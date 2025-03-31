@@ -1,0 +1,17 @@
+// tsconfig.json (exemplo mínimo)
+{
+  "compilerOptions": {
+    "target": "ES2016", // Ou mais recente
+    "module": "CommonJS", // Importante para compatibilidade Jest/Node padrão
+    "outDir": "./dist",
+    "rootDir": "./src", // Ajuste se necessário
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    // Inclua 'jest' nos types se não estiver globalmente
+    "types": ["node", "jest"]
+  },
+  "include": ["src/**/*"], // Ajuste para incluir seus arquivos fonte
+  "exclude": ["node_modules", "dist", "**/*.test.ts"] // Exclua testes da compilação principal se desejar
+}
