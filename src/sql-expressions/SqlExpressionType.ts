@@ -20,10 +20,12 @@ export enum SqlExpressionType {
   Binary = "Binary", // Representa uma operação binária (ex: +, -, =, AND, OR).
   Like = "Like", // Representa uma operação SQL LIKE.
   FunctionCall = "FunctionCall", // Representa uma chamada de função SQL (ex: COUNT, MAX, UPPER).
+  Case = "Case", // <<< NOVO: Representa uma expressão CASE WHEN.
 
   // Joins
   InnerJoin = "InnerJoin", // Representa uma operação INNER JOIN.
-  // Outros tipos de JOIN (LeftJoin, RightJoin, etc.) podem ser adicionados aqui.
+  LeftJoin = "LeftJoin", // Representa uma operação LEFT JOIN.
+  // Outros tipos de JOIN (RightJoin, etc.) podem ser adicionados aqui.
 
   // Subqueries / Predicados
   Exists = "Exists", // Representa um predicado EXISTS(subquery).
@@ -31,6 +33,6 @@ export enum SqlExpressionType {
   ScalarSubquery = "ScalarSubquery", // Subquery que retorna um único valor escalar.
 
   // Fontes Compostas (para FROM)
-  Union = "Union", // <<< NOVO: Representa uma operação UNION ou UNION ALL.
+  Union = "Union", // Representa uma operação UNION ou UNION ALL.
 }
 // --- END OF FILE src/sql-expressions/SqlExpressionType.ts ---

@@ -11,6 +11,7 @@ import {
   SqlBinaryExpression,
   ProjectionExpression,
   InnerJoinExpression,
+  LeftJoinExpression,
   JoinExpressionBase,
   SqlExpressionType,
   SqlScalarSubqueryAsJsonExpression,
@@ -21,6 +22,7 @@ import {
   SqlScalarSubqueryExpression,
   CompositeUnionExpression,
   TableExpressionBase,
+  SqlCaseExpression, // <<< IMPORTAR SqlCaseExpression
 } from "../../sql-expressions";
 import {
   escapeIdentifier,
@@ -166,7 +168,11 @@ export class SqlServerQuerySqlGenerator {
         this.VisitBinary(expression as SqlBinaryExpression);
         break;
       case SqlExpressionType.FunctionCall:
-        this.VisitFunctionCall(expression as SqlFunctionCallExpression); // <<< Chamada aqui
+        this.VisitFunctionCall(expression as SqlFunctionCallExpression);
+        break;
+      // **** NOVO CASO: Case ****
+      case SqlExpressionType.Case:
+        this.VisitCase(expression as SqlCaseExpression);
         break;
       case SqlExpressionType.ScalarSubquery:
         this.VisitScalarSubquery(expression as SqlScalarSubqueryExpression);
@@ -182,8 +188,10 @@ export class SqlServerQuerySqlGenerator {
       case SqlExpressionType.Exists:
         this.VisitExists(expression as SqlExistsExpression);
         break;
+      // Tipos que não são visitados diretamente no nível raiz
       case SqlExpressionType.Projection:
       case SqlExpressionType.InnerJoin:
+      case SqlExpressionType.LeftJoin:
         throw new Error(
           `Cannot directly visit SqlExpressionType: ${expression.type}`
         );
@@ -195,8 +203,8 @@ export class SqlServerQuerySqlGenerator {
     }
   }
 
-  // VisitSelect, VisitTable, VisitColumn, VisitConstant, VisitBinary, VisitJoin, VisitInnerJoin, VisitScalarSubqueryAsJson, VisitExists, VisitLike, VisitScalarSubquery, VisitUnion, VisitProjection
-  // (Métodos inalterados - exceto VisitFunctionCall abaixo)
+  // VisitSelect, VisitProjection, VisitTable, VisitColumn, VisitConstant, VisitBinary, VisitJoin, VisitInnerJoin, VisitLeftJoin, VisitScalarSubqueryAsJson, VisitExists, VisitLike, VisitFunctionCall, VisitScalarSubquery, VisitUnion
+  // (Inalterados)
 
   /**
    * Visita e gera SQL para uma expressão SELECT.
@@ -241,7 +249,7 @@ export class SqlServerQuerySqlGenerator {
     if (expression.joins.length > 0) {
       expression.joins.forEach((j) => {
         this.builder.appendLine();
-        this.VisitJoin(j);
+        this.VisitJoin(j); // <<< Chama o dispatcher de JOIN
       });
     }
 
@@ -343,7 +351,8 @@ export class SqlServerQuerySqlGenerator {
     if (
       projection.expression.type === SqlExpressionType.FunctionCall ||
       projection.expression.type === SqlExpressionType.ScalarSubqueryAsJson ||
-      projection.expression.type === SqlExpressionType.ScalarSubquery
+      projection.expression.type === SqlExpressionType.ScalarSubquery ||
+      projection.expression.type === SqlExpressionType.Case // <<< Case também precisa de alias se fornecido
     ) {
       needsAlias = !!projection.alias;
     }
@@ -414,39 +423,69 @@ export class SqlServerQuerySqlGenerator {
     let sqlOperator: string | null = null;
     let operandForNullCheck: SqlExpression | null = null;
 
-    if (
-      binary.right.type === SqlExpressionType.Constant &&
-      (binary.right as SqlConstantExpression).value === null
-    ) {
-      isNullComparison = true;
-      operandForNullCheck = binary.left;
-      if (binary.operator === OperatorType.Equal) sqlOperator = "IS NULL";
-      else if (binary.operator === OperatorType.NotEqual)
-        sqlOperator = "IS NOT NULL";
-    } else if (
+    // --- Verificação de Nulidade ---
+    // Verifica se um dos lados é uma constante NULL
+    const leftIsNull =
       binary.left.type === SqlExpressionType.Constant &&
-      (binary.left as SqlConstantExpression).value === null
-    ) {
+      (binary.left as SqlConstantExpression).value === null;
+    const rightIsNull =
+      binary.right.type === SqlExpressionType.Constant &&
+      (binary.right as SqlConstantExpression).value === null;
+
+    if (leftIsNull && !rightIsNull) {
       isNullComparison = true;
-      operandForNullCheck = binary.right;
+      operandForNullCheck = binary.right; // O operando a ser checado é o da direita
       if (binary.operator === OperatorType.Equal) sqlOperator = "IS NULL";
       else if (binary.operator === OperatorType.NotEqual)
         sqlOperator = "IS NOT NULL";
+    } else if (rightIsNull && !leftIsNull) {
+      isNullComparison = true;
+      operandForNullCheck = binary.left; // O operando a ser checado é o da esquerda
+      if (binary.operator === OperatorType.Equal) sqlOperator = "IS NULL";
+      else if (binary.operator === OperatorType.NotEqual)
+        sqlOperator = "IS NOT NULL";
+    } else if (leftIsNull && rightIsNull) {
+      // Comparando NULL com NULL (NULL = NULL é falso, NULL != NULL é falso em SQL padrão)
+      // Poderíamos gerar '1=0' para = e '1=1' para !=, mas IS NULL/IS NOT NULL não se aplica.
+      // Vamos gerar a comparação direta (que provavelmente resultará em NULL/UNKNOWN)
+      // ou um erro dependendo do contexto SQL. Por simplicidade, mantemos a lógica original
+      // que não entra no bloco isNullComparison.
+      // É um caso de uso estranho em LINQ, geralmente se verifica `x == null`.
     }
 
     if (isNullComparison && sqlOperator && operandForNullCheck) {
+      // --- Gera IS NULL / IS NOT NULL ---
+      // Adiciona parênteses se o operando for outra expressão binária
+      const wrapOperand = operandForNullCheck.type === SqlExpressionType.Binary;
+      if (wrapOperand) this.builder.append("(");
       this.Visit(operandForNullCheck);
+      if (wrapOperand) this.builder.append(")");
       this.builder.appendSpace().append(sqlOperator);
     } else {
+      // --- Lógica Padrão para Operadores Binários ---
       const currentPrecedence = getOperatorPrecedence(binary.operator);
+
+      // Verifica se o operando esquerdo precisa de parênteses
       const wrapLeft =
-        binary.left.type === SqlExpressionType.Binary &&
-        getOperatorPrecedence((binary.left as SqlBinaryExpression).operator) <
-          currentPrecedence;
+        (binary.left.type === SqlExpressionType.Binary ||
+          binary.left.type === SqlExpressionType.Case) && // CASE também tem baixa precedência
+        getOperatorPrecedence(
+          (binary.left as SqlBinaryExpression | SqlCaseExpression).type ===
+            SqlExpressionType.Binary
+            ? (binary.left as SqlBinaryExpression).operator
+            : OperatorType.Equal
+        ) < currentPrecedence; // CASE tem precedência similar a comparação
+
+      // Verifica se o operando direito precisa de parênteses
       const wrapRight =
-        binary.right.type === SqlExpressionType.Binary &&
-        getOperatorPrecedence((binary.right as SqlBinaryExpression).operator) <
-          currentPrecedence;
+        (binary.right.type === SqlExpressionType.Binary ||
+          binary.right.type === SqlExpressionType.Case) &&
+        getOperatorPrecedence(
+          (binary.right as SqlBinaryExpression | SqlCaseExpression).type ===
+            SqlExpressionType.Binary
+            ? (binary.right as SqlBinaryExpression).operator
+            : OperatorType.Equal
+        ) < currentPrecedence;
 
       if (wrapLeft) this.builder.append("(");
       this.Visit(binary.left);
@@ -471,8 +510,13 @@ export class SqlServerQuerySqlGenerator {
       case SqlExpressionType.InnerJoin:
         this.VisitInnerJoin(join as InnerJoinExpression);
         break;
+      case SqlExpressionType.LeftJoin:
+        this.VisitLeftJoin(join as LeftJoinExpression);
+        break;
       default:
-        throw new Error(`Unsupported join type: ${join.type}`);
+        // Assegura que todos os tipos de JOIN sejam tratados
+        const exhaustiveCheck: never = join.type;
+        throw new Error(`Unsupported join type: ${exhaustiveCheck}`);
     }
   }
 
@@ -484,6 +528,20 @@ export class SqlServerQuerySqlGenerator {
    */
   protected VisitInnerJoin(join: InnerJoinExpression): void {
     this.builder.append("INNER JOIN");
+    this.builder.appendSpace();
+    this.Visit(join.table, true); // Visita a fonte do join como subquery source
+    this.builder.append(" ON ");
+    this.Visit(join.joinPredicate); // Visita a condição do join
+  }
+
+  /**
+   * Visita e gera SQL para uma expressão LEFT JOIN.
+   * @protected
+   * @param {LeftJoinExpression} join A expressão LEFT JOIN a ser visitada.
+   * @memberof SqlServerQuerySqlGenerator
+   */
+  protected VisitLeftJoin(join: LeftJoinExpression): void {
+    this.builder.append("LEFT JOIN"); // <<< Muda para LEFT JOIN
     this.builder.appendSpace();
     this.Visit(join.table, true); // Visita a fonte do join como subquery source
     this.builder.append(" ON ");
@@ -543,14 +601,19 @@ export class SqlServerQuerySqlGenerator {
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitLike(expression: SqlLikeExpression): void {
+    // Adiciona parênteses se a expressão fonte for binária
+    const wrapSource =
+      expression.sourceExpression.type === SqlExpressionType.Binary;
+    if (wrapSource) this.builder.append("(");
     this.Visit(expression.sourceExpression);
+    if (wrapSource) this.builder.append(")");
+
     this.builder.append(" LIKE ");
-    this.Visit(expression.patternExpression);
+    this.Visit(expression.patternExpression); // Padrão já é constante
   }
 
   /**
    * Visita e gera SQL para uma chamada de função.
-   * **CORRIGIDO:** Trata DATEPART especialmente.
    * @protected
    * @param {SqlFunctionCallExpression} expression A expressão de chamada de função.
    * @memberof SqlServerQuerySqlGenerator
@@ -595,6 +658,35 @@ export class SqlServerQuerySqlGenerator {
     });
     this.builder.append(")");
   }
+
+  // **** NOVO MÉTODO: VisitCase ****
+  /**
+   * Visita e gera SQL para uma expressão CASE WHEN.
+   * @param expression A expressão CASE a ser visitada.
+   */
+  protected VisitCase(expression: SqlCaseExpression): void {
+    this.builder.append("CASE");
+    // Não suporta CASE simples (CASE operand WHEN ...) por enquanto
+    // if (expression.operand) {
+    //     this.builder.appendSpace();
+    //     this.Visit(expression.operand);
+    // }
+
+    expression.whenClauses.forEach((wc) => {
+      this.builder.append(" WHEN ");
+      this.Visit(wc.when);
+      this.builder.append(" THEN ");
+      this.Visit(wc.then);
+    });
+
+    if (expression.elseExpression) {
+      this.builder.append(" ELSE ");
+      this.Visit(expression.elseExpression);
+    }
+
+    this.builder.append(" END");
+  }
+  // **** FIM NOVO MÉTODO ****
 
   /**
    * Visita e gera SQL para uma subconsulta escalar.

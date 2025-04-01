@@ -12,9 +12,11 @@ export * from "./SelectExpression";
 export * from "./SqlConstantExpression";
 export * from "./SqlBinaryExpression";
 export * from "./SqlLikeExpression";
+export * from "./SqlCaseExpression"; // <<< EXPORTAR SqlCaseExpression
 export * from "./JoinExpressionBase";
 export * from "./InnerJoinExpression";
-// Adicionar outros tipos de Join aqui (LeftJoin, etc.) se implementados
+export * from "./LeftJoinExpression";
+// Adicionar outros tipos de Join aqui (RightJoin, etc.) se implementados
 export * from "./SqlExistsExpression";
 export * from "./SqlScalarSubqueryAsJsonExpression";
 export * from "./SqlScalarSubqueryExpression";

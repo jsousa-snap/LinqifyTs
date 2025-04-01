@@ -106,7 +106,7 @@ export interface IQueryable<T> {
   where(predicate: (entity: T) => boolean): IQueryable<T>;
 
   /**
-   * Correlaciona os elementos de duas sequências com base em chaves correspondentes.
+   * Correlaciona os elementos de duas sequências com base em chaves correspondentes (INNER JOIN).
    *
    * @template TInnerJoin O tipo dos elementos da sequência interna.
    * @template TKeyJoin O tipo das chaves retornadas pelas funções de seletor de chave.
@@ -123,6 +123,28 @@ export interface IQueryable<T> {
     outerKeySelector: (outer: T) => TKeyJoin,
     innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
     resultSelector: (outer: T, inner: TInnerJoin) => TResultJoin
+  ): IQueryable<TResultJoin>;
+
+  /**
+   * Correlaciona os elementos de duas sequências com base em chaves correspondentes usando LEFT JOIN.
+   * Inclui todos os elementos da sequência externa e os elementos correspondentes da sequência interna.
+   * Se não houver correspondência na sequência interna, o parâmetro 'inner' no resultSelector será `null`.
+   *
+   * @template TInnerJoin O tipo dos elementos da sequência interna.
+   * @template TKeyJoin O tipo das chaves retornadas pelas funções de seletor de chave.
+   * @template TResultJoin O tipo dos elementos de resultado.
+   * @param {IQueryable<TInnerJoin>} inner A sequência para juntar à primeira sequência.
+   * @param {(outer: T) => TKeyJoin} outerKeySelector Uma função para extrair a chave de junção de cada elemento da primeira sequência.
+   * @param {(inner: TInnerJoin) => TKeyJoin} innerKeySelector Uma função para extrair a chave de junção de cada elemento da segunda sequência.
+   * @param {(outer: T, inner: TInnerJoin | null) => TResultJoin} resultSelector Uma função para criar um elemento de resultado a partir de um elemento externo e seu elemento interno correspondente (ou null se não houver correspondência).
+   * @returns {IQueryable<TResultJoin>} Um IQueryable que tem elementos de TResultJoin obtidos através da execução de uma junção externa esquerda (left outer join) em duas sequências.
+   * @memberof IQueryable
+   */
+  leftJoin<TInnerJoin, TKeyJoin, TResultJoin>(
+    inner: IQueryable<TInnerJoin>,
+    outerKeySelector: (outer: T) => TKeyJoin,
+    innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
+    resultSelector: (outer: T, inner: TInnerJoin | null) => TResultJoin // <<< INNER PODE SER NULL
   ): IQueryable<TResultJoin>;
 
   /**

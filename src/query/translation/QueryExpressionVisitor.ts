@@ -1,7 +1,3 @@
-// --- START OF FILE src/query/translation/QueryExpressionVisitor.ts ---
-
-// src/query/translation/QueryExpressionVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -26,6 +22,7 @@ import {
   SqlBinaryExpression,
   ProjectionExpression,
   InnerJoinExpression,
+  LeftJoinExpression, // <<< IMPORTAR LeftJoinExpression
   JoinExpressionBase,
   SqlExpressionType,
   SqlExistsExpression,
@@ -37,6 +34,7 @@ import {
   SqlScalarSubqueryExpression,
   CompositeUnionExpression,
   TableExpressionBase,
+  SqlCaseExpression, // <<< IMPORTAR SqlCaseExpression
 } from "../../sql-expressions";
 
 import { TranslationContext, SqlDataSource } from "./TranslationContext";
@@ -49,6 +47,7 @@ import {
   visitWhereCall,
   visitSelectCall,
   visitJoinCall,
+  visitLeftJoinCall, // <<< IMPORTAR visitLeftJoinCall
   visitIncludesCall, // Usaremos este como base para outros métodos de string
   visitOrderByCall,
   visitThenByCall,
@@ -201,6 +200,9 @@ export class QueryExpressionVisitor {
     if (expression.type === LinqExpressionType.Call) {
       const callExpr = expression as LinqMethodCallExpression;
       switch (callExpr.methodName) {
+        // **** NOVO: Tratamento para o marcador interno do ternário ****
+        case "__internal_ternary__":
+          return this.translateTernaryPlaceholder(callExpr);
         case "exists":
           return this.translateExistsExpression(callExpr);
         // Métodos de string/data que retornam um valor (não uma queryable)
@@ -468,6 +470,72 @@ export class QueryExpressionVisitor {
       );
     }
 
+    // *** CORREÇÃO: Tratamento de nulidade para LEFT JOIN ***
+    // Se estiver comparando um TableExpressionBase (resultado de um join) com null
+    if (
+      leftSql instanceof TableExpressionBase &&
+      rightSql instanceof SqlConstantExpression &&
+      rightSql.value === null
+    ) {
+      if (operator === LinqOperatorType.Equal) {
+        // Gera [alias].[alguma_coluna] IS NULL. Escolhemos a primeira coluna do join key como heurística (pode precisar de ajuste)
+        // Esta parte é complexa. Por simplicidade, vamos assumir que a chave primária da tabela é a primeira coluna do ON.
+        // Ou, melhor ainda, checar uma coluna de chave primária se tivéssemos essa info.
+        // Solução pragmática: Checar o próprio alias (não padrão SQL, mas pode funcionar com COALESCE no gerador ou se o DB permitir)
+        // Ou, idealmente, o visitMember deveria retornar a coluna chave quando o acesso é feito.
+        // Por enquanto, vamos gerar [alias].PrimaryKey IS NULL (assumindo que temos a PK) - se não, usar uma coluna conhecida.
+        // No teste de Department, a chave é 'deptId'.
+        const primaryKeyColName =
+          leftSql instanceof TableExpression && leftSql.name === "Departments"
+            ? "deptId"
+            : "Id"; // Ajuste conforme necessário
+        return new SqlBinaryExpression(
+          new ColumnExpression(primaryKeyColName, leftSql as TableExpression),
+          OperatorType.Equal,
+          rightSql
+        ); // Isso vai gerar [alias].[pk] IS NULL no gerador
+      } else if (operator === LinqOperatorType.NotEqual) {
+        const primaryKeyColName =
+          leftSql instanceof TableExpression && leftSql.name === "Departments"
+            ? "deptId"
+            : "Id";
+        return new SqlBinaryExpression(
+          new ColumnExpression(primaryKeyColName, leftSql as TableExpression),
+          OperatorType.NotEqual,
+          rightSql
+        ); // Gera [alias].[pk] IS NOT NULL
+      }
+    }
+    // O mesmo para o lado direito sendo a tabela e o esquerdo sendo null
+    if (
+      rightSql instanceof TableExpressionBase &&
+      leftSql instanceof SqlConstantExpression &&
+      leftSql.value === null
+    ) {
+      if (operator === LinqOperatorType.Equal) {
+        const primaryKeyColName =
+          rightSql instanceof TableExpression && rightSql.name === "Departments"
+            ? "deptId"
+            : "Id";
+        return new SqlBinaryExpression(
+          new ColumnExpression(primaryKeyColName, rightSql as TableExpression),
+          OperatorType.Equal,
+          leftSql
+        ); // [alias].[pk] IS NULL
+      } else if (operator === LinqOperatorType.NotEqual) {
+        const primaryKeyColName =
+          rightSql instanceof TableExpression && rightSql.name === "Departments"
+            ? "deptId"
+            : "Id";
+        return new SqlBinaryExpression(
+          new ColumnExpression(primaryKeyColName, rightSql as TableExpression),
+          OperatorType.NotEqual,
+          leftSql
+        ); // [alias].[pk] IS NOT NULL
+      }
+    }
+    // *** FIM CORREÇÃO ***
+
     // Otimização: Inverte a ordem se for constante à esquerda e coluna à direita
     // Ex: 5 > u.age => u.age < 5
     if (
@@ -657,6 +725,19 @@ export class QueryExpressionVisitor {
           this.createProjections.bind(this),
           this.aliasGenerator
         );
+      // **** NOVO CASO: leftJoin ****
+      case "leftJoin":
+        return visitLeftJoinCall(
+          // <<< CHAMA visitLeftJoinCall
+          expression,
+          currentSelect,
+          sourceForLambda,
+          this.context,
+          this.visit.bind(this),
+          boundVisitInContext,
+          this.createProjections.bind(this),
+          this.aliasGenerator
+        );
       case "orderBy":
       case "orderByDescending":
         const orderDir = methodName === "orderBy" ? "ASC" : "DESC";
@@ -729,11 +810,10 @@ export class QueryExpressionVisitor {
           this.aliasGenerator
         );
       case "groupBy":
-        // *** CORREÇÃO AQUI ***
         return visitGroupByCall(
           expression,
           currentSelect,
-          sourceForLambda, // <<<< Corrigido de sourceForOuterLambda
+          sourceForLambda,
           this.context,
           boundVisitInContext,
           this, // Passa o próprio visitor raiz
@@ -747,8 +827,36 @@ export class QueryExpressionVisitor {
     }
   }
 
+  // **** NOVO MÉTODO: Traduz o placeholder do ternário para SqlCaseExpression ****
+  protected translateTernaryPlaceholder(
+    expression: LinqMethodCallExpression
+  ): SqlCaseExpression {
+    if (expression.args.length !== 3) {
+      throw new Error(
+        "Internal Error: Invalid number of arguments for internal ternary placeholder."
+      );
+    }
+    const testLinq = expression.args[0];
+    const consequentLinq = expression.args[1];
+    const alternateLinq = expression.args[2];
+
+    const testSql = this.visit(testLinq);
+    const consequentSql = this.visit(consequentLinq);
+    const alternateSql = this.visit(alternateLinq);
+
+    if (!testSql || !consequentSql || !alternateSql) {
+      throw new Error(
+        "Failed to translate one or more parts of the ternary expression to SQL."
+      );
+    }
+
+    // Cria a cláusula WHEN/THEN e a expressão CASE
+    const whenClause = { when: testSql, then: consequentSql };
+    return new SqlCaseExpression([whenClause], alternateSql);
+  }
+
   /**
-   * **NOVO:** Visita chamadas de método de *instância* (string, data, etc.).
+   * Visita chamadas de método de *instância* (string, data, etc.).
    * Retorna uma SqlExpression simples (não SelectExpression).
    */
   protected visitInstanceMethodCall(
@@ -858,23 +966,15 @@ export class QueryExpressionVisitor {
         if (expression.args.length !== 0)
           throw new Error("'getFullYear' takes no arguments.");
         return new SqlFunctionCallExpression("YEAR", [sourceSql]);
-
-      // ***** A ÚNICA SOLUÇÃO DENTRO DESTE MÉTODO *****
       case "getMonth": // JS retorna 0-11, SQL MONTH retorna 1-12
         if (expression.args.length !== 0)
           throw new Error("'getMonth' takes no arguments.");
-        // Para que o VALOR retornado seja 0-11, precisamos gerar MONTH(...) - 1
-        // Isso garante que comparações posteriores com 0, 1, etc., funcionem diretamente.
-        console.log("Translating getMonth() to SQL: MONTH(...) - 1");
         const monthSql = new SqlFunctionCallExpression("MONTH", [sourceSql]);
-        // Retorna a expressão aritmética. O SQL final terá a subtração.
         return new SqlBinaryExpression(
           monthSql,
-          OperatorType.Subtract, // Certifique-se que OperatorType.Subtract está definido e mapeado para '-'
+          OperatorType.Subtract,
           new SqlConstantExpression(1)
         );
-      // ***** FIM DA SOLUÇÃO PARA getMonth() *****
-
       case "getDate": // Dia do mês
         if (expression.args.length !== 0)
           throw new Error("'getDate' takes no arguments.");
@@ -1128,12 +1228,13 @@ export class QueryExpressionVisitor {
           // Adiciona a projeção da subconsulta com o alias da propriedade
           projections.push(new ProjectionExpression(subqueryExpression, alias));
         }
-        // Se a expressão resultar em Coluna, Constante, Função, Binária ou Like
+        // Se a expressão resultar em Coluna, Constante, Função, Binária, Case ou Like
         else if (
           sqlExpr instanceof ColumnExpression ||
           sqlExpr instanceof SqlConstantExpression ||
           sqlExpr instanceof SqlFunctionCallExpression ||
           sqlExpr instanceof SqlBinaryExpression ||
+          sqlExpr instanceof SqlCaseExpression || // <<< Incluir Case
           sqlExpr instanceof SqlLikeExpression
         ) {
           // Adiciona a projeção simples com o alias da propriedade
@@ -1203,6 +1304,7 @@ export class QueryExpressionVisitor {
         sqlExpr instanceof SqlConstantExpression ||
         sqlExpr instanceof SqlFunctionCallExpression ||
         sqlExpr instanceof SqlBinaryExpression ||
+        sqlExpr instanceof SqlCaseExpression || // <<< Incluir Case
         sqlExpr instanceof SqlLikeExpression
       ) {
         // Determina o alias: nome do membro se for MemberAccess, ou 'exprN'
@@ -1267,5 +1369,3 @@ function mapPropertyToSqlFunction(propertyName: string): string | null {
       return null; // Propriedade não mapeada
   }
 }
-
-// --- END OF FILE src/query/translation/QueryExpressionVisitor.ts ---

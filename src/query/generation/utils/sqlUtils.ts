@@ -36,7 +36,7 @@ export function generateSqlLiteral(value: any): string {
 
 /**
  * Mapeia um OperatorType da árvore de expressão LINQ para o operador SQL correspondente.
- * ATUALIZADO: Adiciona mapeamento para operadores aritméticos.
+ * ATUALIZADO: Adiciona mapeamento para operadores aritméticos e corrige NotEqual.
  *
  * @export
  * @param {OperatorType} op O operador LINQ.
@@ -48,7 +48,7 @@ export function mapOperatorToSql(op: OperatorType): string {
     case OperatorType.Equal:
       return "=";
     case OperatorType.NotEqual:
-      return "!="; // Ou <> dependendo do dialeto SQL
+      return "<>"; // <<< CORRIGIDO de != para <>
     case OperatorType.GreaterThan:
       return ">";
     case OperatorType.GreaterThanOrEqual:

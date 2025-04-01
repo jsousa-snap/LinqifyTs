@@ -19,9 +19,9 @@ import { SqlExpressionType } from "./SqlExpressionType"; // Importar SqlExpressi
  * @extends {SqlExpressionMetadata}
  */
 export interface JoinExpressionBaseMetadata extends SqlExpressionMetadata {
-  // *** ATENÇÃO: Se adicionar outros Joins (Left, Right), adicione-os aqui ***
-  /** O tipo específico do JOIN (ex: InnerJoin). */
-  $type: SqlExpressionType.InnerJoin; // Por enquanto, apenas InnerJoin existe
+  // *** ATENÇÃO: Adicionado LeftJoin ***
+  /** O tipo específico do JOIN (ex: InnerJoin, LeftJoin). */
+  $type: SqlExpressionType.InnerJoin | SqlExpressionType.LeftJoin; // <<< ADICIONADO LeftJoin
   /** Metadados da fonte de dados que está sendo juntada (Tabela, Select, Union). */
   // *** CORREÇÃO: Usar TableExpressionBaseMetadata ***
   table: TableExpressionBaseMetadata; // <<< Metadados da fonte JOINED (pode ser Table, Select, Union)
@@ -56,16 +56,18 @@ export abstract class JoinExpressionBase extends SqlExpression {
   }
 
   /**
-   * O tipo específico desta expressão JOIN (ex: InnerJoin).
+   * O tipo específico desta expressão JOIN (ex: InnerJoin, LeftJoin).
    * Deve ser implementado pelas classes filhas.
    * @abstract
-   * @type {SqlExpressionType.InnerJoin} // Adicionar outros tipos se necessário
+   * @type {SqlExpressionType.InnerJoin | SqlExpressionType.LeftJoin} // Adicionar outros tipos se necessário
    * @memberof JoinExpressionBase
    */
   // *** CORREÇÃO: Estreitar o tipo abstrato aqui ***
   // Exige que as classes filhas definam o tipo como um dos tipos de JOIN válidos.
-  // *** ATENÇÃO: Se adicionar outros Joins (Left, Right), adicione-os aqui ***
-  abstract override readonly type: SqlExpressionType.InnerJoin;
+  // *** ATENÇÃO: Adicionado LeftJoin ***
+  abstract override readonly type:
+    | SqlExpressionType.InnerJoin
+    | SqlExpressionType.LeftJoin; // <<< ADICIONADO LeftJoin
 
   /**
    * Retorna a representação em string desta expressão JOIN para depuração.

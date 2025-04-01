@@ -24,7 +24,7 @@ import {
 import { LambdaParser } from "../parsing";
 import { Query } from "./Query";
 
-// --- Declaração de Módulo (Adicionar groupBy, union, concat) ---
+// --- Declaração de Módulo (Adicionar leftJoin, groupBy, union, concat) ---
 declare module "../interfaces" {
   interface IQueryable<T> {
     // Assinaturas existentes...
@@ -36,6 +36,14 @@ declare module "../interfaces" {
     max<TResult extends number | string | Date>(
       selector: (entity: T) => TResult
     ): TResult | null;
+
+    // Assinatura leftJoin
+    leftJoin<TInnerJoin, TKeyJoin, TResultJoin>(
+      inner: IQueryable<TInnerJoin>,
+      outerKeySelector: (outer: T) => TKeyJoin,
+      innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
+      resultSelector: (outer: T, inner: TInnerJoin | null) => TResultJoin // <<< INNER PODE SER NULL
+    ): IQueryable<TResultJoin>;
 
     // Assinatura groupBy
     groupBy<TKey, TResult>(
@@ -209,6 +217,51 @@ Query.prototype.join = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   const resultElementType = Object as ElementType;
   return this.provider.createQuery<TResultJoin>(callExpr, resultElementType);
 };
+
+// **** NOVA IMPLEMENTAÇÃO: leftJoin ****
+/**
+ * Cria a expressão LINQ para uma operação LEFT JOIN.
+ * A lógica é muito similar ao 'join', mas chama o método 'leftJoin'.
+ */
+Query.prototype.leftJoin = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
+  this: IQueryable<TOuter>,
+  innerSource: IQueryable<TInnerJoin>,
+  outerKeySelector: (outer: TOuter) => TKeyJoin,
+  innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
+  resultSelector: (outer: TOuter, inner: TInnerJoin | null) => TResultJoin // Inner pode ser null
+): IQueryable<TResultJoin> {
+  const currentScopeMap = findScopeMap(this.expression);
+  // Parseia as lambdas, exatamente como no 'join'
+  const outerKeyLambda: LambdaExpression = lambdaParser.parse(
+    outerKeySelector,
+    [],
+    currentScopeMap
+  );
+  const innerKeyLambda: LambdaExpression = lambdaParser.parse(
+    innerKeySelector,
+    [],
+    currentScopeMap
+  );
+  const resultLambda: LambdaExpression = lambdaParser.parse(
+    resultSelector,
+    [],
+    currentScopeMap
+  );
+  if (resultLambda.parameters.length !== 2)
+    throw new Error("LeftJoin result selector lambda needs 2 parameters.");
+
+  // Cria a expressão de chamada 'leftJoin'
+  const callExpr = new MethodCallExpression("leftJoin", this.expression, [
+    // <<< NOME DO MÉTODO: leftJoin
+    innerSource.expression,
+    outerKeyLambda,
+    innerKeyLambda,
+    resultLambda,
+  ]);
+  const resultElementType = Object as ElementType;
+  return this.provider.createQuery<TResultJoin>(callExpr, resultElementType);
+};
+// **** FIM NOVA IMPLEMENTAÇÃO ****
 
 // Implementação de exists (inalterada)
 Query.prototype.exists = function <T>(
@@ -500,15 +553,7 @@ Query.prototype.groupBy = function <T, TKey, TResult>(
   return this.provider.createQuery<TResult>(callExpr, resultElementType);
 };
 
-// **** NOVAS IMPLEMENTAÇÕES UNION / CONCAT ****
-
-/**
- * Cria uma expressão de chamada de método para 'union'.
- * Representa a operação SQL UNION (remove duplicatas).
- * @param this A queryable atual (primeira sequência).
- * @param second A segunda queryable a ser unida.
- * @returns Um novo IQueryable representando a união.
- */
+// Implementação de union (inalterada)
 Query.prototype.union = function <T>(
   this: IQueryable<T>,
   second: IQueryable<T>
@@ -524,13 +569,7 @@ Query.prototype.union = function <T>(
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
-/**
- * Cria uma expressão de chamada de método para 'concat'.
- * Representa a operação SQL UNION ALL (mantém duplicatas).
- * @param this A queryable atual (primeira sequência).
- * @param second A segunda queryable a ser concatenada.
- * @returns Um novo IQueryable representando a concatenação.
- */
+// Implementação de concat (inalterada)
 Query.prototype.concat = function <T>(
   this: IQueryable<T>,
   second: IQueryable<T>
@@ -545,6 +584,4 @@ Query.prototype.concat = function <T>(
   // O tipo de elemento permanece o mesmo.
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
-// **** FIM NOVAS IMPLEMENTAÇÕES ****
-
 // --- END OF FILE src/query/QueryableExtensions.ts ---

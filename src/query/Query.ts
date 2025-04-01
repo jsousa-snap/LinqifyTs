@@ -78,6 +78,19 @@ export class Query<T> implements IOrderedQueryable<T> {
     );
     throw new Error("Base Query.join declaration should not be executed.");
   }
+  // **** NOVO Placeholder: leftJoin ****
+  leftJoin<TInnerJoin, TKeyJoin, TResultJoin>(
+    inner: IQueryable<TInnerJoin>,
+    outerKeySelector: (outer: T) => TKeyJoin,
+    innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
+    resultSelector: (outer: T, inner: TInnerJoin | null) => TResultJoin
+  ): IQueryable<TResultJoin> {
+    console.error(
+      "Error: Calling Query.leftJoin base declaration. Check QueryableExtensions."
+    );
+    throw new Error("Base Query.leftJoin declaration should not be executed.");
+  }
+  // **** FIM Placeholder ****
   provideScope(scope: { [key: string]: IQueryable<any> | any }): IQueryable<T> {
     console.error(
       "Error: Calling Query.provideScope base declaration. Check QueryableExtensions."

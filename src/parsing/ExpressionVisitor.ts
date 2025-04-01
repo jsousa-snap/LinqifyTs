@@ -1,3 +1,5 @@
+// --- START OF FILE src/parsing/ExpressionVisitor.ts ---
+
 /* src/parsing/ExpressionVisitor.ts */
 // --- START OF FILE src/parsing/ExpressionVisitor.ts ---
 
@@ -17,7 +19,7 @@ import {
   ScopeExpression,
 } from "../expressions";
 
-// --- AST Node Interfaces (inalteradas) ---
+// --- AST Node Interfaces (adiciona ConditionalExpression) ---
 interface AstNode {
   type: string;
   [key: string]: any;
@@ -76,6 +78,13 @@ interface CallExpressionNode extends AstNode {
   callee: AstNode;
   arguments: AstNode[];
   optional: boolean;
+}
+// **** NOVO: Interface para ConditionalExpression ****
+interface ConditionalExpressionNode extends AstNode {
+  type: "ConditionalExpression";
+  test: AstNode;
+  consequent: AstNode;
+  alternate: AstNode;
 }
 // --- End AST Node Interfaces ---
 
@@ -138,6 +147,11 @@ export class ExpressionVisitor {
         return this.visitObjectExpression(node as ObjectExpressionNode);
       case "CallExpression":
         return this.visitCallExpression(node as CallExpressionNode);
+      // **** NOVO CASO: ConditionalExpression ****
+      case "ConditionalExpression":
+        return this.visitConditionalExpression(
+          node as ConditionalExpressionNode
+        );
       case "ExpressionStatement":
         // Se o nó for uma ExpressionStatement, visita a expressão interna.
         return this.visit((node as ExpressionStatementNode).expression);
@@ -274,7 +288,7 @@ export class ExpressionVisitor {
       // Trata shorthand properties (ex: { x }) como { x: x }.
       const valueExpression = prop.shorthand
         ? this.visitIdentifier(prop.key as IdentifierNode)
-        : this.visit(prop.value);
+        : this.visit(prop.value); // <<< AQUI ESTAVA O ERRO: Visitava prop.value que é ConditionalExpression
       properties.set(propertyName, valueExpression);
     }
     return new NewObjectExpression(properties);
@@ -293,6 +307,14 @@ export class ExpressionVisitor {
     const callee = node.callee;
     // Espera que a chamada seja um acesso a membro (ex: object.method)
     if (callee.type !== "MemberExpression") {
+      // Poderia ser uma chamada global como JSON.parse - ignorar por enquanto
+      if (callee.type === "Identifier") {
+        throw new Error(
+          `Global function calls ('${
+            (callee as IdentifierNode).name
+          }') are not currently supported in LINQ expressions.`
+        );
+      }
       throw new Error(
         `Unsupported CallExpression callee type: ${callee.type}. Expected MemberExpression.`
       );
@@ -340,6 +362,39 @@ export class ExpressionVisitor {
     // Retorna a MethodCallExpression LINQ
     return new MethodCallExpression(methodName, sourceExpr, args);
   }
+
+  // **** NOVO MÉTODO: visitConditionalExpression ****
+  /**
+   * Visita um nó ConditionalExpression (operador ternário condition ? consequent : alternate).
+   * Mapeia para uma expressão CASE WHEN.
+   *
+   * @param {ConditionalExpressionNode} node O nó ConditionalExpression.
+   * @returns {Expression} A expressão LINQ correspondente (atualmente, retorna uma representação não traduzível diretamente para SQL CASE, a tradução ocorre no QueryExpressionVisitor).
+   * @memberof ExpressionVisitor
+   */
+  visitConditionalExpression(node: ConditionalExpressionNode): Expression {
+    // Por enquanto, o ExpressionVisitor do parser *não* criará um SqlCaseExpression diretamente.
+    // Ele criará uma estrutura que o *QueryExpressionVisitor* (tradutor LINQ->SQL)
+    // saberá como interpretar e converter para SqlCaseExpression.
+    // Vamos representá-lo temporariamente com uma MethodCallExpression especial.
+    // O nome 'ternaryConditional' é apenas um marcador interno.
+    const testExpr = this.visit(node.test);
+    const consequentExpr = this.visit(node.consequent);
+    const alternateExpr = this.visit(node.alternate);
+
+    console.warn(
+      `Parsing ConditionalExpression (ternary operator). Translation to SQL CASE WHEN will happen later.`
+    );
+
+    // Usamos uma MethodCallExpression como placeholder na árvore LINQ
+    // O QueryExpressionVisitor (tradutor) identificará isso e criará o SqlCaseExpression.
+    return new MethodCallExpression(
+      "__internal_ternary__", // Nome interno para identificação
+      null, // Sem source
+      [testExpr, consequentExpr, alternateExpr] // Argumentos: [condição, ifTrue, ifFalse]
+    );
+  }
+  // **** FIM NOVO MÉTODO ****
 
   /**
    * Mapeia operadores string do AST (como '==', '>', '+') para o enum OperatorType.
