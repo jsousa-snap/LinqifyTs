@@ -51,10 +51,10 @@ describe("Queryable ProvideScope Tests", () => {
       .where((u) => u.name === searchName && u.age >= minAge); // Usa os valores do escopo
 
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE ([t0].[name] = 'Bob' AND [t0].[age] >= 25)
-    `;
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE ([u].[name] = 'Bob' AND [u].[age] >= 25)`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -72,14 +72,14 @@ WHERE ([t0].[name] = 'Bob' AND [t0].[age] >= 25)
       );
 
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
+SELECT [u].*
+FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
-        FROM [Posts] AS [t1]
-        WHERE ([t1].[authorId] = [t0].[id] AND [t1].[title] = 'Specific Post')
-    )
-        `;
+        FROM [Posts] AS [p]
+        WHERE ([p].[authorId] = [u].[id] AND [p].[title] = 'Specific Post')
+    )`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -93,10 +93,10 @@ WHERE EXISTS (
 
     // Agora esperamos LIKE
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE ([t0].[name] LIKE '%usuario1%')
-      `;
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE ([u].[name] LIKE '%usuario1%')`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -110,10 +110,10 @@ WHERE ([t0].[name] LIKE '%usuario1%')
 
     // Esperamos que o % seja escapado no padrão
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE ([t0].[name] LIKE '%user[%]%')
-      `; // Nota: o % do termo é escapado como [%]
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE ([u].[name] LIKE '%user[%]%')`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -125,10 +125,10 @@ WHERE ([t0].[name] LIKE '%user[%]%')
       .where((u) => u.name.includes(searchTerm));
 
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE ([t0].[name] LIKE '%user[_]1%')
-      `; // Nota: o _ é escapado como [_]
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE ([u].[name] LIKE '%user[_]1%')`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });

@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/translation/method-visitors/visitCountCall.ts ---
 
+// src/query/translation/method-visitors/visitCountCall.ts
+
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -18,7 +20,19 @@ import {
   SqlFunctionCallExpression,
 } from "../../../sql-expressions";
 import { SqlDataSource, TranslationContext } from "../TranslationContext";
+// *** NOVO: Importa AliasGenerator ***
+import { AliasGenerator } from "../../generation/AliasGenerator";
 
+/**
+ * Traduz uma chamada de método LINQ 'count()' ou 'count(predicate)'.
+ * @param expression A expressão da chamada de método 'count'.
+ * @param currentSelect A SelectExpression atual.
+ * @param sourceForLambda A fonte de dados para resolver a lambda, se houver.
+ * @param context O contexto de tradução.
+ * @param visitInContext Função para visitar a lambda do predicado no contexto correto.
+ * @param aliasGenerator O gerador de alias.
+ * @returns A nova SelectExpression que realiza a contagem.
+ */
 export function visitCountCall(
   expression: LinqMethodCallExpression,
   currentSelect: SelectExpression,
@@ -27,8 +41,9 @@ export function visitCountCall(
   visitInContext: (
     expression: LinqExpression,
     context: TranslationContext
-  ) => SqlExpression | null
-) {
+  ) => SqlExpression | null,
+  aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
+): SelectExpression {
   let finalPredicate = currentSelect.predicate;
   if (expression.args.length > 0) {
     // Se Count(predicate)
@@ -65,17 +80,20 @@ export function visitCountCall(
     countFunction,
     "count_result"
   );
-  // Retorna a SelectExpression modificada para fazer a contagem
-  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
+
+  // COUNT terminal não precisa de alias externo
+  const countAlias = ""; // Alias vazio
+
   return new SelectExpression(
+    countAlias, // alias
     [countProjection], // projection (SELECT COUNT_BIG(1)...)
     currentSelect.from, // from (Original)
     finalPredicate, // predicate (WHERE original ou combinado)
-    null, // having <<< Passando null
+    null, // having
     currentSelect.joins, // joins (Originais)
     [], // orderBy (Remove)
-    currentSelect.offset, // Preserva offset
-    currentSelect.limit // Preserva limit
+    currentSelect.offset, // Preserva offset (COUNT não deveria ter, mas mantemos por ora)
+    currentSelect.limit // Preserva limit (COUNT não deveria ter, mas mantemos por ora)
     // groupBy (Default [])
   );
 }

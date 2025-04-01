@@ -1,4 +1,4 @@
-// --- START OF FILE query.test.ts ---
+// --- START OF FILE src/__tests__/query.test.ts ---
 
 // src/main.test.ts  (ou o caminho que preferir)
 
@@ -62,6 +62,7 @@ class PostCategoryEntity implements PostCategory {
 // --- Fim Entidades ---
 
 // Helper para remover a primeira e a última quebra de linha para comparação
+// *** VERSÃO ORIGINAL DO NORMALIZE SQL RESTAURADA ***
 const normalizeSql = (sql: string): string => {
   let result = sql;
 
@@ -90,13 +91,21 @@ describe("Queryable Extensions Tests (EF Core Formatting)", () => {
     profiles = dbContext.set<Profile>("Profiles");
     categories = dbContext.set<Category>("Categories");
     postCategories = dbContext.set<PostCategory>("PostCategories");
+
+    // Mock console.warn para evitar poluir a saída do teste
+    jest.spyOn(console, "warn").mockImplementation();
+  });
+
+  afterEach(() => {
+    // Restaura mocks
+    jest.restoreAllMocks();
   });
 
   it("Teste 1: should handle simple select", () => {
     const nameQuery = users.select((u) => u.name);
     const expectedSql = `
-SELECT [t0].[name]
-FROM [Users] AS [t0]
+SELECT [u].[name]
+FROM [Users] AS [u]
     `;
     const actualSql = nameQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -105,9 +114,9 @@ FROM [Users] AS [t0]
   it("Teste 2: should handle simple where", () => {
     const oldUsersQuery = users.where((u) => u.age > 30);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE [t0].[age] > 30
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE [u].[age] > 30
     `;
     const actualSql = oldUsersQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -116,9 +125,9 @@ WHERE [t0].[age] > 30
   it("Teste 3: should handle where with string equality", () => {
     const aliceQuery = users.where((u) => u.name == "Alice");
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE [t0].[name] = 'Alice'
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE [u].[name] = 'Alice'
     `;
     const actualSql = aliceQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -127,8 +136,8 @@ WHERE [t0].[name] = 'Alice'
   it("Teste 4: should handle select with object projection", () => {
     const dtoQuery = users.select((u) => ({ UserId: u.id, UserName: u.name }));
     const expectedSql = `
-SELECT [t0].[id] AS [UserId], [t0].[name] AS [UserName]
-FROM [Users] AS [t0]
+SELECT [u].[id] AS [UserId], [u].[name] AS [UserName]
+FROM [Users] AS [u]
     `;
     const actualSql = dtoQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -139,9 +148,9 @@ FROM [Users] AS [t0]
       .where((u) => u.age < 25)
       .select((u) => u.name);
     const expectedSql = `
-SELECT [t0].[name]
-FROM [Users] AS [t0]
-WHERE [t0].[age] < 25
+SELECT [u].[name]
+FROM [Users] AS [u]
+WHERE [u].[age] < 25
     `;
     const actualSql = youngUserNamesQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -152,9 +161,9 @@ WHERE [t0].[age] < 25
       .where((u) => u.age >= 65)
       .select((u) => ({ Name: u.name, Contact: u.email }));
     const expectedSql = `
-SELECT [t0].[name] AS [Name], [t0].[email] AS [Contact]
-FROM [Users] AS [t0]
-WHERE [t0].[age] >= 65
+SELECT [u].[name] AS [Name], [u].[email] AS [Contact]
+FROM [Users] AS [u]
+WHERE [u].[age] >= 65
     `;
     const actualSql = seniorDtoQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -163,9 +172,9 @@ WHERE [t0].[age] >= 65
   it("Teste 7: should handle where with logical AND", () => {
     const specificUserQuery = users.where((u) => u.age > 20 && u.name == "Bob");
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE ([t0].[age] > 20 AND [t0].[name] = 'Bob')
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE ([u].[age] > 20 AND [u].[name] = 'Bob')
     `;
     const actualSql = specificUserQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -182,9 +191,9 @@ WHERE ([t0].[age] > 20 AND [t0].[name] = 'Bob')
       })
     );
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], [t1].[title] AS [PostTitle]
-FROM [Users] AS [t0]
-INNER JOIN [Posts] AS [t1] ON [t0].[id] = [t1].[authorId]
+SELECT [u].[name] AS [UserName], [p].[title] AS [PostTitle]
+FROM [Users] AS [u]
+INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
     `;
     const actualSql = userPostsQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -206,10 +215,10 @@ INNER JOIN [Posts] AS [t1] ON [t0].[id] = [t1].[authorId]
       .where((joinedResult) => joinedResult.UserName == "Alice");
 
     const expectedSql = `
-SELECT [t0].[id] AS [UserId], [t0].[name] AS [UserName], [t1].[title] AS [PostTitle], [t1].[postId] AS [PostId]
-FROM [Users] AS [t0]
-INNER JOIN [Posts] AS [t1] ON [t0].[id] = [t1].[authorId]
-WHERE [t0].[name] = 'Alice'
+SELECT [u].[id] AS [UserId], [u].[name] AS [UserName], [p].[title] AS [PostTitle], [p].[postId] AS [PostId]
+FROM [Users] AS [u]
+INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
+WHERE [u].[name] = 'Alice'
     `;
     const actualSql = specificUserPostsQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -237,81 +246,125 @@ WHERE [t0].[name] = 'Alice'
       );
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], [t3].[name] AS [CategoryName]
-FROM [Users] AS [t0]
-INNER JOIN [Posts] AS [t1] ON [t0].[id] = [t1].[authorId]
-INNER JOIN [PostCategories] AS [t2] ON [t1].[postId] = [t2].[postId]
-INNER JOIN [Categories] AS [t3] ON [t2].[categoryId] = [t3].[categoryId]
+SELECT [u].[name] AS [UserName], [c].[name] AS [CategoryName]
+FROM [Users] AS [u]
+INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
+INNER JOIN [PostCategories] AS [p1] ON [p].[postId] = [p1].[postId]
+INNER JOIN [Categories] AS [c] ON [p1].[categoryId] = [c].[categoryId]
     `;
     const actualSql = userAndCategoryNames.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // Teste Subquery (Teste 11 original) - AINDA PODE FALHAR dependendo do suporte a subqueries correlacionadas
-  it("Teste Subquery: should handle subquery using provideScope (expecting error or specific SQL)", () => {
+  // Teste Subquery (Teste 11 original) - CORRIGIDO PARA USAR OS NOVOS ALIASES
+  it("Teste Subquery: should handle subquery using provideScope (expecting JSON)", () => {
     const subQueryTest = users
-      .provideScope({ posts, categories })
+      .provideScope({ posts, categories }) // categories é [c]
       .select((user) => ({
+        // user é [u]
         nome: user.name,
-        postsList: posts
+        postsList: posts // posts é [p]
           .where((post) => post.authorId === user.id)
           .select((post) => ({
+            // post interno é [p] (ou pode ser [p1] dependendo se o contexto é reiniciado) - Assumindo [p] por simplicidade na expectativa
             title: post.title,
-            categories: categories.select((c) => c.name),
+            categories: categories.select((c) => c.name), // categories interno é [c], param c é [c1]
           })),
       }));
 
+    // **EXPECTED SQL COM ALIAS CORRIGIDOS**
     const expectedSql = `
-SELECT [t0].[name] AS [nome], JSON_QUERY(COALESCE((
-    SELECT [t1].[title], JSON_QUERY(COALESCE((
-        SELECT [t2].[name]
-        FROM [Categories] AS [t2]
+SELECT [u].[name] AS [nome], JSON_QUERY(COALESCE((
+    SELECT [p].[title], JSON_QUERY(COALESCE((
+        SELECT [c].[name]
+        FROM [Categories] AS [c]
         FOR JSON PATH, INCLUDE_NULL_VALUES
     ), '[]')) AS [categories]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
     FOR JSON PATH, INCLUDE_NULL_VALUES
 ), '[]')) AS [postsList]
-FROM [Users] AS [t0]`;
+FROM [Users] AS [u]`;
 
-    const actualSql = subQueryTest.toQueryString(); // Armazena o resultado
-    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql)); // Compara
+    const actualSql = subQueryTest.toQueryString();
+    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste 11: should handle multi-join with where before and after", () => {
-    const userAndTechCategoryNames = users
+    const userAndTechCategoryNames = users // [u]
       .join(
-        posts,
+        posts, // [p]
         (u: User) => u.id,
         (p: Post) => p.authorId,
         (u, p) => ({ user: u, post: p })
       )
       .join(
-        postCategories,
+        postCategories, // [p1]
         (up) => up.post.postId,
         (pc: PostCategory) => pc.postId,
         (up, pc) => ({ user: up.user, post: up.post, postCategory: pc })
       )
-      .where((uppc) => uppc.post.title != null) // Where intermediário
+      .where((uppc) => uppc.post.title != null)
       .join(
         categories,
         (uppc) => uppc.postCategory.categoryId,
         (cat: Category) => cat.categoryId,
         (uppc, cat) => ({ UserName: uppc.user.name, CategoryName: cat.name })
       )
-      .where((result) => result.CategoryName == "Tech"); // Where final
+      .where((result) => result.CategoryName == "Tech");
 
     const expectedSqlNotNull = `
-SELECT [t0].[name] AS [UserName], [t3].[name] AS [CategoryName]
-FROM [Users] AS [t0]
-INNER JOIN [Posts] AS [t1] ON [t0].[id] = [t1].[authorId]
-INNER JOIN [PostCategories] AS [t2] ON [t1].[postId] = [t2].[postId]
-INNER JOIN [Categories] AS [t3] ON [t2].[categoryId] = [t3].[categoryId]
-WHERE ([t1].[title] != NULL AND [t3].[name] = 'Tech')
-    `;
-    const actualSql = userAndTechCategoryNames.toQueryString(); // Armazena o resultado
-    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSqlNotNull)); // Compara
+SELECT [u].[name] AS [UserName], [c].[name] AS [CategoryName]
+FROM [Users] AS [u]
+INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
+INNER JOIN [PostCategories] AS [p1] ON [p].[postId] = [p1].[postId]
+INNER JOIN [Categories] AS [c] ON [p1].[categoryId] = [c].[categoryId]
+WHERE ([p].[title] IS NOT NULL AND [c].[name] = 'Tech')`;
+
+    const actualSql = userAndTechCategoryNames.toQueryString();
+    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSqlNotNull));
+  });
+
+  it("Teste 12: should handle multi-join with subquery ", () => {
+    const userAndTechCategoryNames = users // [u]
+      .join(
+        posts, // [p]
+        (u: User) => u.id,
+        (p: Post) => p.authorId,
+        (u, p) => ({ user: u, post: p })
+      )
+      .join(
+        postCategories, // [p1]
+        (up) => up.post.postId,
+        (pc: PostCategory) => pc.postId,
+        (up, pc) => ({ user: up.user, post: up.post, postCategory: pc })
+      )
+      .where((uppc) => uppc.post.title != null) // Where intermediário
+      .join(
+        categories.where((c) => c.name === "cat1"), // Subquery -> categories é [c], where usa [c], alias da subquery será [c1] ou similar
+        (uppc) => uppc.postCategory.categoryId,
+        (cat: Category) => cat.categoryId, // cat refere-se ao alias da subquery [c1]
+        (uppc, cat) => ({ UserName: uppc.user.name, CategoryName: cat.name })
+      )
+      .where((result) => result.CategoryName == "Tech"); // Where final
+
+    // **EXPECTED SQL COM ALIAS CORRIGIDOS**
+    // Alias da subquery Categories é [c] (interno) e [c1] (externo)
+    const expectedSqlNotNull = `
+SELECT [u].[name] AS [UserName], [c].[name] AS [CategoryName]
+FROM [Users] AS [u]
+INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
+INNER JOIN [PostCategories] AS [p1] ON [p].[postId] = [p1].[postId]
+INNER JOIN (
+    SELECT [c].*
+    FROM [Categories] AS [c]
+    WHERE [c].[name] = 'cat1'
+) AS [c] ON [p1].[categoryId] = [c].[categoryId]
+WHERE ([p].[title] IS NOT NULL AND [c].[name] = 'Tech')`;
+
+    const actualSql = userAndTechCategoryNames.toQueryString();
+    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSqlNotNull));
   });
 });
 
-// --- END OF FILE query.test.ts ---
+// --- END OF FILE src/__tests__/query.test.ts ---

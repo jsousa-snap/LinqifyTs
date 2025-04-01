@@ -65,17 +65,21 @@ export function visitHavingCall(
       )
     : predicateSql;
 
-  // Cria uma nova SelectExpression, movendo o predicado para a cláusula 'having'
+  // HAVING não muda a forma, reutiliza o alias
+  const alias = currentSelect.alias;
+
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
-    currentSelect.projection,
-    currentSelect.from,
-    currentSelect.predicate, // Preserva o WHERE original (de antes do groupBy)
-    newHaving, // Define o HAVING
-    currentSelect.joins,
-    currentSelect.orderBy,
-    currentSelect.offset,
-    currentSelect.limit,
-    currentSelect.groupBy // Mantém o GROUP BY
+    alias, // <<< alias (Mantém)
+    currentSelect.projection, // projection
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate (Preserva o WHERE original)
+    newHaving, // having (Define)
+    currentSelect.joins, // joins
+    currentSelect.orderBy, // orderBy
+    currentSelect.offset, // offset
+    currentSelect.limit, // limit
+    currentSelect.groupBy // groupBy (Mantém)
   );
 }
 

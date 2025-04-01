@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/translation/method-visitors/visitWhereCall.ts ---
 
+// src/query/translation/method-visitors/visitWhereCall.ts
+
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -12,9 +14,17 @@ import {
   SqlBinaryExpression,
 } from "../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../TranslationContext";
-import { OperatorType } from "../../generation/utils/sqlUtils";
+import { OperatorType } from "../../generation/utils/sqlUtils"; // <<< Precisa importar OperatorType
 
-// Função wrapper
+/**
+ * Traduz uma chamada de método LINQ 'where'.
+ * @param expression A expressão da chamada de método 'where'.
+ * @param currentSelect A SelectExpression atual.
+ * @param sourceForOuterLambda A fonte de dados para resolver a lambda.
+ * @param context O contexto de tradução.
+ * @param visitInContext Função para visitar a lambda no contexto correto.
+ * @returns A nova SelectExpression com o predicado WHERE atualizado.
+ */
 export function visitWhereCall(
   expression: LinqMethodCallExpression,
   currentSelect: SelectExpression,
@@ -38,23 +48,32 @@ export function visitWhereCall(
     [sourceForOuterLambda]
   );
   const predicateSql = visitInContext(lambda.body, predicateContext);
+
+  // *** CORREÇÃO: Throw error se predicateSql for null ***
   if (!predicateSql) {
-    throw new Error("Could not translate 'where' predicate.");
+    throw new Error(
+      `Could not translate 'where' predicate: ${lambda.body.toString()}`
+    );
   }
+
   const newPredicate = currentSelect.predicate
     ? new SqlBinaryExpression(
-        currentSelect.predicate,
+        currentSelect.predicate, // Não pode ser null aqui por definição
         OperatorType.And,
-        predicateSql
+        predicateSql // Agora garantido que não é null
       )
-    : predicateSql;
+    : predicateSql; // Se não havia predicado anterior, usa o novo
 
-  // **CORREÇÃO: Ordem dos argumentos do construtor**
+  // WHERE não muda a forma, reutiliza o alias
+  const alias = currentSelect.alias;
+
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
+    alias, // <<< alias (Mantém)
     currentSelect.projection, // projection
     currentSelect.from, // from
     newPredicate, // predicate (Atualiza)
-    null, // having <<< Passando null
+    null, // having
     currentSelect.joins, // joins
     currentSelect.orderBy, // orderBy (Preserva)
     currentSelect.offset, // offset (Preserva)

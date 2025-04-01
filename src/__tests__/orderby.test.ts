@@ -40,9 +40,9 @@ describe("Queryable OrderBy/ThenBy Tests", () => {
   it("Teste OrderBy 1: should generate correct SQL for orderBy", () => {
     const query = users.orderBy((u) => u.age);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] ASC
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[age] ASC
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -51,9 +51,9 @@ ORDER BY [t0].[age] ASC
   it("Teste OrderBy 2: should generate correct SQL for orderByDescending", () => {
     const query = users.orderByDescending((u) => u.name);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] DESC
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[name] DESC
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -62,9 +62,9 @@ ORDER BY [t0].[name] DESC
   it("Teste OrderBy 3: should generate correct SQL for orderBy and thenBy", () => {
     const query = users.orderBy((u) => u.age).thenBy((u) => u.name);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] ASC, [t0].[name] ASC
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[age] ASC, [u].[name] ASC
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -75,9 +75,9 @@ ORDER BY [t0].[age] ASC, [t0].[name] ASC
       .orderByDescending((u) => u.age)
       .thenByDescending((u) => u.name);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] DESC, [t0].[name] DESC
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[age] DESC, [u].[name] DESC
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -89,9 +89,9 @@ ORDER BY [t0].[age] DESC, [t0].[name] DESC
       .thenByDescending((u) => u.name)
       .thenBy((u) => u.id);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] ASC, [t0].[name] DESC, [t0].[id] ASC
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[age] ASC, [u].[name] DESC, [u].[id] ASC
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -102,10 +102,10 @@ ORDER BY [t0].[age] ASC, [t0].[name] DESC, [t0].[id] ASC
       .where((u) => u.email.includes("@"))
       .orderBy((u) => u.id);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE ([t0].[email] LIKE '%@%')
-ORDER BY [t0].[id] ASC
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE ([u].[email] LIKE '%@%')
+ORDER BY [u].[id] ASC
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -115,9 +115,9 @@ ORDER BY [t0].[id] ASC
     const query = users.orderBy((u) => u.age).select((u) => u.name);
     // Order By should apply to the source before projection in SQL
     const expectedSql = `
-SELECT [t0].[name]
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] ASC
+SELECT [u].[name]
+FROM [Users] AS [u]
+ORDER BY [u].[age] ASC
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -133,9 +133,9 @@ ORDER BY [t0].[age] ASC
 
     // Expected: ORDER BY happens on the source table column
     const expectedSql = `
-SELECT UPPER([t0].[name]) AS [NameUpper], [t0].[age] AS [Age]
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] ASC
+SELECT UPPER([u].[name]) AS [NameUpper], [u].[age] AS [Age]
+FROM [Users] AS [u]
+ORDER BY [u].[age] ASC
     `;
     // How UPPER is translated might vary, assuming a simple UPPER function for now.
     // The key point is that ORDER BY [t0].[age] refers to the *source* table.
@@ -146,9 +146,9 @@ ORDER BY [t0].[age] ASC
       .orderBy((dto) => dto.AgeVal); // Order by projected 'AgeVal'
 
     const expectedSqlSimple = `
-SELECT [t0].[name] AS [NameVal], [t0].[age] AS [AgeVal]
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] ASC
+SELECT [u].[name] AS [NameVal], [u].[age] AS [AgeVal]
+FROM [Users] AS [u]
+ORDER BY [u].[age] ASC
     `;
 
     const actualSqlSimple = querySimple.toQueryString();

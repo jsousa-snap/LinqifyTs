@@ -61,11 +61,11 @@ describe("Queryable Paging Tests (Skip/Take)", () => {
   it("Teste Paging 1: should handle simple take", () => {
     const query = users.orderBy((u) => u.id).take(10);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[id] ASC
-OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
-    `;
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[id] ASC
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -73,11 +73,11 @@ OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
   it("Teste Paging 2: should handle simple skip", () => {
     const query = users.orderBy((u) => u.id).skip(5);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[id] ASC
-OFFSET 5 ROWS
-    `;
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[id] ASC
+OFFSET 5 ROWS`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -88,11 +88,11 @@ OFFSET 5 ROWS
       .skip(10)
       .take(5);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] ASC
-OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY
-    `;
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[name] ASC
+OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -103,11 +103,11 @@ OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY
       .take(10)
       .skip(5);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] ASC
-OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY
-    `;
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[age] ASC
+OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -119,12 +119,12 @@ OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY
       .skip(2)
       .take(4);
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-WHERE [t0].[age] > 18
-ORDER BY [t0].[email] DESC
-OFFSET 2 ROWS FETCH NEXT 4 ROWS ONLY
-    `;
+SELECT [u].*
+FROM [Users] AS [u]
+WHERE [u].[age] > 18
+ORDER BY [u].[email] DESC
+OFFSET 2 ROWS FETCH NEXT 4 ROWS ONLY`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -135,11 +135,11 @@ OFFSET 2 ROWS FETCH NEXT 4 ROWS ONLY
       .orderBy((dto) => dto.Age)
       .take(3);
     const expectedSql = `
-SELECT [t0].[name] AS [Name], [t0].[age] AS [Age]
-FROM [Users] AS [t0]
-ORDER BY [t0].[age] ASC
-OFFSET 0 ROWS FETCH NEXT 3 ROWS ONLY
-    `;
+SELECT [u].[name] AS [Name], [u].[age] AS [Age]
+FROM [Users] AS [u]
+ORDER BY [u].[age] ASC
+OFFSET 0 ROWS FETCH NEXT 3 ROWS ONLY`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -150,12 +150,13 @@ OFFSET 0 ROWS FETCH NEXT 3 ROWS ONLY
       .orderBy((u) => u.id)
       .skip(0)
       .take(5);
+
     const expectedSqlSkip0 = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[id] ASC
-OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY
-    `;
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[id] ASC
+OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY`;
+
     const actualSqlSkip0 = querySkip0.toQueryString();
     expect(normalizeSql(actualSqlSkip0)).toEqual(
       normalizeSql(expectedSqlSkip0)
@@ -167,11 +168,11 @@ OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY
       .skip(10)
       .take(0);
     const expectedSqlTake0 = `
-SELECT [t0].*
-FROM [Users] AS [t0]
-ORDER BY [t0].[id] ASC
-OFFSET 10 ROWS FETCH NEXT 0 ROWS ONLY
-    `;
+SELECT [u].*
+FROM [Users] AS [u]
+ORDER BY [u].[id] ASC
+OFFSET 10 ROWS FETCH NEXT 0 ROWS ONLY`;
+
     const actualSqlTake0 = queryTake0.toQueryString();
     expect(normalizeSql(actualSqlTake0)).toEqual(
       normalizeSql(expectedSqlTake0)
@@ -182,15 +183,17 @@ OFFSET 10 ROWS FETCH NEXT 0 ROWS ONLY
     const query = users.skip(5).take(10);
     const warnSpy = jest.spyOn(console, "warn").mockImplementation();
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
+SELECT [u].*
+FROM [Users] AS [u]
 ORDER BY (SELECT NULL)
 OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY
      `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("ORDER BY clause")
+      expect.stringContaining(
+        "Warning: SQL generation includes OFFSET or FETCH without ORDER BY. Adding 'ORDER BY (SELECT NULL)' for compatibility."
+      )
     );
     warnSpy.mockRestore();
   });
@@ -227,17 +230,16 @@ OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY
       .orderBy((uDto) => uDto.UserName);
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], JSON_QUERY(COALESCE((
-    SELECT [t1].[title]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
-    ORDER BY [t1].[postId] ASC
+SELECT [u].[name] AS [UserName], JSON_QUERY(COALESCE((
+    SELECT [p].[title]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
+    ORDER BY [p].[postId] ASC
     OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY
     FOR JSON PATH, INCLUDE_NULL_VALUES
 ), '[]')) AS [SecondAndThirdPostTitles]
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] ASC
-    `;
+FROM [Users] AS [u]
+ORDER BY [u].[name] ASC`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -258,22 +260,19 @@ ORDER BY [t0].[name] ASC
       .take(10);
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], JSON_QUERY(COALESCE((
-    SELECT [t1].[title]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
+SELECT [u].[name] AS [UserName], JSON_QUERY(COALESCE((
+    SELECT [p].[title]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
     FOR JSON PATH, INCLUDE_NULL_VALUES
 ), '[]')) AS [AllPostTitles]
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] ASC
-OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY
-    `;
+FROM [Users] AS [u]
+ORDER BY [u].[name] ASC
+OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
-
-  // **** NOVOS TESTES PARA WITHOUT_ARRAY_WRAPPER (SQL esperado CORRIGIDO) ****
 
   it("Teste Paging 15: should use WITHOUT_ARRAY_WRAPPER for subquery with take(1) and single column", () => {
     const query = users
@@ -289,17 +288,17 @@ OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY
       .orderBy((uDto) => uDto.UserName);
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], (
-    SELECT [t1].[title]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
-    ORDER BY [t1].[postId] ASC
+SELECT [u].[name] AS [UserName], (
+    SELECT [p].[title]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
+    ORDER BY [p].[postId] ASC
     OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
     FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
 ) AS [FirstPostTitle]
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] ASC
-    `;
+FROM [Users] AS [u]
+ORDER BY [u].[name] ASC`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -322,23 +321,22 @@ ORDER BY [t0].[name] ASC
       .orderBy((uDto) => uDto.UserName);
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], (
-    SELECT [t1].[postId] AS [Id], [t1].[title] AS [Title]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
-    ORDER BY [t1].[postId] ASC
+SELECT [u].[name] AS [UserName], (
+    SELECT [p].[postId] AS [Id], [p].[title] AS [Title]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
+    ORDER BY [p].[postId] ASC
     OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
     FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
 ) AS [FirstPostData]
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] ASC
-    `;
+FROM [Users] AS [u]
+ORDER BY [u].[name] ASC`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Paging 17: should use WITHOUT_ARRAY_WRAPPER for subquery with take(1) and wildcard projection", () => {
-    // CORRIGIDO: Deve usar wrapper
     const query = users
       .provideScope({ posts })
       .select((u) => ({
@@ -351,17 +349,16 @@ ORDER BY [t0].[name] ASC
       .orderBy((uDto) => uDto.UserName);
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], (
-    SELECT [t1].*
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
-    ORDER BY [t1].[postId] ASC
+SELECT [u].[name] AS [UserName], (
+    SELECT [p].*
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
+    ORDER BY [p].[postId] ASC
     OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
     FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
 ) AS [FirstPost]
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] ASC
-    `;
+FROM [Users] AS [u]
+ORDER BY [u].[name] ASC`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -381,17 +378,16 @@ ORDER BY [t0].[name] ASC
       .orderBy((uDto) => uDto.UserName);
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], JSON_QUERY(COALESCE((
-    SELECT [t1].[title]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
-    ORDER BY [t1].[postId] ASC
+SELECT [u].[name] AS [UserName], JSON_QUERY(COALESCE((
+    SELECT [p].[title]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
+    ORDER BY [p].[postId] ASC
     OFFSET 0 ROWS FETCH NEXT 2 ROWS ONLY
     FOR JSON PATH, INCLUDE_NULL_VALUES
 ), '[]')) AS [FirstTwoTitles]
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] ASC
-    `;
+FROM [Users] AS [u]
+ORDER BY [u].[name] ASC`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -410,22 +406,19 @@ ORDER BY [t0].[name] ASC
       .orderBy((uDto) => uDto.UserName);
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], JSON_QUERY(COALESCE((
-    SELECT [t1].[title]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
-    ORDER BY [t1].[postId] ASC
+SELECT [u].[name] AS [UserName], JSON_QUERY(COALESCE((
+    SELECT [p].[title]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
+    ORDER BY [p].[postId] ASC
     FOR JSON PATH, INCLUDE_NULL_VALUES
 ), '[]')) AS [AllTitles]
-FROM [Users] AS [t0]
-ORDER BY [t0].[name] ASC
-    `; // CORRETO: sem take() => COM COALESCE, SEM WITHOUT_ARRAY_WRAPPER
+FROM [Users] AS [u]
+ORDER BY [u].[name] ASC`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
-
-  // **** FIM NOVOS TESTES ****
-}); // Fim do describe
+});
 
 // --- END OF FILE src/__tests__/paging.test.ts ---

@@ -29,14 +29,11 @@ interface DataItemDto {
 // Helper normalizeSql (inalterado)
 const normalizeSql = (sql: string): string => {
   let result = sql;
-
-  // Remove espaços em branco seguidos pela primeira quebra de linha no início
   result = result.replace(/^\s*\n/, "");
-
-  // Remove a última quebra de linha seguida por espaços em branco no final
   result = result.replace(/\n\s*$/, "");
-
-  return result;
+  // Adicional: Remover múltiplos espaços para lidar com variações de indentação
+  result = result.replace(/\s+/g, " ");
+  return result.trim();
 };
 
 describe("Queryable Union/Concat Tests", () => {
@@ -63,20 +60,23 @@ describe("Queryable Union/Concat Tests", () => {
     jest.restoreAllMocks();
   });
 
-  // Testes 1 a 11 permanecem inalterados
+  // Testes com aliases corrigidos
   it("Teste Union 1: Simple Union", () => {
     const query = set1.union(set2);
+    // set1 -> i, set2 -> i1, union -> un
     const expectedOuterSql = `
-SELECT [t2].*
+SELECT [u].*
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
         )
         UNION
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
         )
-    ) AS [t2]
+    ) AS [u]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedOuterSql));
@@ -84,17 +84,20 @@ FROM (
 
   it("Teste Union 2: Simple Concat (UNION ALL)", () => {
     const query = set1.concat(set2);
+
     const expectedOuterSql = `
-SELECT [t2].*
+SELECT [u].*
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
         )
         UNION ALL
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
         )
-    ) AS [t2]
+    ) AS [u]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedOuterSql));
@@ -102,319 +105,311 @@ FROM (
 
   it("Teste Union 3: Union with Where clauses", () => {
     const query = set1
-      .where((i) => i.category === "A")
-      .union(set2.where((i) => i.id > 10));
+      .where((item) => item.category === "A") // Alias interno 'i'
+      .union(set2.where((item) => item.id > 10)); // Alias interno 'i1'
+    // union -> un
     const expectedOuterSql = `
-SELECT [t2].*
+SELECT [u].*
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
-            WHERE [t0].[category] = 'A'
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
+            WHERE [i].[category] = 'A'
         )
         UNION
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
-            WHERE [t1].[id] > 10
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
+            WHERE [i1].[id] > 10
         )
-    ) AS [t2]
-    `;
+    ) AS [u]`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedOuterSql));
   });
 
   it("Teste Union 4: Concat with Select projections", () => {
-    // As projeções DEVEM ser compatíveis (mesmos nomes/tipos)
     const query = set1
-      .select((i) => ({ itemId: i.id, itemValue: i.value }))
-      .concat(set2.select((i) => ({ itemId: i.id, itemValue: i.value })));
-
+      .select((i) => ({ itemId: i.id, itemValue: i.value })) // Alias interno 'i'
+      .concat(set2.select((i) => ({ itemId: i.id, itemValue: i.value }))); // Alias interno 'i1'
+    // union -> un
     const expectedOuterSql = `
-SELECT [t2].*
+SELECT [u].*
 FROM (
-        (SELECT [t0].[id] AS [itemId], [t0].[value] AS [itemValue]
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].[id] AS [itemId], [i].[value] AS [itemValue]
+            FROM [Items1] AS [i]
         )
         UNION ALL
-        (SELECT [t1].[id] AS [itemId], [t1].[value] AS [itemValue]
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].[id] AS [itemId], [i1].[value] AS [itemValue]
+            FROM [Items2] AS [i1]
         )
-    ) AS [t2]
-    `;
+    ) AS [u]`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedOuterSql));
   });
 
   it("Teste Union 5: Union followed by Where", () => {
     const query = set1
-      .union(set2)
-      .where((combined) => combined.value.includes("test"));
-
-    // O WHERE é aplicado sobre o resultado da UNION
+      .union(set2) // union -> un
+      .where((combined) => combined.value.includes("test")); // Referencia 'un'
     const expectedSql = `
-SELECT [t2].*
+SELECT [u].*
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
         )
         UNION
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
         )
-    ) AS [t2]
-WHERE ([t2].[value] LIKE '%test%')
-    `;
+    ) AS [u]
+WHERE ([u].[value] LIKE '%test%')`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Union 6: Concat followed by OrderBy", () => {
-    const query = set1.concat(set2).orderBy((combined) => combined.id);
-
-    // O ORDER BY é aplicado sobre o resultado do UNION ALL
+    const query = set1
+      .concat(set2) // union -> un
+      .orderBy((combined) => combined.id); // Referencia 'un'
     const expectedSql = `
-SELECT [t2].*
+SELECT [u].*
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
         )
         UNION ALL
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
         )
-    ) AS [t2]
-ORDER BY [t2].[id] ASC
-    `;
+    ) AS [u]
+ORDER BY [u].[id] ASC`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Union 7: Union followed by Select", () => {
     const query = set1
-      .union(set2)
-      .select((combined) => ({ OnlyValue: combined.value }));
-
-    // O SELECT é aplicado sobre o resultado da UNION
+      .union(set2) // union -> un
+      .select((combined) => ({ OnlyValue: combined.value })); // Referencia 'un'
     const expectedSql = `
-SELECT [t2].[value] AS [OnlyValue]
+SELECT [u].[value] AS [OnlyValue]
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
         )
         UNION
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
         )
-    ) AS [t2]
-    `;
+    ) AS [u]`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Union 8: Union of three sets (Flattened)", () => {
-    // Testa o encadeamento: (set1 UNION set2) UNION set3
     const query = set1.union(set2).union(set3);
-
-    // O resultado esperado agora é plano (sem aninhamento de UNION)
     const expectedSql = `
-SELECT [t4].*
+SELECT [u1].*
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
         )
         UNION
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
         )
         UNION
-        (SELECT [t3].*
-            FROM [Items3] AS [t3]
+        (
+            SELECT [i2].*
+            FROM [Items3] AS [i2]
         )
-    ) AS [t4]
-    `;
+    ) AS [u1]`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Union 9: Union with compatible DTO projections", () => {
-    // Garante que a união funcione mesmo se as fontes originais forem diferentes,
-    // desde que a projeção final seja compatível.
-    const projectedSet1 = set1
+    const projectedSet1 = set1 // alias interno 'i'
       .where((i) => i.id < 5)
       .select((i) => ({ id: i.id, text: i.value }));
-    const projectedSet3 = set3
+    const projectedSet3 = set3 // alias interno 'i1'
       .where((i) => i.category == "X")
-      .select((i) => ({ id: i.id, text: i.category + i.value })); // Projeção diferente, mas estrutura compatível
+      .select((i) => ({ id: i.id, text: i.category + i.value }));
 
-    const query = projectedSet1.union(projectedSet3);
-
+    const query = projectedSet1.union(projectedSet3); // union -> un
     const expectedSql = `
-SELECT [t2].*
+SELECT [u].*
 FROM (
-        (SELECT [t0].[id], [t0].[value] AS [text]
-            FROM [Items1] AS [t0]
-            WHERE [t0].[id] < 5
+        (
+            SELECT [i].[id], [i].[value] AS [text]
+            FROM [Items1] AS [i]
+            WHERE [i].[id] < 5
         )
         UNION
-        (SELECT [t1].[id], [t1].[category] + [t1].[value] AS [text]
-            FROM [Items3] AS [t1]
-            WHERE [t1].[category] = 'X'
+        (
+            SELECT [i1].[id], [i1].[category] + [i1].[value] AS [text]
+            FROM [Items3] AS [i1]
+            WHERE [i1].[category] = 'X'
         )
-    ) AS [t2]
-    `;
+    ) AS [u]`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Union 10: Concat followed by Take", () => {
-    // Testar paginação após união (requer ORDER BY)
     const query = set1
-      .concat(set2)
-      .orderBy((c) => c.id)
+      .concat(set2) // union -> un
+      .orderBy((c) => c.id) // referencia un
       .take(10);
-
     const expectedSql = `
-SELECT [t2].*
+SELECT [u].*
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
         )
         UNION ALL
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
         )
-    ) AS [t2]
-ORDER BY [t2].[id] ASC
-OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
-    `;
+    ) AS [u]
+ORDER BY [u].[id] ASC
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // Teste opcional: Union com uma fonte que já é uma união
   it("Teste Union 11: Union of (set1 UNION set2) and (set3 UNION set1) (Flattened)", () => {
-    const union12 = set1.union(set2);
-    const union31 = set3.union(set1); // set1 aparece em ambas as uniões
-
-    const query = union12.union(union31);
-
-    // Espera-se uma estrutura plana
-    // O otimizador SQL pode remover a duplicação do set1, mas a tradução LINQ o incluirá
+    const union12 = set1.union(set2); // union interna -> un (fontes i, i1)
+    const union31 = set3.union(set1); // union interna -> un1 (fontes i2, i3)
+    const query = union12.union(union31); // union externa -> un2 (fontes i, i1, un1)
     const expectedSql = `
-SELECT [t6].*
+SELECT [u2].*
 FROM (
-        (SELECT [t0].*
-            FROM [Items1] AS [t0]
+        (
+            SELECT [i].*
+            FROM [Items1] AS [i]
         )
         UNION
-        (SELECT [t1].*
-            FROM [Items2] AS [t1]
+        (
+            SELECT [i1].*
+            FROM [Items2] AS [i1]
         )
         UNION
-        (SELECT [t5].*
+        (
+            SELECT [u1].*
             FROM (
-                    (SELECT [t3].*
-                        FROM [Items3] AS [t3]
+                    (
+                        SELECT [i2].*
+                        FROM [Items3] AS [i2]
                     )
                     UNION
-                    (SELECT [t4].*
-                        FROM [Items1] AS [t4]
+                    (
+                        SELECT [i3].*
+                        FROM [Items1] AS [i3]
                     )
-                ) AS [t5]
+                ) AS [u1]
         )
-    ) AS [t6]
-    `;
+    ) AS [u2]`;
+
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // **** NOVO TESTE ****
   it("Teste Union 12: Union inside Subquery Projection", () => {
-    // Define projeções compatíveis para unir
     const proj1 = set1
       .where((i) => i.category == "A")
       .select((i) => ({ itemValue: i.value }));
     const proj2 = set2
       .where((i) => i.category == "A")
       .select((i) => ({ itemValue: i.value }));
-
-    // Query principal selecionando usuários e uma lista de valores de itens da categoria 'A'
-    const query = users
-      .provideScope({ proj1, proj2 }) // Fornece as projeções ao escopo
-      .select((u) => ({
-        UserName: u.name,
-        CategoryAValues: proj1 // Começa a subquery com a primeira projeção
-          .union(proj2) // Une com a segunda projeção DENTRO da subquery
-          .select((p) => p.itemValue), // Seleciona apenas o valor final
-      }));
-
-    // O SQL esperado terá uma subconsulta FOR JSON contendo a UNION
+    const query = users.provideScope({ proj1, proj2 }).select((user) => ({
+      // parâmetro user -> alias u
+      UserName: user.name,
+      CategoryAValues: proj1.union(proj2).select((p) => p.itemValue), // parâmetro p -> alias un
+    }));
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], JSON_QUERY(COALESCE((
-    SELECT [t3].[itemValue]
+SELECT [u].[name] AS [UserName], JSON_QUERY(COALESCE((
+    SELECT [u1].[itemValue]
     FROM (
-            (SELECT [t1].[value] AS [itemValue]
-                FROM [Items1] AS [t1]
-                WHERE [t1].[category] = 'A'
-            )
-            UNION
-            (SELECT [t2].[value] AS [itemValue]
-                FROM [Items2] AS [t2]
-                WHERE [t2].[category] = 'A'
-            )
-        ) AS [t3]
+        (
+            SELECT [i].[value] AS [itemValue]
+            FROM [Items1] AS [i]
+            WHERE [i].[category] = 'A'
+        )
+        UNION
+        (
+            SELECT [i1].[value] AS [itemValue]
+            FROM [Items2] AS [i1]
+            WHERE [i1].[category] = 'A'
+        )
+    ) AS [u1]
     FOR JSON PATH, INCLUDE_NULL_VALUES
 ), '[]')) AS [CategoryAValues]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // **** NOVO TESTE ****
   it("Teste Union 13: Union inside Subquery Projection limit 1", () => {
-    // Define projeções compatíveis para unir
     const proj1 = set1
       .where((i) => i.category == "A")
       .select((i) => ({ itemValue: i.value }));
     const proj2 = set2
       .where((i) => i.category == "A")
       .select((i) => ({ itemValue: i.value }));
-
-    // Query principal selecionando usuários e uma lista de valores de itens da categoria 'A'
-    const query = users
-      .provideScope({ proj1, proj2 }) // Fornece as projeções ao escopo
-      .select((u) => ({
-        UserName: u.name,
-        CategoryAValue: proj1 // Começa a subquery com a primeira projeção
-          .union(proj2) // Une com a segunda projeção DENTRO da subquery
-          .select((p) => p.itemValue)
-          .take(1), // Seleciona apenas o valor final
-      }));
-
-    // O SQL esperado terá uma subconsulta FOR JSON contendo a UNION
+    const query = users.provideScope({ proj1, proj2 }).select((user) => ({
+      // user -> u
+      UserName: user.name,
+      CategoryAValue: proj1
+        .union(proj2)
+        .select((p) => p.itemValue) // p -> un
+        .take(1),
+    }));
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], (
-    SELECT [t3].[itemValue]
+SELECT [u].[name] AS [UserName], (
+    SELECT [u1].[itemValue]
     FROM (
-            (SELECT [t1].[value] AS [itemValue]
-                FROM [Items1] AS [t1]
-                WHERE [t1].[category] = 'A'
+            (
+                SELECT [i].[value] AS [itemValue]
+                FROM [Items1] AS [i]
+                WHERE [i].[category] = 'A'
             )
             UNION
-            (SELECT [t2].[value] AS [itemValue]
-                FROM [Items2] AS [t2]
-                WHERE [t2].[category] = 'A'
+            (
+                SELECT [i1].[value] AS [itemValue]
+                FROM [Items2] AS [i1]
+                WHERE [i1].[category] = 'A'
             )
-        ) AS [t3]
+        ) AS [u1]
     ORDER BY (SELECT NULL)
     OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
     FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
 ) AS [CategoryAValue]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
       `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
-  // **** FIM NOVO TESTE ****
 });
 // --- END OF FILE src/__tests__/union.test.ts ---

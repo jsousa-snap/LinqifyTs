@@ -49,9 +49,9 @@ describe("Queryable GroupBy Tests", () => {
     );
 
     const expectedSql = `
-SELECT [t0].[department] AS [Department], COUNT(1) AS [EmployeeCount]
-FROM [Employees] AS [t0]
-GROUP BY [t0].[department]
+SELECT [e].[department] AS [Department], COUNT(1) AS [EmployeeCount]
+FROM [Employees] AS [e]
+GROUP BY [e].[department]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -67,9 +67,9 @@ GROUP BY [t0].[department]
     );
 
     const expectedSql = `
-SELECT [t0].[department] AS [Department], SUM([t0].[salary]) AS [TotalSalary]
-FROM [Employees] AS [t0]
-GROUP BY [t0].[department]
+SELECT [e].[department] AS [Department], SUM([e].[salary]) AS [TotalSalary]
+FROM [Employees] AS [e]
+GROUP BY [e].[department]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -86,9 +86,9 @@ GROUP BY [t0].[department]
     );
 
     const expectedSql = `
-SELECT [t0].[department] AS [Department], [t0].[country] AS [Country], AVG([t0].[salary]) AS [AverageSalary]
-FROM [Employees] AS [t0]
-GROUP BY [t0].[department], [t0].[country]
+SELECT [e].[department] AS [Department], [e].[country] AS [Country], AVG([e].[salary]) AS [AverageSalary]
+FROM [Employees] AS [e]
+GROUP BY [e].[department], [e].[country]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -106,9 +106,9 @@ GROUP BY [t0].[department], [t0].[country]
     );
 
     const expectedSql = `
-SELECT [t0].[country] AS [Country], COUNT(1) AS [Count], MIN([t0].[salary]) AS [MinSalary], MAX([t0].[salary]) AS [MaxSalary]
-FROM [Employees] AS [t0]
-GROUP BY [t0].[country]
+SELECT [e].[country] AS [Country], COUNT(1) AS [Count], MIN([e].[salary]) AS [MinSalary], MAX([e].[salary]) AS [MaxSalary]
+FROM [Employees] AS [e]
+GROUP BY [e].[country]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -123,10 +123,10 @@ GROUP BY [t0].[country]
       );
 
     const expectedSql = `
-SELECT [t0].[department] AS [Department], COUNT(1) AS [HighSalaryCount]
-FROM [Employees] AS [t0]
-WHERE [t0].[salary] > 50000
-GROUP BY [t0].[department]
+SELECT [e].[department] AS [Department], COUNT(1) AS [HighSalaryCount]
+FROM [Employees] AS [e]
+WHERE [e].[salary] > 50000
+GROUP BY [e].[department]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -143,9 +143,9 @@ GROUP BY [t0].[department]
 
     // *** CORRIGIDO: Espera HAVING agora ***
     const expectedSql = `
-SELECT [t0].[department] AS [Department], COUNT(1) AS [Count]
-FROM [Employees] AS [t0]
-GROUP BY [t0].[department]
+SELECT [e].[department] AS [Department], COUNT(1) AS [Count]
+FROM [Employees] AS [e]
+GROUP BY [e].[department]
 HAVING COUNT(1) > 10
     `;
     const actualSql = query.toQueryString();
@@ -166,8 +166,8 @@ HAVING COUNT(1) > 10
     // It typically results in aggregates over the whole table without a GROUP BY clause.
     // O SQL Server aceita GROUP BY <constante>, então manteremos assim por enquanto.
     const expectedSql = `
-SELECT COUNT(1) AS [TotalEmployees], AVG([t0].[salary]) AS [AverageSalary]
-FROM [Employees] AS [t0]
+SELECT COUNT(1) AS [TotalEmployees], AVG([e].[salary]) AS [AverageSalary]
+FROM [Employees] AS [e]
 GROUP BY 1
     `;
     const actualSql = query.toQueryString();

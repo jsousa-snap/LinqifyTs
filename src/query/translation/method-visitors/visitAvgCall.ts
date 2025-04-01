@@ -17,7 +17,9 @@ import {
   SqlFunctionCallExpression,
 } from "../../../sql-expressions";
 import { SqlDataSource, TranslationContext } from "../TranslationContext";
-import { OperatorType } from "../../generation/utils/sqlUtils"; // Import OperatorType if needed for predicate combination
+import { OperatorType } from "../../generation/utils/sqlUtils";
+// *** NOVO: Importa AliasGenerator ***
+import { AliasGenerator } from "../../generation/AliasGenerator";
 
 /**
  * Traduz uma chamada de método LINQ 'avg(selector)'.
@@ -26,6 +28,7 @@ import { OperatorType } from "../../generation/utils/sqlUtils"; // Import Operat
  * @param sourceForLambda A fonte de dados para resolver a lambda selector.
  * @param context O contexto de tradução.
  * @param visitInContext Função para visitar a lambda no contexto correto.
+ * @param aliasGenerator O gerador de alias (para o alias do Select resultante, se necessário).
  * @returns A nova SelectExpression que calcula a média.
  */
 export function visitAvgCall(
@@ -36,7 +39,8 @@ export function visitAvgCall(
   visitInContext: (
     expression: LinqExpression,
     context: TranslationContext
-  ) => SqlExpression | null
+  ) => SqlExpression | null,
+  aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
 ): SelectExpression {
   if (
     expression.args.length !== 1 ||
@@ -63,15 +67,15 @@ export function visitAvgCall(
   ]);
   const avgProjection = new ProjectionExpression(avgFunction, "avg_result");
 
-  // Retorna uma nova SelectExpression *apenas* com a projeção AVG,
-  // mantendo o FROM, JOINs e WHERE originais.
-  // ORDER BY e Paging são ignorados para agregações.
-  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
+  // As agregações terminais geralmente não precisam de um alias externo significativo
+  const aggregationAlias = ""; // Usar alias vazio
+
   return new SelectExpression(
+    aggregationAlias, // alias
     [avgProjection], // projection
     currentSelect.from, // from
     currentSelect.predicate, // predicate (WHERE)
-    null, // having <<< Passando null
+    null, // having
     currentSelect.joins, // joins
     [] // orderBy (Remove)
     // Offset e Limit são removidos (default null)

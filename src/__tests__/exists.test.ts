@@ -61,7 +61,7 @@ describe("Queryable Exists Operator Tests", () => {
     const expectedSql = `
 EXISTS (
     SELECT 1
-    FROM [Users] AS [t0]
+    FROM [Users] AS [u]
 )
     `;
     const actualSql = dbContext["queryProvider"].getQueryText(existsCallExpr);
@@ -82,8 +82,8 @@ EXISTS (
     const expectedSql = `
 EXISTS (
     SELECT 1
-    FROM [Users] AS [t0]
-    WHERE [t0].[age] > 90
+    FROM [Users] AS [u]
+    WHERE [u].[age] > 90
 )
     `;
     const actualSql = dbContext["queryProvider"].getQueryText(existsCallExpr);
@@ -103,8 +103,8 @@ EXISTS (
     const expectedSql = `
 EXISTS (
     SELECT 1
-    FROM [Users] AS [t0]
-    WHERE [t0].[name] = 'Alice'
+    FROM [Users] AS [u]
+    WHERE [u].[name] = 'Alice'
 )
     `;
     const actualSql = dbContext["queryProvider"].getQueryText(existsCallExpr);
@@ -122,12 +122,12 @@ EXISTS (
       .where((u) => posts.where((p) => p.authorId === u.id).exists()); // 'posts' agora é conhecido
 
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
+SELECT [u].*
+FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
-        FROM [Posts] AS [t1]
-        WHERE [t1].[authorId] = [t0].[id]
+        FROM [Posts] AS [p]
+        WHERE [p].[authorId] = [u].[id]
     )
         `;
     const actualSql = query.toQueryString();
@@ -147,12 +147,12 @@ WHERE EXISTS (
       ); // 'posts' agora é conhecido
 
     const expectedSql = `
-SELECT [t0].*
-FROM [Users] AS [t0]
+SELECT [u].*
+FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
-        FROM [Posts] AS [t1]
-        WHERE ([t1].[authorId] = [t0].[id] AND [t1].[title] = 'Specific Post')
+        FROM [Posts] AS [p]
+        WHERE ([p].[authorId] = [u].[id] AND [p].[title] = 'Specific Post')
     )
         `;
     const actualSql = query.toQueryString();

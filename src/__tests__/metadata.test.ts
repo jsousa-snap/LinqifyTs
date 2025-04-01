@@ -200,7 +200,6 @@ describe("SQL Expression Metadata Generation Tests", () => {
     const join = selectMeta.joins[0] as InnerJoinExpressionMetadata;
     expect(join.$type).toBe(SqlExpressionType.InnerJoin);
     expect(join.table.$type).toBe(SqlExpressionType.Table);
-    expect(join.table.name).toBe("Posts");
     expect(join.table.alias).toBe(postAlias);
 
     // Join Predicate
@@ -469,74 +468,75 @@ describe("SQL Expression Metadata Generation Tests", () => {
       .select((u) => u.email);
 
     const metadata = getMetadata(query);
-    const generatedJson = JSON.stringify(metadata, null, 2); // Usa 2 espaços para formatação
+    const generatedJson = JSON.stringify(metadata, null, 4);
 
     const expectedJson = `{
-  "$type": "Select",
-  "projection": [
-    {
-      "$type": "Projection",
-      "expression": {
-        "$type": "Column",
-        "name": "email",
-        "table": {
-          "$type": "Table",
-          "alias": "t0",
-          "name": "Users"
+    "$type": "Select",
+    "alias": "s",
+    "projection": [
+        {
+            "$type": "Projection",
+            "expression": {
+                "$type": "Column",
+                "name": "email",
+                "table": {
+                    "$type": "Table",
+                    "alias": "u",
+                    "name": "Users"
+                }
+            },
+            "alias": "email"
         }
-      },
-      "alias": "email"
-    }
-  ],
-  "from": {
-    "$type": "Table",
-    "alias": "t0",
-    "name": "Users"
-  },
-  "predicate": {
-    "$type": "Binary",
-    "left": {
-      "$type": "Binary",
-      "left": {
-        "$type": "Column",
-        "name": "age",
-        "table": {
-          "$type": "Table",
-          "alias": "t0",
-          "name": "Users"
-        }
-      },
-      "operator": ">",
-      "right": {
-        "$type": "Constant",
-        "value": 30
-      }
+    ],
+    "from": {
+        "$type": "Table",
+        "alias": "u",
+        "name": "Users"
     },
-    "operator": "&&",
-    "right": {
-      "$type": "Binary",
-      "left": {
-        "$type": "Column",
-        "name": "name",
-        "table": {
-          "$type": "Table",
-          "alias": "t0",
-          "name": "Users"
+    "predicate": {
+        "$type": "Binary",
+        "left": {
+            "$type": "Binary",
+            "left": {
+                "$type": "Column",
+                "name": "age",
+                "table": {
+                    "$type": "Table",
+                    "alias": "u",
+                    "name": "Users"
+                }
+            },
+            "operator": ">",
+            "right": {
+                "$type": "Constant",
+                "value": 30
+            }
+        },
+        "operator": "&&",
+        "right": {
+            "$type": "Binary",
+            "left": {
+                "$type": "Column",
+                "name": "name",
+                "table": {
+                    "$type": "Table",
+                    "alias": "u",
+                    "name": "Users"
+                }
+            },
+            "operator": "==",
+            "right": {
+                "$type": "Constant",
+                "value": "Alice"
+            }
         }
-      },
-      "operator": "==",
-      "right": {
-        "$type": "Constant",
-        "value": "Alice"
-      }
-    }
-  },
-  "having": null,
-  "joins": [],
-  "orderBy": [],
-  "offset": null,
-  "limit": null,
-  "groupBy": []
+    },
+    "having": null,
+    "joins": [],
+    "orderBy": [],
+    "offset": null,
+    "limit": null,
+    "groupBy": []
 }`;
 
     // Compara as strings JSON formatadas

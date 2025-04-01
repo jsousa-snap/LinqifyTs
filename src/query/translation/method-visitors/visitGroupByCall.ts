@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/translation/method-visitors/visitGroupByCall.ts ---
 
+// src/query/translation/method-visitors/visitGroupByCall.ts
+
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -24,6 +26,9 @@ import {
 } from "../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../TranslationContext";
 import { QueryExpressionVisitor } from "../QueryExpressionVisitor";
+import { AliasGenerator } from "../../generation/AliasGenerator";
+// *** NOVO: Importar VisitFn de types.ts ***
+import { VisitFn } from "../../generation/types";
 
 /**
  * Traduz uma chamada de método LINQ 'groupBy(keySelector, resultSelector)'.
@@ -33,13 +38,11 @@ export function visitGroupByCall(
   currentSelect: SelectExpression,
   sourceForOuterLambda: SqlDataSource,
   context: TranslationContext, // Contexto principal
-  visitInContext: (
-    expression: LinqExpression,
-    context: TranslationContext
-  ) => SqlExpression | null,
-  rootVisitor: QueryExpressionVisitor
+  visitInContext: VisitFn, // <<< Usa o tipo VisitFn importado
+  rootVisitor: QueryExpressionVisitor,
+  aliasGenerator: AliasGenerator
 ): SelectExpression {
-  // Validações (inalteradas)
+  // (Validações e lógica inicial inalterada...)
   if (
     expression.args.length !== 2 ||
     expression.args[0].type !== LinqExpressionType.Lambda ||
@@ -49,29 +52,23 @@ export function visitGroupByCall(
   }
   const keyLambda = expression.args[0] as LinqLambdaExpression;
   const resultLambda = expression.args[1] as LinqLambdaExpression;
-
   if (
     keyLambda.parameters.length !== 1 ||
     resultLambda.parameters.length !== 2
   ) {
     throw new Error("Invalid parameter count for 'groupBy' lambda selectors.");
   }
-
   const keyEntityParam = keyLambda.parameters[0];
-  const resultKeyParam = resultLambda.parameters[0]; // Parâmetro 'key'
-  const resultGroupParam = resultLambda.parameters[1]; // Parâmetro 'group'
-
-  // --- 1. Traduzir Chaves de Agrupamento (keySelector) ---
+  const resultKeyParam = resultLambda.parameters[0];
+  const resultGroupParam = resultLambda.parameters[1];
   const keyContext = context.createChildContext(
     [keyEntityParam],
     [sourceForOuterLambda]
   );
   const keySqlExpressions: SqlExpression[] = [];
   const keyMapping = new Map<string | symbol, SqlExpression>();
-
   const keyBody = keyLambda.body;
   if (keyBody.type === LinqExpressionType.NewObject) {
-    // Chave composta
     const newObjectKey = keyBody as LinqNewObjectExpression;
     for (const [propName, propExpr] of newObjectKey.properties.entries()) {
       const keyPartSql = visitInContext(propExpr, keyContext);
@@ -88,10 +85,9 @@ export function visitGroupByCall(
         );
       }
       keySqlExpressions.push(keyPartSql);
-      keyMapping.set(propName, keyPartSql); // Mapeia nome da propriedade -> SQL
+      keyMapping.set(propName, keyPartSql);
     }
   } else {
-    // Chave simples
     const keyPartSql = visitInContext(keyBody, keyContext);
     if (
       !keyPartSql ||
@@ -106,33 +102,26 @@ export function visitGroupByCall(
       );
     }
     keySqlExpressions.push(keyPartSql);
-    keyMapping.set(resultKeyParam.name, keyPartSql); // Mapeia nome do parâmetro 'key' -> SQL
+    keyMapping.set(resultKeyParam.name, keyPartSql);
   }
-
   if (keySqlExpressions.length === 0) {
     throw new Error("groupBy resulted in zero key expressions.");
   }
-
-  // --- 2. Traduzir Projeção do Resultado (resultSelector) ---
-  const resultContext = context.createChildContext([], []); // Contexto filho para resultSelector
-
-  // Registra 'key' com informações especiais
+  const resultContext = context.createChildContext([], []);
   const keyPlaceholderSource = {
     isGroupKeyPlaceholder: true,
     keySqlMapping: keyMapping,
     getSqlForKeyAccess(memberName?: string): SqlExpression | undefined {
       if (this.keySqlMapping.size === 1 && !memberName) {
-        return this.keySqlMapping.values().next().value; // Chave simples
+        return this.keySqlMapping.values().next().value;
       }
       if (memberName && this.keySqlMapping.has(memberName)) {
-        return this.keySqlMapping.get(memberName); // Membro de chave composta
+        return this.keySqlMapping.get(memberName);
       }
       return undefined;
     },
   };
   resultContext.registerParameter(resultKeyParam, keyPlaceholderSource as any);
-
-  // Registra 'group' com informações especiais
   const groupPlaceholderSource = {
     isGroupPlaceholder: true,
     originalSource: sourceForOuterLambda,
@@ -141,23 +130,19 @@ export function visitGroupByCall(
     resultGroupParam,
     groupPlaceholderSource as any
   );
-
-  // Traduz o corpo do resultSelector
   const finalProjections: ProjectionExpression[] = [];
   const resultBody = resultLambda.body;
-
   if (resultBody.type === LinqExpressionType.NewObject) {
     const newObjectResult = resultBody as LinqNewObjectExpression;
     for (const [alias, expr] of newObjectResult.properties.entries()) {
-      // Passa os parâmetros necessários explicitamente para o helper
       const sqlExpr = translateResultSelectorExpression(
         expr,
         resultContext,
         visitInContext,
         sourceForOuterLambda,
-        context, // Passa o contexto raiz
-        resultKeyParam, // Passa a referência ao parâmetro 'key'
-        resultGroupParam // Passa a referência ao parâmetro 'group'
+        context,
+        resultKeyParam,
+        resultGroupParam
       );
       if (!sqlExpr) {
         throw new Error(
@@ -167,15 +152,14 @@ export function visitGroupByCall(
       finalProjections.push(new ProjectionExpression(sqlExpr, alias));
     }
   } else {
-    // Projeção simples
     const sqlExpr = translateResultSelectorExpression(
       resultBody,
       resultContext,
       visitInContext,
       sourceForOuterLambda,
-      context, // Passa o contexto raiz
-      resultKeyParam, // Passa a referência ao parâmetro 'key'
-      resultGroupParam // Passa a referência ao parâmetro 'group'
+      context,
+      resultKeyParam,
+      resultGroupParam
     );
     if (!sqlExpr) {
       throw new Error(
@@ -185,22 +169,22 @@ export function visitGroupByCall(
     const alias = `groupResult${finalProjections.length}`;
     finalProjections.push(new ProjectionExpression(sqlExpr, alias));
   }
-
   if (finalProjections.length === 0) {
     throw new Error("groupBy resultSelector resulted in zero projections.");
   }
 
-  // --- 3. Construir SelectExpression Final ---
-  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
+  const groupByAlias = aliasGenerator.generateAlias("group");
+
   return new SelectExpression(
-    finalProjections, // projection
-    currentSelect.from, // from
-    currentSelect.predicate, // predicate (WHERE original)
-    null, // having <<< Passando null (HAVING é definido por visitHavingCall)
-    currentSelect.joins, // joins
-    [], // orderBy (Resetado por groupBy)
-    null, // offset (Resetado)
-    null, // limit (Resetado)
+    groupByAlias,
+    finalProjections,
+    currentSelect.from,
+    currentSelect.predicate,
+    currentSelect.having, // Preserva having
+    currentSelect.joins,
+    [], // orderBy
+    null, // offset
+    null, // limit
     keySqlExpressions // groupBy
   );
 }
@@ -208,21 +192,18 @@ export function visitGroupByCall(
 // --- Helper para Traduzir Expressões dentro do ResultSelector ---
 function translateResultSelectorExpression(
   expression: LinqExpression,
-  resultContext: TranslationContext, // Contexto do resultSelector (key/group)
-  visitInContext: (
-    expression: LinqExpression,
-    context: TranslationContext
-  ) => SqlExpression | null,
-  originalSource: SqlDataSource, // Fonte ANTES do groupBy
-  rootContext: TranslationContext, // Contexto principal/raiz
-  keyParam: LinqParameterExpression, // Referência ao parâmetro 'key'
-  groupParam: LinqParameterExpression // Referência ao parâmetro 'group'
+  resultContext: TranslationContext,
+  // *** CORREÇÃO: Usa o tipo VisitFn importado ***
+  visitInContext: VisitFn,
+  originalSource: SqlDataSource,
+  rootContext: TranslationContext,
+  keyParam: LinqParameterExpression,
+  groupParam: LinqParameterExpression
 ): SqlExpression | null {
+  // (Lógica interna do helper inalterada...)
   // --- 1. Check for Key Access ---
   const keyPlaceholderSource =
-    resultContext.getDataSourceForParameter(keyParam); // Busca pelo parâmetro 'key'
-
-  // Case 1.1: Direct access: key
+    resultContext.getDataSourceForParameter(keyParam);
   if (
     expression.type === LinqExpressionType.Parameter &&
     expression === keyParam
@@ -231,16 +212,13 @@ function translateResultSelectorExpression(
       keyPlaceholderSource &&
       (keyPlaceholderSource as any).isGroupKeyPlaceholder
     ) {
-      const keySql = (keyPlaceholderSource as any).getSqlForKeyAccess(); // Acesso à chave simples
+      const keySql = (keyPlaceholderSource as any).getSqlForKeyAccess();
       if (keySql) return keySql;
       else
         throw new Error("Could not resolve simple key SQL in result selector.");
     }
-  }
-  // Case 1.2: Member access: key.Department
-  else if (expression.type === LinqExpressionType.MemberAccess) {
+  } else if (expression.type === LinqExpressionType.MemberAccess) {
     const memberExpr = expression as LinqMemberExpression;
-    // Verifica se o objeto base é o 'keyParam'
     if (
       memberExpr.objectExpression.type === LinqExpressionType.Parameter &&
       memberExpr.objectExpression === keyParam
@@ -260,11 +238,9 @@ function translateResultSelectorExpression(
       }
     }
   }
-
   // --- 2. Check for Aggregate Call on Group ---
   if (expression.type === LinqExpressionType.Call) {
     const callExpr = expression as LinqMethodCallExpression;
-    // Verifica se a fonte da chamada é o 'groupParam'
     if (
       callExpr.source?.type === LinqExpressionType.Parameter &&
       callExpr.source === groupParam
@@ -275,24 +251,19 @@ function translateResultSelectorExpression(
         groupPlaceholderSource &&
         (groupPlaceholderSource as any).isGroupPlaceholder
       ) {
-        // É uma chamada de agregação no grupo!
         const sqlFunctionName = mapLinqAggregateToSql(callExpr.methodName);
         let aggregateArgSql: SqlExpression;
-
         if (callExpr.args.length === 0 && callExpr.methodName === "count") {
           aggregateArgSql = new SqlConstantExpression(1);
         } else if (
           callExpr.args.length === 1 &&
           callExpr.args[0].type === LinqExpressionType.Lambda
         ) {
-          // group.Sum(x => x.Salary)
           const innerLambda = callExpr.args[0] as LinqLambdaExpression;
           const innerParam = innerLambda.parameters[0];
-
-          // Visita o corpo da lambda (x.Salary) no contexto da *fonte original*
           const originalSourceContext = rootContext.createChildContext(
             [innerParam],
-            [(groupPlaceholderSource as any).originalSource] // Usa a fonte ANTES do groupBy
+            [(groupPlaceholderSource as any).originalSource]
           );
           const innerValueSql = visitInContext(
             innerLambda.body,
@@ -309,23 +280,17 @@ function translateResultSelectorExpression(
             `Unsupported aggregate call arguments in groupBy: ${callExpr.methodName}`
           );
         }
-
         return new SqlFunctionCallExpression(sqlFunctionName, [
           aggregateArgSql,
         ]);
       }
     }
   }
-
   // --- 3. Other Cases ---
-  // Se não for acesso à chave nem agregação no grupo, visita normalmente
-  // dentro do contexto do resultSelector (que contém 'key' e 'group', mas
-  // 'group' não será resolvido para SQL direto aqui, apenas para agregações acima).
-  // Isso pode ser útil para literais ou outras operações que não dependem do 'group'.
   return visitInContext(expression, resultContext);
 }
 
-// --- Helper para Mapear Nomes de Agregadores ---
+// (Helper mapLinqAggregateToSql inalterado)
 function mapLinqAggregateToSql(methodName: string): string {
   switch (methodName.toLowerCase()) {
     case "count":
@@ -344,4 +309,5 @@ function mapLinqAggregateToSql(methodName: string): string {
       );
   }
 }
+
 // --- END OF FILE src/query/translation/method-visitors/visitGroupByCall.ts ---

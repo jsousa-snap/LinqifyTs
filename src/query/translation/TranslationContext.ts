@@ -7,19 +7,16 @@ import {
   TableExpression as SqlTableExpression,
   SelectExpression as SqlSelectExpression,
   SqlExpression,
-  TableExpressionBase, // <<< Importar TableExpressionBase
-  CompositeUnionExpression, // <<< Importar CompositeUnionExpression (opcional, mas bom para clareza)
+  TableExpressionBase,
+  CompositeUnionExpression,
 } from "../../sql-expressions";
 
-// *** CORREÇÃO: Amplia SqlDataSource para incluir TableExpressionBase ***
-// Uma fonte de dados pode ser uma Tabela, uma União (ambas TableExpressionBase)
-// ou o resultado de um Select anterior (SelectExpression).
 export type SqlDataSource = TableExpressionBase | SqlSelectExpression;
 
 /**
  * Mantém o estado durante o processo de tradução da árvore LINQ para SQL.
- * Mapeia parâmetros LINQ para suas fontes de dados SQL correspondentes (Tabela, Select, Union)
- * e gerencia a geração de aliases únicos. Suporta contextos aninhados para lambdas.
+ * Mapeia parâmetros LINQ para suas fontes de dados SQL correspondentes (Tabela, Select, Union).
+ * Suporta contextos aninhados para lambdas.
  *
  * @export
  * @class TranslationContext
@@ -27,10 +24,11 @@ export type SqlDataSource = TableExpressionBase | SqlSelectExpression;
 export class TranslationContext {
   // Mapeia o parâmetro da lambda (ex: 'u' em u => u.name) para sua fonte SQL
   private parameterMap = new Map<LinqParameterExpression, SqlDataSource>();
-  // Contador para gerar aliases únicos (t0, t1, etc.)
-  public aliasCounter = 0;
   // Referência ao contexto pai (para lambdas aninhadas)
   public readonly outerContext?: TranslationContext;
+
+  // <<< REMOVIDO: aliasCounter e métodos relacionados >>>
+  // private aliasCounter = 0;
 
   /**
    * Cria uma instância de TranslationContext.
@@ -39,25 +37,10 @@ export class TranslationContext {
    */
   constructor(outerContext?: TranslationContext) {
     this.outerContext = outerContext;
-    // Herda o contador de alias do pai para garantir unicidade global
-    if (outerContext) {
-      this.aliasCounter = outerContext.aliasCounter;
-    }
+    // <<< REMOVIDO: Herança de aliasCounter >>>
   }
 
-  /**
-   * Gera um novo alias de tabela único (ex: "t0", "t1").
-   * Atualiza o contador de alias no contexto atual e no pai (se existir).
-   * @returns {string} O novo alias gerado.
-   */
-  public generateTableAlias(): string {
-    const alias = `t${this.aliasCounter++}`;
-    // Propaga o contador atualizado para o pai para manter a sincronia
-    if (this.outerContext) {
-      this.outerContext.aliasCounter = this.aliasCounter;
-    }
-    return alias;
-  }
+  // <<< REMOVIDO: generateTableAlias() >>>
 
   /**
    * Registra o mapeamento entre um parâmetro LINQ e sua fonte de dados SQL.
@@ -74,8 +57,6 @@ export class TranslationContext {
       this.parameterMap.has(parameter) &&
       this.parameterMap.get(parameter) !== source
     ) {
-      // Aviso se um parâmetro estiver sendo redefinido no mesmo contexto.
-      // Isso pode indicar um problema, mas pode ser válido em cenários complexos.
       console.warn(
         `TranslationContext: Parameter '${parameter.name}' is being re-registered.`
       );
@@ -119,7 +100,6 @@ export class TranslationContext {
   ): SqlDataSource {
     const source = this.getDataSourceForParameter(parameter);
     if (!source) {
-      // Log de depuração para ajudar a identificar o problema
       console.error(
         "Context state when error occurred (getDataSourceForParameterStrict):"
       );
@@ -168,17 +148,7 @@ export class TranslationContext {
     return childContext;
   }
 
-  /**
-   * Atualiza o contador de alias do contexto atual com base no contador de um contexto filho.
-   * Garante que o contador do pai seja sempre o maior valor visto, mantendo a unicidade global.
-   *
-   * @param {TranslationContext} childContext O contexto filho cujo contador será usado para atualizar.
-   * @memberof TranslationContext
-   */
-  public updateAliasCounterFromChild(childContext: TranslationContext): void {
-    // Garante que o contador pai reflita o maior valor usado
-    this.aliasCounter = Math.max(this.aliasCounter, childContext.aliasCounter);
-  }
+  // <<< REMOVIDO: updateAliasCounterFromChild() >>>
 }
 
 // --- END OF FILE src/query/translation/TranslationContext.ts ---

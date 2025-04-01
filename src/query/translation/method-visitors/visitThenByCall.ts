@@ -69,13 +69,16 @@ export function visitThenByCall(
   const newOrdering: SqlOrdering = { expression: keySql, direction };
   const updatedOrderBy = [...currentSelect.orderBy, newOrdering];
 
+  // ThenBy não muda a forma, reutiliza o alias
+  const alias = currentSelect.alias;
+
   // **CORREÇÃO: Ordem dos argumentos do construtor**
-  // thenBy adiciona à ordenação, mas mantém a paginação
   return new SelectExpression(
+    alias, // <<< alias (Mantém)
     currentSelect.projection, // projection
     currentSelect.from, // from
     currentSelect.predicate, // predicate
-    null, // having <<< Passando null
+    null, // having
     currentSelect.joins, // joins
     updatedOrderBy, // orderBy (Adiciona)
     currentSelect.offset, // offset (Preserva)

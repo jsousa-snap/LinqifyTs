@@ -70,12 +70,16 @@ export function visitTakeCall(
 
   const limitSql = new SqlConstantExpression(count);
 
+  // Take não muda a forma, reutiliza o alias
+  const alias = currentSelect.alias;
+
   // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
+    alias, // <<< alias (Mantém)
     currentSelect.projection, // projection
     currentSelect.from, // from
     currentSelect.predicate, // predicate
-    null, // having <<< Passando null
+    null, // having
     currentSelect.joins, // joins
     currentSelect.orderBy, // orderBy
     currentSelect.offset, // offset

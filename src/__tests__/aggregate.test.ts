@@ -54,8 +54,8 @@ describe("Queryable Aggregate Operator Tests", () => {
   it("Teste Aggregate 1: should generate correct SQL for avg()", () => {
     const query = users.avg((u) => u.age);
     const expectedSql = `
-SELECT AVG([t0].[age]) AS [avg_result]
-FROM [Users] AS [t0]
+SELECT AVG([u].[age]) AS [avg_result]
+FROM [Users] AS [u]
     `;
     expect(query).toBe(42.5);
     const avgExpression = new (require("../expressions").MethodCallExpression)(
@@ -70,9 +70,9 @@ FROM [Users] AS [t0]
   it("Teste Aggregate 2: should generate correct SQL for avg() after where()", () => {
     const query = users.where((u) => u.name === "Alice").avg((u) => u.age);
     const expectedSql = `
-SELECT AVG([t0].[age]) AS [avg_result]
-FROM [Users] AS [t0]
-WHERE [t0].[name] = 'Alice'
+SELECT AVG([u].[age]) AS [avg_result]
+FROM [Users] AS [u]
+WHERE [u].[name] = 'Alice'
     `;
     expect(query).toBe(42.5);
     const filteredUsers = users.where((u) => u.name === "Alice");
@@ -88,8 +88,8 @@ WHERE [t0].[name] = 'Alice'
   it("Teste Aggregate 3: should generate correct SQL for avg() on nullable field", () => {
     const query = users.avg((u) => u.salary!);
     const expectedSql = `
-SELECT AVG([t0].[salary]) AS [avg_result]
-FROM [Users] AS [t0]
+SELECT AVG([u].[salary]) AS [avg_result]
+FROM [Users] AS [u]
     `;
     expect(query).toBe(42.5);
     const avgExpression = new (require("../expressions").MethodCallExpression)(
@@ -104,8 +104,8 @@ FROM [Users] AS [t0]
   it("Teste Aggregate 4: should generate correct SQL for sum()", () => {
     const query = posts.sum((p) => p.views);
     const expectedSql = `
-SELECT SUM([t0].[views]) AS [sum_result]
-FROM [Posts] AS [t0]
+SELECT SUM([p].[views]) AS [sum_result]
+FROM [Posts] AS [p]
     `;
     expect(query).toBe(1234);
     const sumExpression = new (require("../expressions").MethodCallExpression)(
@@ -120,9 +120,9 @@ FROM [Posts] AS [t0]
   it("Teste Aggregate 5: should generate correct SQL for sum() after where()", () => {
     const query = posts.where((p) => p.authorId === 1).sum((p) => p.views);
     const expectedSql = `
-SELECT SUM([t0].[views]) AS [sum_result]
-FROM [Posts] AS [t0]
-WHERE [t0].[authorId] = 1
+SELECT SUM([p].[views]) AS [sum_result]
+FROM [Posts] AS [p]
+WHERE [p].[authorId] = 1
     `;
     expect(query).toBe(1234);
     const filteredPosts = posts.where((p) => p.authorId === 1);
@@ -138,8 +138,8 @@ WHERE [t0].[authorId] = 1
   it("Teste Aggregate 6: should generate correct SQL for min()", () => {
     const query = users.min((u) => u.age);
     const expectedSql = `
-SELECT MIN([t0].[age]) AS [min_result]
-FROM [Users] AS [t0]
+SELECT MIN([u].[age]) AS [min_result]
+FROM [Users] AS [u]
     `;
     expect(query).toBe(1);
     const minExpression = new (require("../expressions").MethodCallExpression)(
@@ -154,8 +154,8 @@ FROM [Users] AS [t0]
   it("Teste Aggregate 7: should generate correct SQL for min() on strings", () => {
     const query = users.min((u) => u.name);
     const expectedSql = `
-SELECT MIN([t0].[name]) AS [min_result]
-FROM [Users] AS [t0]
+SELECT MIN([u].[name]) AS [min_result]
+FROM [Users] AS [u]
     `;
     expect(query).toBe(1);
     const minExpression = new (require("../expressions").MethodCallExpression)(
@@ -170,8 +170,8 @@ FROM [Users] AS [t0]
   it("Teste Aggregate 8: should generate correct SQL for max()", () => {
     const query = posts.max((p) => p.views);
     const expectedSql = `
-SELECT MAX([t0].[views]) AS [max_result]
-FROM [Posts] AS [t0]
+SELECT MAX([p].[views]) AS [max_result]
+FROM [Posts] AS [p]
     `;
     expect(query).toBe(99);
     const maxExpression = new (require("../expressions").MethodCallExpression)(
@@ -186,9 +186,9 @@ FROM [Posts] AS [t0]
   it("Teste Aggregate 9: should generate correct SQL for max() after where()", () => {
     const query = users.where((u) => u.age < 30).max((u) => u.age);
     const expectedSql = `
-SELECT MAX([t0].[age]) AS [max_result]
-FROM [Users] AS [t0]
-WHERE [t0].[age] < 30
+SELECT MAX([u].[age]) AS [max_result]
+FROM [Users] AS [u]
+WHERE [u].[age] < 30
     `;
     expect(query).toBe(99);
     const filteredUsers = users.where((u) => u.age < 30);
@@ -204,8 +204,8 @@ WHERE [t0].[age] < 30
   it("Teste Aggregate 10: should generate correct SQL for avg() on empty set", () => {
     const query = emptyUsers.avg((u) => u.age);
     const expectedSql = `
-SELECT AVG([t0].[age]) AS [avg_result]
-FROM [Users] AS [t0]
+SELECT AVG([u].[age]) AS [avg_result]
+FROM [Users] AS [u]
 WHERE 0
     `;
     expect(query).toBe(42.5); // Mantém o valor simulado atual
@@ -229,12 +229,12 @@ WHERE 0
     }));
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], (
-    SELECT AVG([t1].[views]) AS [avg_result]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
+SELECT [u].[name] AS [UserName], (
+    SELECT AVG([p].[views]) AS [avg_result]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
 ) AS [AveragePostViews]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -249,12 +249,12 @@ FROM [Users] AS [t0]
     }));
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], (
-    SELECT SUM([t1].[views]) AS [sum_result]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
+SELECT [u].[name] AS [UserName], (
+    SELECT SUM([p].[views]) AS [sum_result]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
 ) AS [TotalPostViews]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -267,12 +267,12 @@ FROM [Users] AS [t0]
     }));
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], (
-    SELECT MIN([t1].[views]) AS [min_result]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
+SELECT [u].[name] AS [UserName], (
+    SELECT MIN([p].[views]) AS [min_result]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
 ) AS [MinPostViews]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -285,12 +285,12 @@ FROM [Users] AS [t0]
     }));
 
     const expectedSql = `
-SELECT [t0].[name] AS [UserName], (
-    SELECT MAX([t1].[views]) AS [max_result]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
+SELECT [u].[name] AS [UserName], (
+    SELECT MAX([p].[views]) AS [max_result]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
 ) AS [MaxPostViews]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -307,12 +307,12 @@ FROM [Users] AS [t0]
       .avg((u) => u.age);
 
     const expectedSql = `
-SELECT AVG([t0].[age]) AS [avg_result]
-FROM [Users] AS [t0]
+SELECT AVG([u].[age]) AS [avg_result]
+FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
-        FROM [Posts] AS [t1]
-        WHERE ([t1].[authorId] = [t0].[id] AND [t1].[views] > 50)
+        FROM [Posts] AS [p]
+        WHERE ([p].[authorId] = [u].[id] AND [p].[views] > 50)
     )
     `;
 

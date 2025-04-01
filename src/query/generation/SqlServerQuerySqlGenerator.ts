@@ -1,7 +1,5 @@
 // --- START OF FILE src/query/generation/SqlServerQuerySqlGenerator.ts ---
 
-// --- START OF FILE src/query/generation/SqlServerQuerySqlGenerator.ts ---
-
 // src/query/generation/SqlServerQuerySqlGenerator.ts
 
 import {
@@ -132,23 +130,29 @@ export class SqlServerQuerySqlGenerator {
    *
    * @protected
    * @param {(SqlExpression | null)} expression A expressão SQL a ser visitada.
+   * @param {boolean} [isSubquerySource=false] Indica se a expressão está sendo visitada como fonte em FROM/JOIN.
    * @memberof SqlServerQuerySqlGenerator
    */
-  protected Visit(expression: SqlExpression | null): void {
+  protected Visit(
+    expression: SqlExpression | null,
+    isSubquerySource: boolean = false
+  ): void {
     if (!expression) {
-      this.builder.append("NULL");
+      this.builder.append("NULL"); // Mantém para casos onde null é usado como valor
       return;
     }
     switch (expression.type) {
       case SqlExpressionType.Select:
-        this.VisitSelect(expression as SelectExpression);
+        this.VisitSelect(expression as SelectExpression, isSubquerySource);
         break;
       case SqlExpressionType.Table:
-        // A chamada para Table agora usa TableExpressionBase
-        this.VisitTable(expression as TableExpression);
+        this.VisitTable(expression as TableExpression, isSubquerySource);
         break;
       case SqlExpressionType.Union:
-        this.VisitUnion(expression as CompositeUnionExpression);
+        this.VisitUnion(
+          expression as CompositeUnionExpression,
+          isSubquerySource
+        );
         break;
       case SqlExpressionType.Column:
         this.VisitColumn(expression as ColumnExpression);
@@ -176,30 +180,40 @@ export class SqlServerQuerySqlGenerator {
       case SqlExpressionType.Exists:
         this.VisitExists(expression as SqlExistsExpression);
         break;
-      case SqlExpressionType.Projection: // Projections são visitadas dentro de VisitSelect
-        this.VisitProjection(expression as ProjectionExpression);
-        break;
-      case SqlExpressionType.InnerJoin: // Joins são visitados dentro de VisitSelect
-        this.VisitJoin(expression as JoinExpressionBase);
-        break;
       default:
-        // Garante que todos os tipos sejam tratados em tempo de compilação
-        const exCheck: never = expression.type;
-        throw new Error(
-          `Unsupported SqlExpressionType in generator dispatcher: ${exCheck}`
-        );
+        if (
+          expression.type !== SqlExpressionType.Projection &&
+          expression.type !== SqlExpressionType.InnerJoin
+        ) {
+          const exCheck: never = expression.type;
+          throw new Error(
+            `Unsupported SqlExpressionType in generator dispatcher: ${exCheck}`
+          );
+        }
     }
   }
 
   /**
    * Visita e gera SQL para uma expressão SELECT.
-   * Responsável por montar as cláusulas SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, OFFSET, FETCH.
+   * Se isSubquerySource for true, gera como (SELECT ...) AS alias.
    *
    * @protected
    * @param {SelectExpression} expression A expressão SELECT a ser visitada.
+   * @param {boolean} isSubquerySource Indica se é fonte em FROM/JOIN.
    * @memberof SqlServerQuerySqlGenerator
    */
-  protected VisitSelect(expression: SelectExpression): void {
+  protected VisitSelect(
+    expression: SelectExpression,
+    isSubquerySource: boolean
+  ): void {
+    const isSub = isSubquerySource;
+
+    if (isSub) {
+      this.builder.append("(");
+      this.builder.indent();
+      this.builder.appendLine();
+    }
+
     this.builder.append("SELECT ");
     if (expression.projection.length === 0) {
       console.warn(
@@ -214,9 +228,9 @@ export class SqlServerQuerySqlGenerator {
         }
       });
     }
+
     this.builder.appendLine().indent().append("FROM ");
-    // A expressão 'from' agora pode ser Table, Union, etc. A chamada Visit fará o dispatch correto.
-    this.Visit(expression.from); // <<< Chama o dispatcher Visit
+    this.Visit(expression.from, true); // A fonte do FROM é sempre tratada como uma (sub)fonte
     this.builder.dedent();
 
     if (expression.joins.length > 0) {
@@ -243,37 +257,34 @@ export class SqlServerQuerySqlGenerator {
       this.builder.dedent();
     }
 
-    // <<< NOVO: Adiciona cláusula HAVING >>>
     if (expression.having) {
       this.builder.appendLine().indent().append("HAVING ");
-      this.Visit(expression.having); // Visita a condição HAVING
+      this.Visit(expression.having);
       this.builder.dedent();
     }
-    // <<< FIM NOVO >>>
 
-    if (expression.orderBy && expression.orderBy.length > 0) {
-      this.builder.appendLine().indent().append("ORDER BY ");
-      expression.orderBy.forEach((o, i) => {
-        this.Visit(o.expression);
-        this.builder.appendSpace().append(o.direction);
-        if (i < expression.orderBy.length - 1) {
-          this.builder.append(", ");
-        }
-      });
-      this.builder.dedent();
-    } else if (expression.offset || expression.limit) {
-      // Adiciona ORDER BY (SELECT NULL) apenas se não houver GROUP BY ou HAVING
-      // (HAVING implica GROUP BY, então verificar groupBy é suficiente)
-      if (expression.groupBy.length === 0) {
+    const hasInternalPaging = !!(expression.offset || expression.limit);
+    if (hasInternalPaging || (!isSub && expression.orderBy.length > 0)) {
+      if (expression.orderBy.length > 0) {
+        this.builder.appendLine().indent().append("ORDER BY ");
+        expression.orderBy.forEach((o, i) => {
+          this.Visit(o.expression);
+          this.builder.appendSpace().append(o.direction);
+          if (i < expression.orderBy.length - 1) {
+            this.builder.append(", ");
+          }
+        });
+        this.builder.dedent();
+      } else if (hasInternalPaging && expression.groupBy.length === 0) {
         console.warn(
-          "Warning: SQL generation includes OFFSET or FETCH without a preceding ORDER BY clause. Results may be non-deterministic."
+          "Warning: SQL generation includes OFFSET or FETCH without ORDER BY. Adding 'ORDER BY (SELECT NULL)' for compatibility."
         );
         this.builder.appendLine().indent().append("ORDER BY (SELECT NULL)");
         this.builder.dedent();
       }
     }
 
-    if (expression.offset || expression.limit) {
+    if (hasInternalPaging) {
       const offsetValue = expression.offset ?? new SqlConstantExpression(0);
       this.builder.appendLine().indent().append("OFFSET ");
       this.Visit(offsetValue);
@@ -285,22 +296,24 @@ export class SqlServerQuerySqlGenerator {
       }
       this.builder.dedent();
     }
+
+    if (isSub) {
+      this.builder.dedent();
+      this.builder.appendLine(`) AS ${escapeIdentifier(expression.alias)}`);
+    }
   }
 
   /**
    * Visita e gera SQL para um item na lista de projeção do SELECT (expressão + alias).
-   *
    * @protected
    * @param {ProjectionExpression} projection A expressão de projeção a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitProjection(projection: ProjectionExpression): void {
-    this.Visit(projection.expression); // Visita a expressão que calcula o valor
+    this.Visit(projection.expression);
 
-    // Lógica para decidir se o alias é necessário
     let needsAlias = true;
     if (projection.expression instanceof ColumnExpression) {
-      // Se o alias for igual ao nome da coluna ou se for SELECT *, não precisa de alias explícito
       if (
         projection.alias === projection.expression.name ||
         projection.expression.name === "*"
@@ -308,70 +321,63 @@ export class SqlServerQuerySqlGenerator {
         needsAlias = false;
       }
     } else if (projection.expression.type === SqlExpressionType.Constant) {
-      // Se for uma constante com alias padrão gerado, não precisa
-      // (Exceto se for um alias de agregação padrão como count_result)
       if (
         projection.alias.startsWith("expr") &&
-        !projection.alias.endsWith("_result") // Mantém alias de agregação
+        !projection.alias.endsWith("_result")
       ) {
         needsAlias = false;
       }
     }
-    // Aliases especiais usados internamente não precisam ser adicionados explicitamente
     if (
       projection.alias === "*" ||
       projection.alias === "exists_val" ||
-      projection.alias?.endsWith("_all")
+      projection.alias?.endsWith("_all") ||
+      projection.alias?.endsWith("_result") // Agregações já têm alias _result interno
     ) {
       needsAlias = false;
     }
-    // Funções e subqueries geralmente precisam do alias definido
     if (
       projection.expression.type === SqlExpressionType.FunctionCall ||
       projection.expression.type === SqlExpressionType.ScalarSubqueryAsJson ||
       projection.expression.type === SqlExpressionType.ScalarSubquery
     ) {
-      // Mantém o alias se ele foi definido (incluindo os _result de agregações)
       needsAlias = !!projection.alias;
     }
 
-    // Adiciona o alias se necessário e se ele existir
     if (needsAlias && projection.alias) {
       this.builder.append(` AS ${escapeIdentifier(projection.alias)}`);
     }
   }
 
   /**
-   * Visita e gera SQL para uma referência a uma tabela física no FROM.
-   *
+   * Visita e gera SQL para uma referência a uma tabela física.
    * @protected
    * @param {TableExpression} table A expressão da tabela a ser visitada.
-   * @param {boolean} [includeAs=true] Se deve incluir "AS [alias]" na saída.
+   * @param {boolean} isSubquerySource Indica se é fonte em FROM/JOIN.
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitTable(
     table: TableExpression,
-    includeAs: boolean = true
+    isSubquerySource: boolean
   ): void {
-    // A expressão base já tem alias, não precisamos mais de TableExpressionBase aqui
     this.builder.append(escapeIdentifier(table.name));
-    if (includeAs && table.alias) {
+    if (table.alias) {
       this.builder.append(` AS ${escapeIdentifier(table.alias)}`);
+    } else if (isSubquerySource) {
+      throw new Error(
+        `Alias missing for table '${table.name}' used as a subquery source.`
+      );
     }
   }
 
   /**
-   * Visita e gera SQL para uma referência a uma coluna (alias.coluna).
-   *
+   * Visita e gera SQL para uma referência a uma coluna.
    * @protected
    * @param {ColumnExpression} column A expressão da coluna a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitColumn(column: ColumnExpression): void {
-    // Tenta encontrar a TableExpression correta na árvore para obter o alias
-    // (Simplificação: assume que column.table tem o alias correto)
     if (!column.table.alias) {
-      // Isso indica um erro interno se o alias não foi propagado corretamente
       throw new Error(
         `Internal Translation Error: Alias missing for table '${column.table.name}' when accessing column '${column.name}'.`
       );
@@ -382,8 +388,7 @@ export class SqlServerQuerySqlGenerator {
   }
 
   /**
-   * Visita e gera SQL para um valor constante (literal).
-   *
+   * Visita e gera SQL para uma constante.
    * @protected
    * @param {SqlConstantExpression} constant A expressão constante a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
@@ -393,44 +398,76 @@ export class SqlServerQuerySqlGenerator {
   }
 
   /**
-   * Visita e gera SQL para uma operação binária (ex: WHERE coluna = valor, a + b).
-   * Adiciona parênteses quando necessário para garantir a precedência correta.
-   *
+   * Visita e gera SQL para uma expressão binária.
+   * **CORRIGIDO:** Trata comparações com NULL usando IS NULL / IS NOT NULL.
    * @protected
    * @param {SqlBinaryExpression} binary A expressão binária a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitBinary(binary: SqlBinaryExpression): void {
-    // Lógica simples para adicionar parênteses: adiciona sempre que não for simples
-    // Coluna/Constante/Função em ambos os lados, ou se um dos lados já for binário.
-    const isSimpleLeft =
-      binary.left.type === SqlExpressionType.Column ||
-      binary.left.type === SqlExpressionType.Constant ||
-      binary.left.type === SqlExpressionType.FunctionCall;
-    const isSimpleRight =
-      binary.right.type === SqlExpressionType.Column ||
-      binary.right.type === SqlExpressionType.Constant ||
-      binary.right.type === SqlExpressionType.FunctionCall;
-    const isLeftBinary = binary.left.type === SqlExpressionType.Binary;
-    const isRightBinary = binary.right.type === SqlExpressionType.Binary;
+    const needsParentheses = !(
+      (binary.left.type === SqlExpressionType.Column ||
+        binary.left.type === SqlExpressionType.Constant ||
+        binary.left.type === SqlExpressionType.FunctionCall) &&
+      (binary.right.type === SqlExpressionType.Column ||
+        binary.right.type === SqlExpressionType.Constant ||
+        binary.right.type === SqlExpressionType.FunctionCall)
+    );
 
-    // Adição/Concatenação pode ter precedência diferente, mas colocar parênteses
-    // em casos complexos geralmente não prejudica.
-    const needsParentheses =
-      !(isSimpleLeft && isSimpleRight) || isLeftBinary || isRightBinary;
+    let isNullComparison = false;
+    let sqlOperator: string | null = null;
 
-    if (needsParentheses) this.builder.append("(");
-    this.Visit(binary.left); // Visita o lado esquerdo
-    // <<< Usa o OperatorType do SqlBinaryExpression >>>
-    this.builder.append(` ${mapOperatorToSql(binary.operator)} `);
-    this.Visit(binary.right); // Visita o lado direito
-    if (needsParentheses) this.builder.append(")");
+    // Verifica se o lado direito é NULL
+    if (
+      binary.right.type === SqlExpressionType.Constant &&
+      (binary.right as SqlConstantExpression).value === null
+    ) {
+      isNullComparison = true;
+      if (binary.operator === OperatorType.Equal) {
+        sqlOperator = "IS NULL";
+      } else if (binary.operator === OperatorType.NotEqual) {
+        sqlOperator = "IS NOT NULL";
+      }
+    }
+    // Verifica se o lado esquerdo é NULL
+    else if (
+      binary.left.type === SqlExpressionType.Constant &&
+      (binary.left as SqlConstantExpression).value === null
+    ) {
+      isNullComparison = true;
+      // Os operadores são comutativos para IS NULL / IS NOT NULL
+      if (binary.operator === OperatorType.Equal) {
+        sqlOperator = "IS NULL";
+      } else if (binary.operator === OperatorType.NotEqual) {
+        sqlOperator = "IS NOT NULL";
+      }
+    }
+
+    if (needsParentheses && !isNullComparison) this.builder.append("(");
+
+    // Gera o SQL
+    if (isNullComparison && sqlOperator) {
+      // Gera 'operand IS NULL' ou 'operand IS NOT NULL'
+      const operand =
+        binary.right.type === SqlExpressionType.Constant &&
+        (binary.right as SqlConstantExpression).value === null
+          ? binary.left // Se right é NULL, usa left
+          : binary.right; // Se left é NULL, usa right
+
+      this.Visit(operand); // Visita o operando não-NULL
+      this.builder.appendSpace().append(sqlOperator);
+    } else {
+      // Geração padrão para outros operadores ou quando nenhum operando é NULL
+      this.Visit(binary.left);
+      this.builder.append(` ${mapOperatorToSql(binary.operator)} `);
+      this.Visit(binary.right);
+    }
+
+    if (needsParentheses && !isNullComparison) this.builder.append(")");
   }
 
   /**
-   * Visita e gera SQL para uma expressão JOIN. Chama o método específico
-   * para o tipo de join (INNER, LEFT, etc.).
-   *
+   * Visita uma expressão JOIN base (dispatcher).
    * @protected
    * @param {JoinExpressionBase} join A expressão JOIN a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
@@ -440,7 +477,6 @@ export class SqlServerQuerySqlGenerator {
       case SqlExpressionType.InnerJoin:
         this.VisitInnerJoin(join as InnerJoinExpression);
         break;
-      // Adicionar outros tipos de join (LEFT, RIGHT) aqui se implementados
       default:
         throw new Error(`Unsupported join type: ${join.type}`);
     }
@@ -448,7 +484,7 @@ export class SqlServerQuerySqlGenerator {
 
   /**
    * Visita e gera SQL para uma expressão INNER JOIN.
-   *
+   * Visita a tabela juntada como uma fonte de subconsulta.
    * @protected
    * @param {InnerJoinExpression} join A expressão INNER JOIN a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
@@ -456,53 +492,45 @@ export class SqlServerQuerySqlGenerator {
   protected VisitInnerJoin(join: InnerJoinExpression): void {
     this.builder.append("INNER JOIN");
     this.builder.appendSpace();
-    // Visita a tabela que está sendo juntada
-    // A tabela do join pode ser uma tabela base ou uma subconsulta/união
-    this.Visit(join.table); // << Chama o dispatcher Visit
+    this.Visit(join.table, true); // Visita a fonte do join como subquery source
     this.builder.append(" ON ");
-    // Visita a condição do join
     this.Visit(join.joinPredicate);
   }
 
   /**
-   * Visita e gera SQL para uma subconsulta escalar formatada como JSON (FOR JSON).
-   * Inclui lógica para adicionar ou remover o wrapper de array [].
-   *
+   * Visita e gera SQL para uma subconsulta escalar formatada como JSON.
    * @protected
-   * @param {SqlScalarSubqueryAsJsonExpression} expression A expressão da subconsulta JSON.
+   * @param {SqlScalarSubqueryAsJsonExpression} expression A expressão a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitScalarSubqueryAsJson(
     expression: SqlScalarSubqueryAsJsonExpression
   ): void {
-    // Determina se o wrapper COALESCE/JSON_QUERY é necessário
     const needsCoalesceWrapper = !expression.withoutArrayWrapper;
 
     if (needsCoalesceWrapper) {
-      this.builder.append("JSON_QUERY(COALESCE("); // Inicia o wrapper externo
+      this.builder.append("JSON_QUERY(COALESCE(");
     }
 
-    // Gera a subconsulta interna FOR JSON
-    this.builder.append("("); // Início da subconsulta interna
+    this.builder.append("(");
     this.builder.indent();
     this.builder.appendLine();
-    this.VisitSelect(expression.selectExpression); // Visita o SELECT interno
-    this.builder.appendLine().append(`FOR JSON ${expression.mode}`); // Adiciona FOR JSON
+    this.VisitSelect(expression.selectExpression, false); // Visita o SELECT interno
+    this.builder.appendLine().append(`FOR JSON ${expression.mode}`);
     const options: string[] = [];
     if (expression.includeNullValues) options.push("INCLUDE_NULL_VALUES");
     if (expression.withoutArrayWrapper) options.push("WITHOUT_ARRAY_WRAPPER");
     if (options.length > 0) this.builder.append(`, ${options.join(", ")}`);
     this.builder.dedent();
-    this.builder.appendLine().append(")"); // Fim da subconsulta interna
+    this.builder.appendLine().append(")");
 
     if (needsCoalesceWrapper) {
-      this.builder.append(", '[]'))"); // Fecha COALESCE e JSON_QUERY
+      this.builder.append(", '[]'))");
     }
   }
 
   /**
-   * Visita e gera SQL para um predicado EXISTS(subquery).
-   *
+   * Visita e gera SQL para um predicado EXISTS.
    * @protected
    * @param {SqlExistsExpression} expression A expressão EXISTS a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
@@ -510,37 +538,33 @@ export class SqlServerQuerySqlGenerator {
   protected VisitExists(expression: SqlExistsExpression): void {
     this.builder.append("EXISTS").appendSpace().append("(");
     this.builder.indent().appendLine();
-    // Visita a subconsulta SELECT dentro do EXISTS
-    this.VisitSelect(expression.selectExpression);
+    this.VisitSelect(expression.selectExpression, false); // Visita o SELECT interno
     this.builder.dedent().appendLine().append(")");
   }
 
   /**
    * Visita e gera SQL para uma operação LIKE.
-   *
    * @protected
    * @param {SqlLikeExpression} expression A expressão LIKE a ser visitada.
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitLike(expression: SqlLikeExpression): void {
     this.builder.append("(");
-    this.Visit(expression.sourceExpression); // Visita a coluna/expressão fonte
+    this.Visit(expression.sourceExpression);
     this.builder.append(" LIKE ");
-    this.Visit(expression.patternExpression); // Visita a constante com o padrão
+    this.Visit(expression.patternExpression);
     this.builder.append(")");
   }
 
   /**
-   * Visita e gera SQL para uma chamada de função SQL (ex: COUNT(), MAX(), UPPER()).
-   *
+   * Visita e gera SQL para uma chamada de função.
    * @protected
    * @param {SqlFunctionCallExpression} expression A expressão de chamada de função.
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitFunctionCall(expression: SqlFunctionCallExpression): void {
-    this.builder.append(expression.functionName); // Nome da função
+    this.builder.append(expression.functionName);
     this.builder.append("(");
-    // Visita cada argumento da função
     expression.args.forEach((arg, index) => {
       this.Visit(arg);
       if (index < expression.args.length - 1) {
@@ -551,52 +575,59 @@ export class SqlServerQuerySqlGenerator {
   }
 
   /**
-   * Visita e gera SQL para uma subconsulta escalar que retorna um único valor.
-   *
+   * Visita e gera SQL para uma subconsulta escalar.
    * @protected
-   * @param {SqlScalarSubqueryExpression} expression A expressão da subconsulta escalar.
+   * @param {SqlScalarSubqueryExpression} expression A expressão de subconsulta escalar.
    * @memberof SqlServerQuerySqlGenerator
    */
   protected VisitScalarSubquery(expression: SqlScalarSubqueryExpression): void {
     this.builder.append("(");
     this.builder.indent();
     this.builder.appendLine();
-    // Visita a subconsulta SELECT interna
-    this.VisitSelect(expression.selectExpression);
+    this.VisitSelect(expression.selectExpression, false); // Visita o SELECT interno
     this.builder.dedent();
     this.builder.appendLine().append(")");
   }
 
   /**
-   * Visita e gera SQL para uma expressão de união (UNION / UNION ALL).
-   * Geralmente usada como fonte na cláusula FROM.
-   *
+   * Visita e gera SQL para uma operação UNION ou UNION ALL.
+   * Se isSubquerySource for true, envolve em parênteses e adiciona alias.
    * @protected
    * @param {CompositeUnionExpression} expression A expressão de união a ser visitada.
+   * @param {boolean} isSubquerySource Indica se é fonte em FROM/JOIN.
    * @memberof SqlServerQuerySqlGenerator
    */
-  protected VisitUnion(expression: CompositeUnionExpression): void {
-    this.builder.append("("); // Parêntese externo para a união
-    this.builder.indent();
+  protected VisitUnion(
+    expression: CompositeUnionExpression,
+    isSubquerySource: boolean
+  ): void {
+    const isSub = isSubquerySource;
+
+    if (isSub) {
+      this.builder.append("(");
+      this.builder.indent();
+    }
 
     const unionOperator = expression.distinct ? "UNION" : "UNION ALL";
 
     expression.sources.forEach((sourceSelect, index) => {
-      this.builder.appendLine("("); // Parêntese para cada SELECT interno
+      // Adiciona parêntese para cada SELECT da união para clareza e precedência
+      this.builder.appendLine("(");
       this.builder.indent();
-      this.VisitSelect(sourceSelect); // Visita cada SELECT da união
+      this.builder.appendLine();
+      this.VisitSelect(sourceSelect, false); // Visita cada SELECT interno
       this.builder.dedent();
-      this.builder.appendLine(")"); // Fecha parêntese do SELECT interno
+      this.builder.appendLine(")");
 
       if (index < expression.sources.length - 1) {
-        // Adiciona o operador UNION/UNION ALL entre os SELECTs
         this.builder.appendLine(unionOperator);
       }
     });
 
-    this.builder.dedent();
-    // Adiciona o alias da união, necessário quando usada no FROM
-    this.builder.appendLine(`) AS ${escapeIdentifier(expression.alias)}`);
+    if (isSub) {
+      this.builder.dedent();
+      this.builder.appendLine(`) AS ${escapeIdentifier(expression.alias)}`);
+    }
   }
 }
 // --- END OF FILE src/query/generation/SqlServerQuerySqlGenerator.ts ---

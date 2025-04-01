@@ -15,8 +15,19 @@ import {
   SqlOrdering,
 } from "../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../TranslationContext";
+// *** NOVO: Importa AliasGenerator ***
+import { AliasGenerator } from "../../generation/AliasGenerator";
 
-// Função wrapper
+/**
+ * Traduz uma chamada de método LINQ 'select'.
+ * @param expression A expressão da chamada de método 'select'.
+ * @param currentSelect A SelectExpression atual.
+ * @param sourceForOuterLambda A fonte de dados para resolver a lambda selector.
+ * @param context O contexto de tradução.
+ * @param createProjections Função para criar projeções SQL a partir do corpo da lambda.
+ * @param aliasGenerator O gerador de alias para a nova SelectExpression.
+ * @returns A nova SelectExpression com a projeção atualizada.
+ */
 export function visitSelectCall(
   expression: LinqMethodCallExpression,
   currentSelect: SelectExpression,
@@ -25,7 +36,8 @@ export function visitSelectCall(
   createProjections: (
     body: LinqExpression,
     context: TranslationContext
-  ) => ProjectionExpression[]
+  ) => ProjectionExpression[],
+  aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
 ): SelectExpression {
   if (
     expression.args.length !== 1 ||
@@ -44,17 +56,21 @@ export function visitSelectCall(
     throw new Error("Select projection resulted in no columns.");
   }
 
-  // **CORREÇÃO: Ordem dos argumentos do construtor**
+  // SELECT cria uma nova forma, precisa de um alias
+  // *** NOVO: Usa aliasGenerator ***
+  const selectAlias = aliasGenerator.generateAlias("select"); // Gera alias como s0, s1, etc.
+
   return new SelectExpression(
+    selectAlias, // <<< alias
     newProjections, // projection (Atualiza)
     currentSelect.from, // from
     currentSelect.predicate, // predicate
-    null, // having <<< Passando null
+    currentSelect.having, // having (Preserva)
     currentSelect.joins, // joins
     currentSelect.orderBy, // orderBy (Preserva)
     currentSelect.offset, // offset (Preserva)
-    currentSelect.limit // limit (Preserva)
-    // groupBy (Default [])
+    currentSelect.limit, // limit (Preserva)
+    currentSelect.groupBy // groupBy (Preserva)
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitSelectCall.ts ---

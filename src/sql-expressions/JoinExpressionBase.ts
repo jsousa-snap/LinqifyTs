@@ -1,40 +1,94 @@
 // --- START OF FILE src/sql-expressions/JoinExpressionBase.ts ---
 
+// --- START OF FILE src/sql-expressions/JoinExpressionBase.ts ---
+
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
-import { TableExpression, TableExpressionMetadata } from "./TableExpression";
+// *** CORREÇÃO: Importar TableExpressionBase ***
+import {
+  TableExpressionBase,
+  TableExpressionBaseMetadata,
+} from "./TableExpressionBase"; // Importar Base
 import { SqlExpressionType } from "./SqlExpressionType"; // Importar SqlExpressionType
 
-// A interface de metadados base continua esperando um tipo de JOIN
+/**
+ * Interface base para metadados de expressões JOIN.
+ * Define as propriedades comuns a todos os tipos de JOIN.
+ *
+ * @export
+ * @interface JoinExpressionBaseMetadata
+ * @extends {SqlExpressionMetadata}
+ */
 export interface JoinExpressionBaseMetadata extends SqlExpressionMetadata {
   // *** ATENÇÃO: Se adicionar outros Joins (Left, Right), adicione-os aqui ***
+  /** O tipo específico do JOIN (ex: InnerJoin). */
   $type: SqlExpressionType.InnerJoin; // Por enquanto, apenas InnerJoin existe
-  table: TableExpressionMetadata; // Metadados da tabela JOINED
-  joinPredicate: SqlExpressionMetadata; // Metadados do predicado ON
+  /** Metadados da fonte de dados que está sendo juntada (Tabela, Select, Union). */
+  // *** CORREÇÃO: Usar TableExpressionBaseMetadata ***
+  table: TableExpressionBaseMetadata; // <<< Metadados da fonte JOINED (pode ser Table, Select, Union)
+  /** Metadados da condição SQL da cláusula ON. */
+  joinPredicate: SqlExpressionMetadata;
 }
 
+/**
+ * Classe base abstrata para todas as expressões SQL JOIN (INNER JOIN, LEFT JOIN, etc.).
+ *
+ * @export
+ * @abstract
+ * @class JoinExpressionBase
+ * @extends {SqlExpression}
+ */
 export abstract class JoinExpressionBase extends SqlExpression {
+  /**
+   * Cria uma instância de JoinExpressionBase.
+   * @param {TableExpressionBase} table A fonte de dados a ser juntada (Tabela, Select, Union).
+   * @param {SqlExpression} joinPredicate A condição SQL da cláusula ON.
+   * @protected // Torna o construtor protegido para forçar uso das classes filhas.
+   * @memberof JoinExpressionBase
+   */
+  // *** CORREÇÃO: Aceitar TableExpressionBase ***
   protected constructor(
-    public readonly table: TableExpression,
+    public readonly table: TableExpressionBase, // <<< Aceita Tabela, Select ou Union
     public readonly joinPredicate: SqlExpression
   ) {
     super();
-    if (!table) throw new Error("Join table cannot be null.");
+    if (!table) throw new Error("Join table source cannot be null.");
     if (!joinPredicate) throw new Error("Join predicate cannot be null.");
   }
 
+  /**
+   * O tipo específico desta expressão JOIN (ex: InnerJoin).
+   * Deve ser implementado pelas classes filhas.
+   * @abstract
+   * @type {SqlExpressionType.InnerJoin} // Adicionar outros tipos se necessário
+   * @memberof JoinExpressionBase
+   */
   // *** CORREÇÃO: Estreitar o tipo abstrato aqui ***
   // Exige que as classes filhas definam o tipo como um dos tipos de JOIN válidos.
   // *** ATENÇÃO: Se adicionar outros Joins (Left, Right), adicione-os aqui ***
   abstract override readonly type: SqlExpressionType.InnerJoin;
 
+  /**
+   * Retorna a representação em string desta expressão JOIN para depuração.
+   * Deve ser implementado pelas classes filhas.
+   * @abstract
+   * @returns {string}
+   * @memberof JoinExpressionBase
+   */
   abstract override toString(): string;
 
+  /**
+   * Converte esta expressão JOIN base para seus metadados serializáveis em JSON.
+   *
+   * @returns {JoinExpressionBaseMetadata}
+   * @memberof JoinExpressionBase
+   */
   toMetadata(): JoinExpressionBaseMetadata {
     return {
       // Esta atribuição agora é válida porque 'this.type'
       // é garantido ser um dos tipos de JOIN permitidos.
       $type: this.type,
-      table: this.table.toMetadata(),
+      // *** CORREÇÃO: Garantir metadados corretos ***
+      table: this.table.toMetadata() as TableExpressionBaseMetadata, // <<< Usa metadados base
       joinPredicate: this.joinPredicate.toMetadata(),
     };
   }

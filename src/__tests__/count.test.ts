@@ -49,7 +49,7 @@ describe("Queryable Count Operator Tests", () => {
     const query = users; // Base query
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
     `;
     // Verifica o SQL gerado pela expressão correspondente
     const countExpression =
@@ -72,8 +72,8 @@ FROM [Users] AS [t0]
     const query = users; // Base query
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
-FROM [Users] AS [t0]
-WHERE [t0].[age] > 30
+FROM [Users] AS [u]
+WHERE [u].[age] > 30
     `;
     // Verifica o SQL gerado pela expressão correspondente
     const predicateLambda = new (require("../parsing").LambdaParser)().parse(
@@ -98,8 +98,8 @@ WHERE [t0].[age] > 30
     const query = users.where((u) => u.name === "Alice");
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
-FROM [Users] AS [t0]
-WHERE [t0].[name] = 'Alice'
+FROM [Users] AS [u]
+WHERE [u].[name] = 'Alice'
     `;
     // Verifica o SQL gerado pela expressão correspondente
     const countExpression =
@@ -122,8 +122,8 @@ WHERE [t0].[name] = 'Alice'
     const query = users.where((u) => u.name.includes("a")); // WHERE inicial
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
-FROM [Users] AS [t0]
-WHERE (([t0].[name] LIKE '%a%') AND [t0].[age] < 25)
+FROM [Users] AS [u]
+WHERE (([u].[name] LIKE '%a%') AND [u].[age] < 25)
     `;
     // Verifica o SQL gerado pela expressão correspondente
     const predicateLambda = new (require("../parsing").LambdaParser)().parse(
@@ -149,7 +149,7 @@ WHERE (([t0].[name] LIKE '%a%') AND [t0].[age] < 25)
     const query = users.select((u) => ({ nameOnly: u.name }));
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
     `;
     // Verifica o SQL gerado pela expressão correspondente
     const countExpression =
@@ -175,12 +175,12 @@ FROM [Users] AS [t0]
     }));
 
     const expectedSql = `
-SELECT [t0].[name] AS [nameOnly], (
+SELECT [u].[name] AS [nameOnly], (
     SELECT COUNT_BIG(1) AS [count_result]
-    FROM [Posts] AS [t1]
-    WHERE [t1].[authorId] = [t0].[id]
+    FROM [Posts] AS [p]
+    WHERE [p].[authorId] = [u].[id]
 ) AS [quantity]
-FROM [Users] AS [t0]
+FROM [Users] AS [u]
           `;
     const actualSql = query.toQueryString(); // Armazena o resultado
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql)); // Compara

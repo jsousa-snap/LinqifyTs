@@ -62,13 +62,16 @@ export function visitOrderByCall(
 
   const newOrdering: SqlOrdering = { expression: keySql, direction };
 
+  // OrderBy não muda a forma, reutiliza o alias
+  const alias = currentSelect.alias;
+
   // **CORREÇÃO: Ordem dos argumentos do construtor**
-  // orderBy substitui a ordenação, mas mantém a paginação
   return new SelectExpression(
+    alias, // <<< alias (Mantém)
     currentSelect.projection, // projection
     currentSelect.from, // from
     currentSelect.predicate, // predicate
-    null, // having <<< Passando null
+    null, // having
     currentSelect.joins, // joins
     [newOrdering], // orderBy (Substitui)
     currentSelect.offset, // offset (Preserva)

@@ -8,9 +8,9 @@ import {
   ProjectionExpressionMetadata,
 } from "./ProjectionExpression";
 import {
-  TableExpressionBase,
+  TableExpressionBase, // Importa a classe base
   TableExpressionBaseMetadata,
-} from "./TableExpressionBase";
+} from "./TableExpressionBase"; // Importa metadados base
 import {
   JoinExpressionBase,
   JoinExpressionBaseMetadata,
@@ -22,16 +22,15 @@ import {
 } from "./SqlConstantExpression";
 import { SqlExpressionType } from "./SqlExpressionType";
 
-// Nova interface de metadados para SelectExpression
-export interface SelectExpressionMetadata extends SqlExpressionMetadata {
-  $type: SqlExpressionType.Select;
+// *** CORREÇÃO: Estende metadados base ***
+export interface SelectExpressionMetadata extends TableExpressionBaseMetadata {
+  $type: SqlExpressionType.Select; // Redefine o tipo específico
   projection: ProjectionExpressionMetadata[];
   from: TableExpressionBaseMetadata;
   predicate: SqlExpressionMetadata | null; // WHERE clause
-  having: SqlExpressionMetadata | null; // <<< NOVO: HAVING clause
+  having: SqlExpressionMetadata | null; // HAVING clause
   joins: JoinExpressionBaseMetadata[];
   orderBy: { expression: SqlExpressionMetadata; direction: SortDirection }[];
-  // Mantém os tipos específicos esperados para offset/limit
   offset: SqlConstantExpressionMetadata | null;
   limit: SqlConstantExpressionMetadata | null;
   groupBy: SqlExpressionMetadata[];
@@ -39,42 +38,41 @@ export interface SelectExpressionMetadata extends SqlExpressionMetadata {
 
 /**
  * Representa uma consulta SELECT completa ou uma subconsulta SELECT.
+ * Agora estende TableExpressionBase para poder ser usada diretamente como fonte.
  *
  * @class SelectExpression
- * @extends {SqlExpression}
+ * @extends {TableExpressionBase} // <<< ESTENDE TableExpressionBase
  */
-export class SelectExpression extends SqlExpression {
-  public readonly type = SqlExpressionType.Select;
+export class SelectExpression extends TableExpressionBase {
+  // <<< ESTENDE TableExpressionBase
+  public override readonly type = SqlExpressionType.Select; // <<< Define o tipo
 
   constructor(
+    alias: string, // <<< NOVO: Recebe o alias
     public readonly projection: ReadonlyArray<ProjectionExpression>,
     public readonly from: TableExpressionBase,
-    public readonly predicate: SqlExpression | null = null, // <<< WHERE
-    public readonly having: SqlExpression | null = null, // <<< NOVO: HAVING
+    public readonly predicate: SqlExpression | null = null,
+    public readonly having: SqlExpression | null = null,
     public readonly joins: ReadonlyArray<JoinExpressionBase> = [],
     public readonly orderBy: ReadonlyArray<SqlOrdering> = [],
-    // Garante que offset/limit sejam SqlConstantExpression ou null no construtor
     public readonly offset: SqlConstantExpression | null = null,
     public readonly limit: SqlConstantExpression | null = null,
     public readonly groupBy: ReadonlyArray<SqlExpression> = []
   ) {
-    super();
+    super(alias); // <<< Passa o alias para a classe base
     if (!projection || projection.length === 0)
       throw new Error("Select must have at least one projection.");
     if (!from) throw new Error("Select must have a FROM source.");
     if (!joins) throw new Error("Joins array cannot be null.");
     if (!orderBy) throw new Error("OrderBy array cannot be null.");
     if (!groupBy) throw new Error("GroupBy array cannot be null.");
-
-    // Removido o warning sobre tipo não constante, pois agora o tipo é forçado
-    // if (offset && offset.type !== SqlExpressionType.Constant) { ... }
-    // if (limit && limit.type !== SqlExpressionType.Constant) { ... }
   }
 
   toString(): string {
-    // ... (inalterado - o gerador de SQL cuidará do HAVING) ...
+    // toString da base já inclui o alias, então não precisamos dele aqui explicitamente
+    // Apenas a lógica interna do SELECT
     const projStr = this.projection.map((p) => p.toString()).join(", ");
-    const fromStr = this.from.toString();
+    const fromStr = this.from.toString(); // from também é TableExpressionBase
     const joinStr = this.joins.map((j) => ` ${j.toString()}`).join("");
     const whereStr = this.predicate
       ? ` WHERE ${this.predicate.toString()}`
@@ -83,7 +81,6 @@ export class SelectExpression extends SqlExpression {
       this.groupBy.length > 0
         ? ` GROUP BY ${this.groupBy.map((g) => g.toString()).join(", ")}`
         : "";
-    // Adiciona o HAVING na string de debug
     const havingStr = this.having ? ` HAVING ${this.having.toString()}` : "";
     const orderByStr =
       this.orderBy.length > 0
@@ -98,26 +95,26 @@ export class SelectExpression extends SqlExpression {
       ? ` FETCH NEXT ${this.limit.toString()} ROWS ONLY`
       : "";
 
+    // Retorna apenas o corpo do SELECT para debug, o gerador cuidará do alias/parênteses
     return `SELECT ${projStr} FROM ${fromStr}${joinStr}${whereStr}${groupByStr}${havingStr}${orderByStr}${offsetStr}${limitStr}`;
   }
 
   toMetadata(): SelectExpressionMetadata {
-    // *** CORREÇÃO: Adicionar asserção de tipo para offset e limit ***
     const offsetMetadata = this.offset?.toMetadata() ?? null;
     const limitMetadata = this.limit?.toMetadata() ?? null;
 
     return {
-      $type: SqlExpressionType.Select,
+      ...super.toMetadata(), // <<< Inclui alias e $type da base
+      $type: SqlExpressionType.Select, // <<< Redefine para Select
       projection: this.projection.map((p) => p.toMetadata()),
-      from: this.from.toMetadata(),
+      from: this.from.toMetadata(), // from também é TableExpressionBase
       predicate: this.predicate?.toMetadata() ?? null,
-      having: this.having?.toMetadata() ?? null, // <<< NOVO: Adiciona metadados do HAVING
+      having: this.having?.toMetadata() ?? null,
       joins: this.joins.map((j) => j.toMetadata()),
       orderBy: this.orderBy.map((o) => ({
         expression: o.expression.toMetadata(),
         direction: o.direction,
       })),
-      // Usa asserção de tipo para satisfazer a interface
       offset: offsetMetadata as SqlConstantExpressionMetadata | null,
       limit: limitMetadata as SqlConstantExpressionMetadata | null,
       groupBy: this.groupBy.map((g) => g.toMetadata()),

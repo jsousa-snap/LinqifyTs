@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/translation/method-visitors/visitMaxCall.ts ---
 
+// src/query/translation/method-visitors/visitMaxCall.ts
+
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -13,6 +15,8 @@ import {
   SqlFunctionCallExpression,
 } from "../../../sql-expressions";
 import { SqlDataSource, TranslationContext } from "../TranslationContext";
+// *** NOVO: Importa AliasGenerator ***
+import { AliasGenerator } from "../../generation/AliasGenerator";
 
 /**
  * Traduz uma chamada de método LINQ 'max(selector)'.
@@ -21,6 +25,7 @@ import { SqlDataSource, TranslationContext } from "../TranslationContext";
  * @param sourceForLambda A fonte de dados para resolver a lambda selector.
  * @param context O contexto de tradução.
  * @param visitInContext Função para visitar a lambda no contexto correto.
+ * @param aliasGenerator O gerador de alias.
  * @returns A nova SelectExpression que calcula o máximo.
  */
 export function visitMaxCall(
@@ -31,7 +36,8 @@ export function visitMaxCall(
   visitInContext: (
     expression: LinqExpression,
     context: TranslationContext
-  ) => SqlExpression | null
+  ) => SqlExpression | null,
+  aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
 ): SelectExpression {
   if (
     expression.args.length !== 1 ||
@@ -58,13 +64,15 @@ export function visitMaxCall(
   ]);
   const maxProjection = new ProjectionExpression(maxFunction, "max_result");
 
-  // Retorna uma nova SelectExpression *apenas* com a projeção MAX
-  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
+  // Agregação terminal não precisa de alias externo
+  const aggregationAlias = ""; // Alias vazio
+
   return new SelectExpression(
+    aggregationAlias, // alias
     [maxProjection], // projection (SELECT MAX(...) AS [max_result])
     currentSelect.from, // from
     currentSelect.predicate, // predicate
-    null, // having <<< Passando null
+    null, // having
     currentSelect.joins, // joins
     [] // orderBy (Remove)
     // Offset e Limit são removidos (default null)

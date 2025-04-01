@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/translation/method-visitors/visitJoinCall.ts ---
 
+// src/query/translation/method-visitors/visitJoinCall.ts
+
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -13,11 +15,26 @@ import {
   InnerJoinExpression,
   SqlBinaryExpression,
   ProjectionExpression,
+  TableExpressionBase,
+  CompositeUnionExpression,
 } from "../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../TranslationContext";
 import { OperatorType } from "../../generation/utils/sqlUtils";
+// *** NOVO: Importa AliasGenerator ***
+import { AliasGenerator } from "../../generation/AliasGenerator";
 
-// Função wrapper
+/**
+ * Traduz uma chamada de método LINQ 'join'.
+ * @param expression A expressão da chamada de método 'join'.
+ * @param currentSelect A SelectExpression atual (representando a fonte externa).
+ * @param sourceForOuterLambda A fonte de dados para a lambda da chave externa.
+ * @param context O contexto de tradução.
+ * @param visit Função principal de visita para a fonte interna.
+ * @param visitInContext Função para visitar lambdas no contexto correto.
+ * @param createProjections Função para criar projeções SQL a partir da lambda de resultado.
+ * @param aliasGenerator O gerador de alias para a nova SelectExpression resultante.
+ * @returns A nova SelectExpression representando o resultado do JOIN.
+ */
 export function visitJoinCall(
   expression: LinqMethodCallExpression,
   currentSelect: SelectExpression,
@@ -31,9 +48,10 @@ export function visitJoinCall(
   createProjections: (
     body: LinqExpression,
     context: TranslationContext
-  ) => ProjectionExpression[]
+  ) => ProjectionExpression[],
+  aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
 ): SelectExpression {
-  // Validações de argumentos (inalteradas)
+  // Validações de argumentos
   const [
     innerSourceLinqExpr,
     outerKeyLambdaExpr,
@@ -46,31 +64,30 @@ export function visitJoinCall(
     LinqLambdaExpression
   ];
 
-  const innerSqlDataSource = visit(innerSourceLinqExpr);
-  if (!innerSqlDataSource) {
-    throw new Error(`Visiting inner source for 'join' failed.`);
-  }
-
-  let innerTableForJoin: TableExpression;
-  if (innerSqlDataSource instanceof TableExpression) {
-    innerTableForJoin = innerSqlDataSource;
-  } else if (
-    innerSqlDataSource instanceof SelectExpression &&
-    innerSqlDataSource.from instanceof TableExpression
+  // --- 1. Visita a fonte interna ---
+  const innerSqlSourceBase = visit(innerSourceLinqExpr);
+  if (
+    !innerSqlSourceBase ||
+    !(innerSqlSourceBase instanceof TableExpressionBase)
   ) {
-    // TODO: Lidar com joins em subqueries de forma mais robusta.
-    // Por agora, pegamos a tabela base da subquery.
-    innerTableForJoin = innerSqlDataSource.from;
-    console.warn(
-      `JOIN with subquery source [${innerTableForJoin.alias}] detected. Currently using base table.`
-    );
-  } else {
     throw new Error(
-      `JOIN requires inner source to be Table or Select with Table FROM (found: ${innerSqlDataSource?.constructor.name})`
+      `Visiting inner source for 'join' did not yield a Table, Select, or Union. Found: ${innerSqlSourceBase?.constructor.name}`
     );
   }
+  // Garante que a fonte interna tenha um alias (necessário para o JOIN ON e projeções)
+  if (
+    !innerSqlSourceBase.alias &&
+    innerSqlSourceBase instanceof TableExpressionBase
+  ) {
+    (innerSqlSourceBase as { alias: string }).alias =
+      aliasGenerator.generateAlias(
+        innerSqlSourceBase instanceof TableExpression
+          ? innerSqlSourceBase.name
+          : innerSqlSourceBase.type
+      );
+  }
 
-  // Tradução das chaves (inalterada)
+  // --- 2. Tradução das chaves ---
   const outerParam = outerKeyLambdaExpr.parameters[0];
   const innerParam = innerKeyLambdaExpr.parameters[0];
   const outerKeyContext = context.createChildContext(
@@ -80,29 +97,28 @@ export function visitJoinCall(
   const outerKeySql = visitInContext(outerKeyLambdaExpr.body, outerKeyContext);
   const innerKeyContext = context.createChildContext(
     [innerParam],
-    [innerTableForJoin]
+    [innerSqlSourceBase]
   );
   const innerKeySql = visitInContext(innerKeyLambdaExpr.body, innerKeyContext);
-
   if (!outerKeySql || !innerKeySql) {
     throw new Error("Could not translate join keys.");
   }
 
-  // Criação da condição e expressão de JOIN (inalterada)
+  // --- 3. Criação da expressão de JOIN ---
   const joinPredicate = new SqlBinaryExpression(
     outerKeySql,
     OperatorType.Equal,
     innerKeySql
   );
-  const joinExpr = new InnerJoinExpression(innerTableForJoin, joinPredicate);
+  const joinExpr = new InnerJoinExpression(innerSqlSourceBase, joinPredicate);
   const newJoins = [...currentSelect.joins, joinExpr];
 
-  // Criação das projeções do resultado (inalterada)
+  // --- 4. Criação das projeções do resultado ---
   const resultOuterParam = resultLambdaExpr.parameters[0];
   const resultInnerParam = resultLambdaExpr.parameters[1];
   const resultContext = context.createChildContext(
     [resultOuterParam, resultInnerParam],
-    [sourceForOuterLambda, innerTableForJoin] // Passa as fontes corretas
+    [sourceForOuterLambda, innerSqlSourceBase]
   );
   const resultProjections = createProjections(
     resultLambdaExpr.body,
@@ -112,19 +128,22 @@ export function visitJoinCall(
     throw new Error("Join projection resulted in no columns.");
   }
 
-  // **CORREÇÃO: Ordem dos argumentos do construtor**
-  // JOIN geralmente redefine a paginação, mas preservamos para consistência,
-  // a menos que haja lógica específica para resetar.
+  // --- 5. Cria a nova SelectExpression ---
+  // JOIN cria uma nova forma, precisa de um alias
+  // *** NOVO: Usa aliasGenerator ***
+  const joinAlias = aliasGenerator.generateAlias("join"); // Gera alias como j0, j1, etc.
+
   return new SelectExpression(
-    resultProjections, // projection (Atualiza)
-    currentSelect.from, // from
-    currentSelect.predicate, // predicate
-    null, // having <<< Passando null
-    newJoins, // joins (Atualiza)
-    currentSelect.orderBy, // orderBy (Preserva - pode precisar reavaliar)
+    joinAlias, // <<< alias
+    resultProjections, // projection (Nova projeção do resultado)
+    currentSelect.from, // from (Mantém o FROM original)
+    currentSelect.predicate, // predicate (Mantém o WHERE original)
+    currentSelect.having, // having (Mantém o HAVING original)
+    newJoins, // joins (Adiciona o novo JOIN)
+    currentSelect.orderBy, // orderBy (Preserva)
     currentSelect.offset, // offset (Preserva)
-    currentSelect.limit // limit (Preserva)
-    // groupBy (Default [])
+    currentSelect.limit, // limit (Preserva)
+    currentSelect.groupBy // groupBy (Preserva)
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitJoinCall.ts ---
