@@ -112,17 +112,19 @@ export function visitJoinCall(
     throw new Error("Join projection resulted in no columns.");
   }
 
-  // **CORREÇÃO: Propaga offset e limit**
+  // **CORREÇÃO: Ordem dos argumentos do construtor**
   // JOIN geralmente redefine a paginação, mas preservamos para consistência,
   // a menos que haja lógica específica para resetar.
   return new SelectExpression(
-    resultProjections, // Atualiza projeção
-    currentSelect.from,
-    currentSelect.predicate,
-    newJoins, // Atualiza joins
-    currentSelect.orderBy, // Preserva orderBy (pode precisar reavaliar)
-    currentSelect.offset, // Preserva offset
-    currentSelect.limit // Preserva limit
+    resultProjections, // projection (Atualiza)
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate
+    null, // having <<< Passando null
+    newJoins, // joins (Atualiza)
+    currentSelect.orderBy, // orderBy (Preserva - pode precisar reavaliar)
+    currentSelect.offset, // offset (Preserva)
+    currentSelect.limit // limit (Preserva)
+    // groupBy (Default [])
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitJoinCall.ts ---

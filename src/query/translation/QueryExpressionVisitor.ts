@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/translation/QueryExpressionVisitor.ts ---
 
+// --- START OF FILE src/query/translation/QueryExpressionVisitor.ts ---
+
 // src/query/translation/QueryExpressionVisitor.ts
 
 import {
@@ -58,6 +60,7 @@ import {
   visitMinCall,
   visitMaxCall,
   visitGroupByCall,
+  visitHavingCall, // <<< NOVO: Importa visitHavingCall
 } from "./method-visitors";
 
 // Lista de nomes de funções de agregação SQL comuns
@@ -159,7 +162,18 @@ export class QueryExpressionVisitor {
       "*" // Alias da projeção é '*'
     );
     // A cláusula FROM da nova SelectExpression usa a fonte original (Table ou Union)
-    return new SelectExpression([placeholderProjection], source);
+    // *** CORREÇÃO: O constructor precisa receber TODOS os parâmetros agora ***
+    return new SelectExpression(
+      [placeholderProjection],
+      source,
+      null, // predicate
+      null // having <<< NOVO
+      // [] (joins - default)
+      // [] (orderBy - default)
+      // null (offset - default)
+      // null (limit - default)
+      // [] (groupBy - default)
+    );
   }
 
   /**
@@ -406,7 +420,7 @@ export class QueryExpressionVisitor {
     return new SqlBinaryExpression(leftSql, operator, rightSql);
   }
 
-  // visitMethodCall (Modificado para tratar Union como fonte em union/concat)
+  // visitMethodCall (Modificado para tratar where vs having)
   protected visitMethodCall(
     expression: LinqMethodCallExpression
   ): SelectExpression | CompositeUnionExpression {
@@ -419,7 +433,7 @@ export class QueryExpressionVisitor {
       );
     }
 
-    // --- TRATAMENTO UNION/CONCAT COM FLATTENING ---
+    // --- TRATAMENTO UNION/CONCAT COM FLATTENING (inalterado) ---
     if (methodName === "union" || methodName === "concat") {
       if (expression.args.length !== 1) {
         throw new Error(`Invalid arguments for '${methodName}'.`);
@@ -427,11 +441,9 @@ export class QueryExpressionVisitor {
       const isDistinct = methodName === "union";
       const secondLinqExpr = expression.args[0];
 
-      // Visita ambas as fontes
-      const firstVisited = this.visit(sourceLinqExpr); // Visita a primeira fonte (pode ser Table, Select, Union)
-      const secondVisited = this.visit(secondLinqExpr); // Visita a segunda fonte (pode ser Table, Select, Union)
+      const firstVisited = this.visit(sourceLinqExpr);
+      const secondVisited = this.visit(secondLinqExpr);
 
-      // Garante que a SEGUNDA fonte seja SelectExpression (a primeira será tratada abaixo)
       let secondSelect: SelectExpression;
       if (
         secondVisited instanceof TableExpression ||
@@ -446,22 +458,19 @@ export class QueryExpressionVisitor {
         );
       }
 
-      // Verifica se a PRIMEIRA fonte já é uma Union compatível
       if (
         firstVisited instanceof CompositeUnionExpression &&
         firstVisited.distinct === isDistinct
       ) {
-        // Merge: Adiciona a segunda SELECT às fontes existentes da primeira Union
         const existingSources = firstVisited.sources;
         const newSources = [...existingSources, secondSelect];
-        const unionAlias = this.context.generateTableAlias(); // Novo alias para a union combinada
+        const unionAlias = this.context.generateTableAlias();
         return new CompositeUnionExpression(newSources, unionAlias, isDistinct);
       } else {
-        // Cria nova Union: Garante que a PRIMEIRA fonte também seja SelectExpression
         let firstSelect: SelectExpression;
         if (
           firstVisited instanceof TableExpression ||
-          firstVisited instanceof CompositeUnionExpression // Trata caso onde a primeira é uma Union de tipo diferente
+          firstVisited instanceof CompositeUnionExpression
         ) {
           firstSelect = this.createDefaultSelect(firstVisited);
         } else if (firstVisited instanceof SelectExpression) {
@@ -474,7 +483,7 @@ export class QueryExpressionVisitor {
 
         const unionAlias = this.context.generateTableAlias();
         return new CompositeUnionExpression(
-          [firstSelect, secondSelect], // Cria nova union com as duas fontes (como Selects)
+          [firstSelect, secondSelect],
           unionAlias,
           isDistinct
         );
@@ -482,7 +491,7 @@ export class QueryExpressionVisitor {
     }
     // --- FIM TRATAMENTO UNION/CONCAT ---
 
-    // --- Lógica existente para outros métodos ---
+    // --- Visita a fonte ANTES de decidir o visitor ---
     const baseSql = this.visit(sourceLinqExpr);
     if (!baseSql) {
       throw new Error(
@@ -493,6 +502,7 @@ export class QueryExpressionVisitor {
     let currentSelect: SelectExpression;
     let sourceForLambda: SqlDataSource;
 
+    // Normaliza a fonte para SelectExpression se necessário
     if (baseSql instanceof TableExpression) {
       currentSelect = this.createDefaultSelect(baseSql);
       sourceForLambda = baseSql;
@@ -500,24 +510,53 @@ export class QueryExpressionVisitor {
       currentSelect = baseSql;
       sourceForLambda = currentSelect;
     } else if (baseSql instanceof CompositeUnionExpression) {
-      currentSelect = this.createDefaultSelect(baseSql); // Cria SELECT * FROM (Union)
-      sourceForLambda = currentSelect; // Lambda opera sobre o resultado da união
+      currentSelect = this.createDefaultSelect(baseSql);
+      sourceForLambda = currentSelect;
     } else {
       throw new Error(
         `Translation Error: Cannot apply method '${methodName}' to SQL source of type '${baseSql.constructor.name}'. Expected Table, Select, or Union.`
       );
     }
 
-    // Delega para visitors específicos de cada método
-    switch (methodName) {
-      case "where":
-        return visitWhereCall(
+    // --- *** NOVO: Lógica para distinguir WHERE de HAVING *** ---
+    if (methodName === "where") {
+      // Verifica se a EXPRESSÃO LINQ FONTE foi um 'groupBy'
+      let isSourceGroupBy = false;
+      if (
+        sourceLinqExpr.type === LinqExpressionType.Call &&
+        (sourceLinqExpr as LinqMethodCallExpression).methodName === "groupBy"
+      ) {
+        isSourceGroupBy = true;
+      }
+
+      // Chama o visitor apropriado
+      if (isSourceGroupBy) {
+        // Se a fonte foi groupBy, este 'where' vira 'HAVING'
+        return visitHavingCall(
+          // <<< Chama visitHavingCall
           expression,
           currentSelect,
           sourceForLambda,
           this.context,
           this.visitInContext.bind(this)
         );
+      } else {
+        // Senão, é um 'WHERE' normal
+        return visitWhereCall(
+          // <<< Chama visitWhereCall
+          expression,
+          currentSelect,
+          sourceForLambda,
+          this.context,
+          this.visitInContext.bind(this)
+        );
+      }
+    }
+    // --- *** FIM DA LÓGICA WHERE/HAVING *** ---
+
+    // --- Lógica existente para outros métodos ---
+    switch (methodName) {
+      // case "where": // Tratado acima
       case "select":
         return visitSelectCall(
           expression,
@@ -667,8 +706,7 @@ export class QueryExpressionVisitor {
       const param = lambda.parameters[0];
 
       const sourceForPredicate: SqlDataSource =
-        (selectForExists.from instanceof TableExpression ||
-          selectForExists.from instanceof CompositeUnionExpression) && // Check if FROM is Table or Union
+        selectForExists.from instanceof TableExpressionBase && // Check if FROM is Table or Union
         selectForExists.projection.length === 1 &&
         selectForExists.projection[0].expression instanceof ColumnExpression &&
         selectForExists.projection[0].expression.name === "*"
@@ -691,10 +729,12 @@ export class QueryExpressionVisitor {
           )
         : predicateSql;
 
+      // *** CORREÇÃO: Passa null para having ***
       selectForExists = new SelectExpression(
         selectForExists.projection,
         selectForExists.from,
         newPredicate,
+        null, // having
         selectForExists.joins,
         selectForExists.orderBy,
         selectForExists.offset,
@@ -708,10 +748,12 @@ export class QueryExpressionVisitor {
       "exists_val"
     );
 
+    // *** CORREÇÃO: Passa null para having ***
     const finalSelectForExists = new SelectExpression(
       [existsProjection],
       selectForExists.from,
       selectForExists.predicate,
+      null, // having
       selectForExists.joins,
       [],
       null,
@@ -789,7 +831,8 @@ export class QueryExpressionVisitor {
             !sqlExpr.offset &&
             !sqlExpr.limit &&
             sqlExpr.joins.length === 0 &&
-            sqlExpr.groupBy.length === 0; // Agregação sem paginação/join/group
+            sqlExpr.groupBy.length === 0 &&
+            !sqlExpr.having; // <<< NOVO: Agregação não pode ter HAVING para ser escalar simples
 
           let subqueryExpression: SqlExpression;
           if (useScalarSubquery) {

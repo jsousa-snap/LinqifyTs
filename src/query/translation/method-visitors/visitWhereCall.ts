@@ -49,15 +49,17 @@ export function visitWhereCall(
       )
     : predicateSql;
 
-  // **CORREÇÃO: Propaga offset e limit**
+  // **CORREÇÃO: Ordem dos argumentos do construtor**
   return new SelectExpression(
-    currentSelect.projection,
-    currentSelect.from,
-    newPredicate, // Atualiza predicado
-    currentSelect.joins,
-    currentSelect.orderBy,
-    currentSelect.offset, // Preserva offset
-    currentSelect.limit // Preserva limit
+    currentSelect.projection, // projection
+    currentSelect.from, // from
+    newPredicate, // predicate (Atualiza)
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    currentSelect.orderBy, // orderBy (Preserva)
+    currentSelect.offset, // offset (Preserva)
+    currentSelect.limit // limit (Preserva)
+    // groupBy (Default [])
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitWhereCall.ts ---

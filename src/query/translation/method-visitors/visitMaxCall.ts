@@ -59,13 +59,15 @@ export function visitMaxCall(
   const maxProjection = new ProjectionExpression(maxFunction, "max_result");
 
   // Retorna uma nova SelectExpression *apenas* com a projeção MAX
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
-    [maxProjection], // SELECT MAX(...) AS [max_result]
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    [] // Remove OrderBy
-    // Offset e Limit são removidos
+    [maxProjection], // projection (SELECT MAX(...) AS [max_result])
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    [] // orderBy (Remove)
+    // Offset e Limit são removidos (default null)
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitMaxCall.ts ---

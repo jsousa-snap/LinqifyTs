@@ -1,5 +1,7 @@
 // --- START OF FILE src/sql-expressions/SelectExpression.ts ---
 
+// --- START OF FILE src/sql-expressions/SelectExpression.ts ---
+
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
 import {
   ProjectionExpression,
@@ -25,7 +27,8 @@ export interface SelectExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.Select;
   projection: ProjectionExpressionMetadata[];
   from: TableExpressionBaseMetadata;
-  predicate: SqlExpressionMetadata | null;
+  predicate: SqlExpressionMetadata | null; // WHERE clause
+  having: SqlExpressionMetadata | null; // <<< NOVO: HAVING clause
   joins: JoinExpressionBaseMetadata[];
   orderBy: { expression: SqlExpressionMetadata; direction: SortDirection }[];
   // Mantém os tipos específicos esperados para offset/limit
@@ -46,7 +49,8 @@ export class SelectExpression extends SqlExpression {
   constructor(
     public readonly projection: ReadonlyArray<ProjectionExpression>,
     public readonly from: TableExpressionBase,
-    public readonly predicate: SqlExpression | null = null,
+    public readonly predicate: SqlExpression | null = null, // <<< WHERE
+    public readonly having: SqlExpression | null = null, // <<< NOVO: HAVING
     public readonly joins: ReadonlyArray<JoinExpressionBase> = [],
     public readonly orderBy: ReadonlyArray<SqlOrdering> = [],
     // Garante que offset/limit sejam SqlConstantExpression ou null no construtor
@@ -68,7 +72,7 @@ export class SelectExpression extends SqlExpression {
   }
 
   toString(): string {
-    // ... (inalterado) ...
+    // ... (inalterado - o gerador de SQL cuidará do HAVING) ...
     const projStr = this.projection.map((p) => p.toString()).join(", ");
     const fromStr = this.from.toString();
     const joinStr = this.joins.map((j) => ` ${j.toString()}`).join("");
@@ -79,6 +83,8 @@ export class SelectExpression extends SqlExpression {
       this.groupBy.length > 0
         ? ` GROUP BY ${this.groupBy.map((g) => g.toString()).join(", ")}`
         : "";
+    // Adiciona o HAVING na string de debug
+    const havingStr = this.having ? ` HAVING ${this.having.toString()}` : "";
     const orderByStr =
       this.orderBy.length > 0
         ? ` ORDER BY ${this.orderBy
@@ -92,7 +98,7 @@ export class SelectExpression extends SqlExpression {
       ? ` FETCH NEXT ${this.limit.toString()} ROWS ONLY`
       : "";
 
-    return `SELECT ${projStr} FROM ${fromStr}${joinStr}${whereStr}${groupByStr}${orderByStr}${offsetStr}${limitStr}`;
+    return `SELECT ${projStr} FROM ${fromStr}${joinStr}${whereStr}${groupByStr}${havingStr}${orderByStr}${offsetStr}${limitStr}`;
   }
 
   toMetadata(): SelectExpressionMetadata {
@@ -105,6 +111,7 @@ export class SelectExpression extends SqlExpression {
       projection: this.projection.map((p) => p.toMetadata()),
       from: this.from.toMetadata(),
       predicate: this.predicate?.toMetadata() ?? null,
+      having: this.having?.toMetadata() ?? null, // <<< NOVO: Adiciona metadados do HAVING
       joins: this.joins.map((j) => j.toMetadata()),
       orderBy: this.orderBy.map((o) => ({
         expression: o.expression.toMetadata(),

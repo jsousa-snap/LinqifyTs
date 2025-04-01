@@ -59,13 +59,15 @@ export function visitSumCall(
   const sumProjection = new ProjectionExpression(sumFunction, "sum_result");
 
   // Retorna uma nova SelectExpression *apenas* com a projeção SUM
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
-    [sumProjection], // SELECT SUM(...) AS [sum_result]
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    [] // Remove OrderBy
-    // Offset e Limit são removidos
+    [sumProjection], // projection (SELECT SUM(...) AS [sum_result])
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    [] // orderBy (Remove)
+    // Offset e Limit são removidos (default null)
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitSumCall.ts ---

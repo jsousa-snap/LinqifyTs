@@ -191,15 +191,17 @@ export function visitGroupByCall(
   }
 
   // --- 3. Construir SelectExpression Final ---
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
-    finalProjections,
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    [], // ORDER BY
-    null, // OFFSET
-    null, // LIMIT
-    keySqlExpressions // GROUP BY
+    finalProjections, // projection
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate (WHERE original)
+    null, // having <<< Passando null (HAVING é definido por visitHavingCall)
+    currentSelect.joins, // joins
+    [], // orderBy (Resetado por groupBy)
+    null, // offset (Resetado)
+    null, // limit (Resetado)
+    keySqlExpressions // groupBy
   );
 }
 
@@ -342,5 +344,4 @@ function mapLinqAggregateToSql(methodName: string): string {
       );
   }
 }
-
 // --- END OF FILE src/query/translation/method-visitors/visitGroupByCall.ts ---

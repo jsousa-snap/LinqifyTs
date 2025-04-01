@@ -62,16 +62,18 @@ export function visitOrderByCall(
 
   const newOrdering: SqlOrdering = { expression: keySql, direction };
 
-  // **CORREÇÃO: Propaga offset e limit**
+  // **CORREÇÃO: Ordem dos argumentos do construtor**
   // orderBy substitui a ordenação, mas mantém a paginação
   return new SelectExpression(
-    currentSelect.projection,
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    [newOrdering], // Substitui orderBy
-    currentSelect.offset, // Preserva offset
-    currentSelect.limit // Preserva limit
+    currentSelect.projection, // projection
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    [newOrdering], // orderBy (Substitui)
+    currentSelect.offset, // offset (Preserva)
+    currentSelect.limit // limit (Preserva)
+    // groupBy (Default [])
   );
 }
 

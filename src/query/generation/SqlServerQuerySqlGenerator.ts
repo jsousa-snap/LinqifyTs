@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/generation/SqlServerQuerySqlGenerator.ts ---
 
+// --- START OF FILE src/query/generation/SqlServerQuerySqlGenerator.ts ---
+
 // src/query/generation/SqlServerQuerySqlGenerator.ts
 
 import {
@@ -191,7 +193,7 @@ export class SqlServerQuerySqlGenerator {
 
   /**
    * Visita e gera SQL para uma expressão SELECT.
-   * Responsável por montar as cláusulas SELECT, FROM, JOIN, WHERE, GROUP BY, ORDER BY, OFFSET, FETCH.
+   * Responsável por montar as cláusulas SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, OFFSET, FETCH.
    *
    * @protected
    * @param {SelectExpression} expression A expressão SELECT a ser visitada.
@@ -241,6 +243,14 @@ export class SqlServerQuerySqlGenerator {
       this.builder.dedent();
     }
 
+    // <<< NOVO: Adiciona cláusula HAVING >>>
+    if (expression.having) {
+      this.builder.appendLine().indent().append("HAVING ");
+      this.Visit(expression.having); // Visita a condição HAVING
+      this.builder.dedent();
+    }
+    // <<< FIM NOVO >>>
+
     if (expression.orderBy && expression.orderBy.length > 0) {
       this.builder.appendLine().indent().append("ORDER BY ");
       expression.orderBy.forEach((o, i) => {
@@ -252,7 +262,8 @@ export class SqlServerQuerySqlGenerator {
       });
       this.builder.dedent();
     } else if (expression.offset || expression.limit) {
-      // Adiciona ORDER BY (SELECT NULL) apenas se não houver GROUP BY
+      // Adiciona ORDER BY (SELECT NULL) apenas se não houver GROUP BY ou HAVING
+      // (HAVING implica GROUP BY, então verificar groupBy é suficiente)
       if (expression.groupBy.length === 0) {
         console.warn(
           "Warning: SQL generation includes OFFSET or FETCH without a preceding ORDER BY clause. Results may be non-deterministic."
@@ -298,7 +309,11 @@ export class SqlServerQuerySqlGenerator {
       }
     } else if (projection.expression.type === SqlExpressionType.Constant) {
       // Se for uma constante com alias padrão gerado, não precisa
-      if (projection.alias.startsWith("expr")) {
+      // (Exceto se for um alias de agregação padrão como count_result)
+      if (
+        projection.alias.startsWith("expr") &&
+        !projection.alias.endsWith("_result") // Mantém alias de agregação
+      ) {
         needsAlias = false;
       }
     }
@@ -316,7 +331,8 @@ export class SqlServerQuerySqlGenerator {
       projection.expression.type === SqlExpressionType.ScalarSubqueryAsJson ||
       projection.expression.type === SqlExpressionType.ScalarSubquery
     ) {
-      needsAlias = !!projection.alias; // Precisa do alias se ele foi definido
+      // Mantém o alias se ele foi definido (incluindo os _result de agregações)
+      needsAlias = !!projection.alias;
     }
 
     // Adiciona o alias se necessário e se ele existir

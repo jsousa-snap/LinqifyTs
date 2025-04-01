@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/translation/method-visitors/visitAvgCall.ts ---
 
+// src/query/translation/method-visitors/visitAvgCall.ts
+
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -64,13 +66,15 @@ export function visitAvgCall(
   // Retorna uma nova SelectExpression *apenas* com a projeção AVG,
   // mantendo o FROM, JOINs e WHERE originais.
   // ORDER BY e Paging são ignorados para agregações.
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
-    [avgProjection], // SELECT AVG(...) AS [avg_result]
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    [] // Remove OrderBy
-    // Offset e Limit são removidos
+    [avgProjection], // projection
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate (WHERE)
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    [] // orderBy (Remove)
+    // Offset e Limit são removidos (default null)
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitAvgCall.ts ---

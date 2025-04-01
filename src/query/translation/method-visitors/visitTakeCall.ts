@@ -70,14 +70,17 @@ export function visitTakeCall(
 
   const limitSql = new SqlConstantExpression(count);
 
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
-    currentSelect.projection,
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    currentSelect.orderBy,
-    currentSelect.offset,
-    limitSql // Define o limit
+    currentSelect.projection, // projection
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    currentSelect.orderBy, // orderBy
+    currentSelect.offset, // offset
+    limitSql // limit (Define)
+    // groupBy (Default [])
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitTakeCall.ts ---

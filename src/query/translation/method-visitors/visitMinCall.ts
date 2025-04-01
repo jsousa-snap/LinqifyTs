@@ -59,13 +59,15 @@ export function visitMinCall(
   const minProjection = new ProjectionExpression(minFunction, "min_result");
 
   // Retorna uma nova SelectExpression *apenas* com a projeção MIN
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
-    [minProjection], // SELECT MIN(...) AS [min_result]
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    [] // Remove OrderBy
-    // Offset e Limit são removidos
+    [minProjection], // projection (SELECT MIN(...) AS [min_result])
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    [] // orderBy (Remove)
+    // Offset e Limit são removidos (default null)
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitMinCall.ts ---

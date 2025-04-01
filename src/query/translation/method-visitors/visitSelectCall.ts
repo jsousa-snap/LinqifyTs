@@ -44,15 +44,17 @@ export function visitSelectCall(
     throw new Error("Select projection resulted in no columns.");
   }
 
-  // **CORREÇÃO: Propaga offset e limit**
+  // **CORREÇÃO: Ordem dos argumentos do construtor**
   return new SelectExpression(
-    newProjections, // Atualiza projeção
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    currentSelect.orderBy, // Preserva orderBy
-    currentSelect.offset, // Preserva offset
-    currentSelect.limit // Preserva limit
+    newProjections, // projection (Atualiza)
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    currentSelect.orderBy, // orderBy (Preserva)
+    currentSelect.offset, // offset (Preserva)
+    currentSelect.limit // limit (Preserva)
+    // groupBy (Default [])
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitSelectCall.ts ---

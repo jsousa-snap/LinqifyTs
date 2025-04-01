@@ -1,3 +1,5 @@
+// --- START OF FILE src/query/translation/method-visitors/visitCountCall.ts ---
+
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -64,13 +66,17 @@ export function visitCountCall(
     "count_result"
   );
   // Retorna a SelectExpression modificada para fazer a contagem
+  // *** CORREÇÃO: Ordem dos argumentos do construtor ***
   return new SelectExpression(
-    [countProjection], // SELECT COUNT_BIG(1)...
-    currentSelect.from, // FROM original (TableExpression)
-    finalPredicate, // WHERE original (ou combinado)
-    currentSelect.joins, // JOINs originais
-    [],
+    [countProjection], // projection (SELECT COUNT_BIG(1)...)
+    currentSelect.from, // from (Original)
+    finalPredicate, // predicate (WHERE original ou combinado)
+    null, // having <<< Passando null
+    currentSelect.joins, // joins (Originais)
+    [], // orderBy (Remove)
     currentSelect.offset, // Preserva offset
     currentSelect.limit // Preserva limit
+    // groupBy (Default [])
   );
 }
+// --- END OF FILE src/query/translation/method-visitors/visitCountCall.ts ---

@@ -1,5 +1,7 @@
 // --- START OF FILE src/query/translation/method-visitors/index.ts ---
 
+// --- START OF FILE src/query/translation/method-visitors/index.ts ---
+
 // src/query/translation/method-visitors/index.ts
 
 export * from "./visitWhereCall";
@@ -15,6 +17,7 @@ export * from "./visitAvgCall";
 export * from "./visitSumCall";
 export * from "./visitMinCall";
 export * from "./visitMaxCall";
-export * from "./visitGroupByCall"; // **** EXPORTAR NOVO ****
+export * from "./visitGroupByCall";
+export * from "./visitHavingCall"; // <<< NOVO: Exporta o visitor de HAVING
 
 // --- END OF FILE src/query/translation/method-visitors/index.ts ---

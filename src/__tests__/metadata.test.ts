@@ -531,6 +531,7 @@ describe("SQL Expression Metadata Generation Tests", () => {
       }
     }
   },
+  "having": null,
   "joins": [],
   "orderBy": [],
   "offset": null,

@@ -69,16 +69,18 @@ export function visitThenByCall(
   const newOrdering: SqlOrdering = { expression: keySql, direction };
   const updatedOrderBy = [...currentSelect.orderBy, newOrdering];
 
-  // **CORREÇÃO: Propaga offset e limit**
+  // **CORREÇÃO: Ordem dos argumentos do construtor**
   // thenBy adiciona à ordenação, mas mantém a paginação
   return new SelectExpression(
-    currentSelect.projection,
-    currentSelect.from,
-    currentSelect.predicate,
-    currentSelect.joins,
-    updatedOrderBy, // Adiciona ao orderBy
-    currentSelect.offset, // Preserva offset
-    currentSelect.limit // Preserva limit
+    currentSelect.projection, // projection
+    currentSelect.from, // from
+    currentSelect.predicate, // predicate
+    null, // having <<< Passando null
+    currentSelect.joins, // joins
+    updatedOrderBy, // orderBy (Adiciona)
+    currentSelect.offset, // offset (Preserva)
+    currentSelect.limit // limit (Preserva)
+    // groupBy (Default [])
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitThenByCall.ts ---
