@@ -1,3 +1,4 @@
+/* src/expressions/BinaryExpression.ts */
 // --- START OF FILE src/expressions/BinaryExpression.ts ---
 
 import { Expression, ExpressionType } from "./Expression";
@@ -16,9 +17,12 @@ export enum OperatorType {
   // Lógico
   And = "&&",
   Or = "||",
-  // Adicionar mais conforme necessário (aritméticos, etc.)
-  Add = "+", // <<< NOVO: Adição/Concatenação
-  Subtract = "-", // <<< NOVO: Adição/Concatenação
+  // ** NOVO: Aritméticos **
+  Add = "+",
+  Subtract = "-",
+  Multiply = "*",
+  Divide = "/",
+  // ** FIM: Aritméticos **
 }
 
 /**

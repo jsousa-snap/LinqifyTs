@@ -1,3 +1,4 @@
+/* src/parsing/ExpressionVisitor.ts */
 // --- START OF FILE src/parsing/ExpressionVisitor.ts ---
 
 import * as acorn from "acorn";
@@ -342,6 +343,7 @@ export class ExpressionVisitor {
 
   /**
    * Mapeia operadores string do AST (como '==', '>', '+') para o enum OperatorType.
+   * **ATUALIZADO:** Adiciona mapeamento para operadores aritméticos.
    *
    * @private
    * @param {string} op O operador string do AST.
@@ -351,6 +353,7 @@ export class ExpressionVisitor {
    */
   private mapOperator(op: string): OperatorType {
     switch (op) {
+      // Comparação
       case "===": // Trata estrito e não estrito como iguais para mapeamento SQL
       case "==":
         return OperatorType.Equal;
@@ -365,10 +368,16 @@ export class ExpressionVisitor {
         return OperatorType.LessThan;
       case "<=":
         return OperatorType.LessThanOrEqual;
-      case "+": // <<< MAPEAMENTO ADICIONADO
+      // ** NOVO: Aritméticos **
+      case "+":
         return OperatorType.Add;
+      case "-":
+        return OperatorType.Subtract;
+      case "*":
+        return OperatorType.Multiply;
+      case "/":
+        return OperatorType.Divide;
       // Operadores lógicos (&&, ||) são tratados por mapLogicalOperator
-      // Adicionar outros (aritméticos -, *, / etc.) se necessário
       default:
         throw new Error(`Unsupported binary operator: ${op}`);
     }

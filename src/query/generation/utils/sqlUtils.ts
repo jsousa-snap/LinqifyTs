@@ -1,13 +1,16 @@
+/* src/query/generation/utils/sqlUtils.ts */
 // --- START OF FILE src/query/generation/utils/sqlUtils.ts ---
 
 import {
   OperatorType as LinqOperatorType, // Renomeia para evitar conflito interno
   ConstantExpression,
-  OperatorType,
 } from "../../../expressions";
 
-// Reexporta o OperatorType do LINQ para uso nos visitors SQL
-export { LinqOperatorType as OperatorType };
+// IMPORTANTE: Usar o enum importado diretamente
+import { OperatorType } from "../../../expressions/BinaryExpression"; // Caminho direto para o enum
+
+// **NOVO: Reexportar OperatorType**
+export { OperatorType };
 
 /**
  * Gera a representação literal SQL para um valor JavaScript.
@@ -33,34 +36,41 @@ export function generateSqlLiteral(value: any): string {
 
 /**
  * Mapeia um OperatorType da árvore de expressão LINQ para o operador SQL correspondente.
+ * ATUALIZADO: Adiciona mapeamento para operadores aritméticos.
  *
  * @export
- * @param {LinqOperatorType} op O operador LINQ.
+ * @param {OperatorType} op O operador LINQ.
  * @returns {string} O operador SQL como string.
  * @throws {Error} Se o operador LINQ não for suportado para tradução SQL.
  */
-export function mapOperatorToSql(op: LinqOperatorType): string {
+export function mapOperatorToSql(op: OperatorType): string {
   switch (op) {
-    case LinqOperatorType.Equal:
+    case OperatorType.Equal:
       return "=";
-    case LinqOperatorType.NotEqual:
+    case OperatorType.NotEqual:
       return "!="; // Ou <> dependendo do dialeto SQL
-    case LinqOperatorType.GreaterThan:
+    case OperatorType.GreaterThan:
       return ">";
-    case LinqOperatorType.GreaterThanOrEqual:
+    case OperatorType.GreaterThanOrEqual:
       return ">=";
-    case LinqOperatorType.LessThan:
+    case OperatorType.LessThan:
       return "<";
-    case LinqOperatorType.LessThanOrEqual:
+    case OperatorType.LessThanOrEqual:
       return "<=";
-    case LinqOperatorType.And:
+    case OperatorType.And:
       return "AND";
-    case LinqOperatorType.Or:
+    case OperatorType.Or:
       return "OR";
-    case LinqOperatorType.Add:
+    // ** NOVO: Aritméticos **
+    case OperatorType.Add:
       return "+";
-    case LinqOperatorType.Subtract:
+    case OperatorType.Subtract:
       return "-";
+    case OperatorType.Multiply:
+      return "*";
+    case OperatorType.Divide:
+      return "/";
+    // ** FIM: Aritméticos **
     default:
       const exhaustiveCheck: never = op;
       throw new Error(
@@ -73,26 +83,30 @@ export function mapOperatorToSql(op: LinqOperatorType): string {
  * Retorna a precedência numérica de um operador SQL.
  * Números maiores indicam maior precedência.
  * Usado para determinar a necessidade de parênteses em expressões binárias.
+ * ATUALIZADO: Adiciona precedência para operadores aritméticos.
+ *
  * @param op O tipo do operador.
  * @returns A precedência numérica.
  */
 export function getOperatorPrecedence(op: OperatorType): number {
   switch (op) {
-    // Adicionar aritméticos se forem suportados
-    // case OperatorType.Multiply:
-    // case OperatorType.Divide:
-    //     return 5;
+    // ** NOVO: Aritméticos (precedência maior) **
+    case OperatorType.Multiply:
+    case OperatorType.Divide:
+      return 5;
     case OperatorType.Add:
     case OperatorType.Subtract:
       return 4;
+    // ** FIM: Aritméticos **
+    // Comparação e LIKE (precedência menor que aritméticos)
     case OperatorType.Equal:
     case OperatorType.NotEqual:
     case OperatorType.GreaterThan:
     case OperatorType.GreaterThanOrEqual:
     case OperatorType.LessThan:
     case OperatorType.LessThanOrEqual:
-      // LIKE também entra aqui em termos de agrupamento com AND/OR
       return 3;
+    // Lógicos (precedência menor que comparação)
     case OperatorType.And:
       return 2;
     case OperatorType.Or:
