@@ -5,6 +5,7 @@
 import { DbContext } from "../core";
 import "../query/QueryableExtensions"; // Importa para aplicar os métodos no protótipo
 import { IQueryable } from "../interfaces"; // Se necessário para tipagem
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 
 // --- Interfaces/Classes de Entidade (Copie ou importe-as) ---
 interface User {
@@ -32,19 +33,6 @@ class PostEntity implements Post {
   authorId!: number;
 }
 // --- Fim Entidades ---
-
-// Helper normalizeSql (**VERSÃO FORNECIDA PELO USUÁRIO - INTOCADA**)
-const normalizeSql = (sql: string): string => {
-  let result = sql;
-
-  // Remove espaços em branco seguidos pela primeira quebra de linha no início
-  result = result.replace(/^\s*\n/, "");
-
-  // Remove a última quebra de linha seguida por espaços em branco no final
-  result = result.replace(/\n\s*$/, "");
-
-  return result;
-};
 
 describe("Queryable Paging Tests (Skip/Take)", () => {
   let dbContext: DbContext;

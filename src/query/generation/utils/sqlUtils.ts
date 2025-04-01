@@ -3,6 +3,7 @@
 import {
   OperatorType as LinqOperatorType, // Renomeia para evitar conflito interno
   ConstantExpression,
+  OperatorType,
 } from "../../../expressions";
 
 // Reexporta o OperatorType do LINQ para uso nos visitors SQL
@@ -56,16 +57,48 @@ export function mapOperatorToSql(op: LinqOperatorType): string {
       return "AND";
     case LinqOperatorType.Or:
       return "OR";
-    case LinqOperatorType.Add: // <<< MAPEAMENTO ADICIONADO
-      // Assume '+' para concatenação/adição (pode variar entre dialetos SQL)
-      // Para portabilidade, poderia usar CONCAT() para strings, mas '+' é comum.
+    case LinqOperatorType.Add:
       return "+";
+    case LinqOperatorType.Subtract:
+      return "-";
     default:
-      // Garante que todos os valores do enum sejam tratados
       const exhaustiveCheck: never = op;
       throw new Error(
         `Unsupported operator type encountered in SQL generation: ${exhaustiveCheck}`
       );
+  }
+}
+
+/**
+ * Retorna a precedência numérica de um operador SQL.
+ * Números maiores indicam maior precedência.
+ * Usado para determinar a necessidade de parênteses em expressões binárias.
+ * @param op O tipo do operador.
+ * @returns A precedência numérica.
+ */
+export function getOperatorPrecedence(op: OperatorType): number {
+  switch (op) {
+    // Adicionar aritméticos se forem suportados
+    // case OperatorType.Multiply:
+    // case OperatorType.Divide:
+    //     return 5;
+    case OperatorType.Add:
+    case OperatorType.Subtract:
+      return 4;
+    case OperatorType.Equal:
+    case OperatorType.NotEqual:
+    case OperatorType.GreaterThan:
+    case OperatorType.GreaterThanOrEqual:
+    case OperatorType.LessThan:
+    case OperatorType.LessThanOrEqual:
+      // LIKE também entra aqui em termos de agrupamento com AND/OR
+      return 3;
+    case OperatorType.And:
+      return 2;
+    case OperatorType.Or:
+      return 1;
+    default:
+      return 0; // Precedência mais baixa para desconhecidos ou não binários
   }
 }
 
@@ -82,7 +115,6 @@ export function escapeIdentifier(name: string): string {
   if (!name) return name; // Retorna nulo/vazio como está
   if (name === "*") return "*"; // '*' não precisa ser escapado
 
-  // Lógica do SQL Server: [identificador] com escape de ']' interno -> ']]'
   const escaped = name.replace(/\]/g, "]]");
   return `[${escaped}]`;
 }

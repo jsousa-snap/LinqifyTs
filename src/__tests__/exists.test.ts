@@ -9,6 +9,7 @@ import {
   Expression, // Import Expression
 } from "../expressions";
 import { LambdaParser } from "../parsing";
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 
 // --- Interfaces ---
 interface User {
@@ -23,20 +24,6 @@ interface Post {
   authorId: number;
 }
 // --- Fim Interfaces ---
-
-// Helper normalizeSql (inalterado)
-// Helper para remover a primeira e a última quebra de linha para comparação
-const normalizeSql = (sql: string): string => {
-  let result = sql;
-
-  // Remove espaços em branco seguidos pela primeira quebra de linha no início
-  result = result.replace(/^\s*\n/, "");
-
-  // Remove a última quebra de linha seguida por espaços em branco no final
-  result = result.replace(/\n\s*$/, "");
-
-  return result;
-};
 
 describe("Queryable Exists Operator Tests", () => {
   let dbContext: DbContext;
@@ -152,7 +139,7 @@ FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
         FROM [Posts] AS [p]
-        WHERE ([p].[authorId] = [u].[id] AND [p].[title] = 'Specific Post')
+        WHERE [p].[authorId] = [u].[id] AND [p].[title] = 'Specific Post'
     )
         `;
     const actualSql = query.toQueryString();

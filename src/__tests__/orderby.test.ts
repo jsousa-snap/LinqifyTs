@@ -4,6 +4,7 @@
 
 import { DbContext } from "../core";
 import { IQueryable, IOrderedQueryable } from "../interfaces"; // Import IOrderedQueryable
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 import "../query/QueryableExtensions"; // Apply extensions
 
 // --- Interfaces ---
@@ -14,19 +15,6 @@ interface User {
   age: number;
 }
 // --- Fim Interfaces ---
-
-// Helper normalizeSql
-const normalizeSql = (sql: string): string => {
-  let result = sql;
-
-  // Remove espaços em branco seguidos pela primeira quebra de linha no início
-  result = result.replace(/^\s*\n/, "");
-
-  // Remove a última quebra de linha seguida por espaços em branco no final
-  result = result.replace(/\n\s*$/, "");
-
-  return result;
-};
 
 describe("Queryable OrderBy/ThenBy Tests", () => {
   let dbContext: DbContext;
@@ -104,7 +92,7 @@ ORDER BY [u].[age] ASC, [u].[name] DESC, [u].[id] ASC
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
-WHERE ([u].[email] LIKE '%@%')
+WHERE [u].[email] LIKE '%@%'
 ORDER BY [u].[id] ASC
     `;
     const actualSql = query.toQueryString();

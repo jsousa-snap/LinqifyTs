@@ -3,6 +3,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions";
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 
 // --- Interfaces ---
 interface User {
@@ -17,19 +18,6 @@ interface Post {
   authorId: number;
 }
 // --- Fim Interfaces ---
-
-// Helper normalizeSql
-const normalizeSql = (sql: string): string => {
-  let result = sql;
-
-  // Remove espaços em branco seguidos pela primeira quebra de linha no início
-  result = result.replace(/^\s*\n/, "");
-
-  // Remove a última quebra de linha seguida por espaços em branco no final
-  result = result.replace(/\n\s*$/, "");
-
-  return result;
-};
 
 describe("Queryable ProvideScope Tests", () => {
   let dbContext: DbContext;
@@ -53,7 +41,7 @@ describe("Queryable ProvideScope Tests", () => {
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
-WHERE ([u].[name] = 'Bob' AND [u].[age] >= 25)`;
+WHERE [u].[name] = 'Bob' AND [u].[age] >= 25`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -77,7 +65,7 @@ FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
         FROM [Posts] AS [p]
-        WHERE ([p].[authorId] = [u].[id] AND [p].[title] = 'Specific Post')
+        WHERE [p].[authorId] = [u].[id] AND [p].[title] = 'Specific Post'
     )`;
 
     const actualSql = query.toQueryString();
@@ -95,7 +83,7 @@ WHERE EXISTS (
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
-WHERE ([u].[name] LIKE '%usuario1%')`;
+WHERE [u].[name] LIKE '%usuario1%'`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -112,7 +100,7 @@ WHERE ([u].[name] LIKE '%usuario1%')`;
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
-WHERE ([u].[name] LIKE '%user[%]%')`;
+WHERE [u].[name] LIKE '%user[%]%'`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -127,7 +115,7 @@ WHERE ([u].[name] LIKE '%user[%]%')`;
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
-WHERE ([u].[name] LIKE '%user[_]1%')`;
+WHERE [u].[name] LIKE '%user[_]1%'`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));

@@ -7,7 +7,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
-
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 // --- Interfaces ---
 interface Employee {
   id: number;
@@ -17,12 +17,6 @@ interface Employee {
   salary: number;
 }
 // --- Fim Interfaces ---
-
-const normalizeSql = (sql: string): string => {
-  return sql
-    .replace(/\s+/g, " ") // Replace multiple spaces/newlines with single space
-    .trim();
-};
 
 describe("Queryable GroupBy Tests", () => {
   let dbContext: DbContext;

@@ -5,6 +5,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO
 
 // --- Interfaces ---
 interface User {
@@ -22,17 +23,7 @@ interface Post {
 
 // --- Fim Interfaces ---
 
-const normalizeSql = (sql: string): string => {
-  let result = sql;
-
-  // Remove espaços em branco seguidos pela primeira quebra de linha no início
-  result = result.replace(/^\s*\n/, "");
-
-  // Remove a última quebra de linha seguida por espaços em branco no final
-  result = result.replace(/\n\s*$/, "");
-
-  return result;
-};
+// normalizeSql REMOVIDO DAQUI
 
 describe("Queryable Count Operator Tests", () => {
   let dbContext: DbContext;
@@ -43,6 +34,13 @@ describe("Queryable Count Operator Tests", () => {
     dbContext = new DbContext();
     users = dbContext.set<User>("Users");
     posts = dbContext.set<Post>("Posts");
+    // Mock console.warn para evitar poluir a saída do teste com mensagens de simulação
+    jest.spyOn(console, "warn").mockImplementation();
+  });
+
+  afterEach(() => {
+    // Restaura o mock
+    jest.restoreAllMocks();
   });
 
   it("Teste Count 1: should generate correct SQL for simple count()", () => {
@@ -62,9 +60,7 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
     // Verifica a execução (simulada)
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation(); // Silencia o warning da simulação
     expect(query.count()).toBe(10); // Valor simulado retornado pelo provider.execute
-    warnSpy.mockRestore();
   });
 
   it("Teste Count 2: should generate correct SQL for count(predicate)", () => {
@@ -89,9 +85,7 @@ WHERE [u].[age] > 30
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
     // Verifica a execução (simulada)
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation();
     expect(query.count(predicate)).toBe(10);
-    warnSpy.mockRestore();
   });
 
   it("Teste Count 3: should generate correct SQL for count() after where()", () => {
@@ -112,9 +106,7 @@ WHERE [u].[name] = 'Alice'
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
     // Verifica a execução (simulada)
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation();
     expect(query.count()).toBe(10);
-    warnSpy.mockRestore();
   });
 
   it("Teste Count 4: should generate correct SQL for count(predicate) after where()", () => {
@@ -123,7 +115,7 @@ WHERE [u].[name] = 'Alice'
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
-WHERE (([u].[name] LIKE '%a%') AND [u].[age] < 25)
+WHERE [u].[name] LIKE '%a%' AND [u].[age] < 25
     `;
     // Verifica o SQL gerado pela expressão correspondente
     const predicateLambda = new (require("../parsing").LambdaParser)().parse(
@@ -139,9 +131,7 @@ WHERE (([u].[name] LIKE '%a%') AND [u].[age] < 25)
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
     // Verifica a execução (simulada)
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation();
     expect(query.count(predicate)).toBe(10);
-    warnSpy.mockRestore();
   });
 
   it("Teste Count 5: should generate correct SQL for count() after select() (should ignore projection)", () => {
@@ -162,9 +152,7 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
     // Verifica a execução (simulada)
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation();
     expect(query.count()).toBe(10);
-    warnSpy.mockRestore();
   });
 
   it("Teste Count 6: should generate correct SQL for count() in subquery", () => {

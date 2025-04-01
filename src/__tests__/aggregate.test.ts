@@ -5,6 +5,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 
 // --- Interfaces ---
 interface User {
@@ -22,12 +23,7 @@ interface Post {
 }
 // --- Fim Interfaces ---
 
-const normalizeSql = (sql: string): string => {
-  return sql
-    .replace(/^\s*\n/, "")
-    .replace(/\n\s*$/, "")
-    .trim();
-};
+// normalizeSql REMOVIDO DAQUI
 
 describe("Queryable Aggregate Operator Tests", () => {
   let dbContext: DbContext;
@@ -57,13 +53,14 @@ describe("Queryable Aggregate Operator Tests", () => {
 SELECT AVG([u].[age]) AS [avg_result]
 FROM [Users] AS [u]
     `;
-    expect(query).toBe(42.5);
+    expect(query).toBe(42.5); // Simulado
     const avgExpression = new (require("../expressions").MethodCallExpression)(
       "avg",
       users.expression,
       [new (require("../parsing").LambdaParser)().parse((u: User) => u.age)]
     );
     const actualSql = dbContext["queryProvider"].getQueryText(avgExpression);
+    // Usa a função importada
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
@@ -74,7 +71,7 @@ SELECT AVG([u].[age]) AS [avg_result]
 FROM [Users] AS [u]
 WHERE [u].[name] = 'Alice'
     `;
-    expect(query).toBe(42.5);
+    expect(query).toBe(42.5); // Simulado
     const filteredUsers = users.where((u) => u.name === "Alice");
     const avgExpression = new (require("../expressions").MethodCallExpression)(
       "avg",
@@ -91,7 +88,7 @@ WHERE [u].[name] = 'Alice'
 SELECT AVG([u].[salary]) AS [avg_result]
 FROM [Users] AS [u]
     `;
-    expect(query).toBe(42.5);
+    expect(query).toBe(42.5); // Simulado
     const avgExpression = new (require("../expressions").MethodCallExpression)(
       "avg",
       users.expression,
@@ -107,7 +104,7 @@ FROM [Users] AS [u]
 SELECT SUM([p].[views]) AS [sum_result]
 FROM [Posts] AS [p]
     `;
-    expect(query).toBe(1234);
+    expect(query).toBe(1234); // Simulado
     const sumExpression = new (require("../expressions").MethodCallExpression)(
       "sum",
       posts.expression,
@@ -124,7 +121,7 @@ SELECT SUM([p].[views]) AS [sum_result]
 FROM [Posts] AS [p]
 WHERE [p].[authorId] = 1
     `;
-    expect(query).toBe(1234);
+    expect(query).toBe(1234); // Simulado
     const filteredPosts = posts.where((p) => p.authorId === 1);
     const sumExpression = new (require("../expressions").MethodCallExpression)(
       "sum",
@@ -141,7 +138,7 @@ WHERE [p].[authorId] = 1
 SELECT MIN([u].[age]) AS [min_result]
 FROM [Users] AS [u]
     `;
-    expect(query).toBe(1);
+    expect(query).toBe(1); // Simulado
     const minExpression = new (require("../expressions").MethodCallExpression)(
       "min",
       users.expression,
@@ -157,7 +154,7 @@ FROM [Users] AS [u]
 SELECT MIN([u].[name]) AS [min_result]
 FROM [Users] AS [u]
     `;
-    expect(query).toBe(1);
+    expect(query).toBe(1); // Simulado (retorno genérico)
     const minExpression = new (require("../expressions").MethodCallExpression)(
       "min",
       users.expression,
@@ -173,7 +170,7 @@ FROM [Users] AS [u]
 SELECT MAX([p].[views]) AS [max_result]
 FROM [Posts] AS [p]
     `;
-    expect(query).toBe(99);
+    expect(query).toBe(99); // Simulado
     const maxExpression = new (require("../expressions").MethodCallExpression)(
       "max",
       posts.expression,
@@ -190,7 +187,7 @@ SELECT MAX([u].[age]) AS [max_result]
 FROM [Users] AS [u]
 WHERE [u].[age] < 30
     `;
-    expect(query).toBe(99);
+    expect(query).toBe(99); // Simulado
     const filteredUsers = users.where((u) => u.age < 30);
     const maxExpression = new (require("../expressions").MethodCallExpression)(
       "max",
@@ -312,7 +309,7 @@ FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
         FROM [Posts] AS [p]
-        WHERE ([p].[authorId] = [u].[id] AND [p].[views] > 50)
+        WHERE [p].[authorId] = [u].[id] AND [p].[views] > 50
     )
     `;
 

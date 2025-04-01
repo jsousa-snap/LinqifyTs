@@ -18,6 +18,7 @@ export enum OperatorType {
   Or = "||",
   // Adicionar mais conforme necessário (aritméticos, etc.)
   Add = "+", // <<< NOVO: Adição/Concatenação
+  Subtract = "-", // <<< NOVO: Adição/Concatenação
 }
 
 /**

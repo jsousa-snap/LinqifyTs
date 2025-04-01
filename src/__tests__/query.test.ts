@@ -7,6 +7,7 @@
 import { DbContext } from "../core"; // Ex: './core/DbContext' ou similar
 import "../query/QueryableExtensions"; // Importa para aplicar os métodos no protótipo
 import { IQueryable } from "../interfaces"; // Se necessário para tipagem
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 
 // --- Interfaces/Classes de Entidade (Copie ou importe-as) ---
 interface User {
@@ -60,20 +61,6 @@ class PostCategoryEntity implements PostCategory {
   categoryId!: number;
 }
 // --- Fim Entidades ---
-
-// Helper para remover a primeira e a última quebra de linha para comparação
-// *** VERSÃO ORIGINAL DO NORMALIZE SQL RESTAURADA ***
-const normalizeSql = (sql: string): string => {
-  let result = sql;
-
-  // Remove espaços em branco seguidos pela primeira quebra de linha no início
-  result = result.replace(/^\s*\n/, "");
-
-  // Remove a última quebra de linha seguida por espaços em branco no final
-  result = result.replace(/\n\s*$/, "");
-
-  return result;
-};
 
 describe("Queryable Extensions Tests (EF Core Formatting)", () => {
   let dbContext: DbContext;
@@ -174,7 +161,7 @@ WHERE [u].[age] >= 65
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
-WHERE ([u].[age] > 20 AND [u].[name] = 'Bob')
+WHERE [u].[age] > 20 AND [u].[name] = 'Bob'
     `;
     const actualSql = specificUserQuery.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -319,7 +306,7 @@ FROM [Users] AS [u]
 INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
 INNER JOIN [PostCategories] AS [p1] ON [p].[postId] = [p1].[postId]
 INNER JOIN [Categories] AS [c] ON [p1].[categoryId] = [c].[categoryId]
-WHERE ([p].[title] IS NOT NULL AND [c].[name] = 'Tech')`;
+WHERE [p].[title] IS NOT NULL AND [c].[name] = 'Tech'`;
 
     const actualSql = userAndTechCategoryNames.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSqlNotNull));
@@ -360,7 +347,7 @@ INNER JOIN (
     FROM [Categories] AS [c]
     WHERE [c].[name] = 'cat1'
 ) AS [c] ON [p1].[categoryId] = [c].[categoryId]
-WHERE ([p].[title] IS NOT NULL AND [c].[name] = 'Tech')`;
+WHERE [p].[title] IS NOT NULL AND [c].[name] = 'Tech'`;
 
     const actualSql = userAndTechCategoryNames.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSqlNotNull));

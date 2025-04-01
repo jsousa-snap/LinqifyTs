@@ -5,7 +5,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
-
+import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 // --- Interfaces ---
 // Usaremos uma interface simples para os testes de Union/Concat
 interface DataItem {
@@ -25,16 +25,6 @@ interface DataItemDto {
   itemValue: string;
 }
 // --- Fim Interfaces ---
-
-// Helper normalizeSql (inalterado)
-const normalizeSql = (sql: string): string => {
-  let result = sql;
-  result = result.replace(/^\s*\n/, "");
-  result = result.replace(/\n\s*$/, "");
-  // Adicional: Remover múltiplos espaços para lidar com variações de indentação
-  result = result.replace(/\s+/g, " ");
-  return result.trim();
-};
 
 describe("Queryable Union/Concat Tests", () => {
   let dbContext: DbContext;
@@ -168,7 +158,7 @@ FROM (
             FROM [Items2] AS [i1]
         )
     ) AS [u]
-WHERE ([u].[value] LIKE '%test%')`;
+WHERE [u].[value] LIKE '%test%'`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -351,22 +341,21 @@ FROM (
 SELECT [u].[name] AS [UserName], JSON_QUERY(COALESCE((
     SELECT [u1].[itemValue]
     FROM (
-        (
-            SELECT [i].[value] AS [itemValue]
-            FROM [Items1] AS [i]
-            WHERE [i].[category] = 'A'
-        )
-        UNION
-        (
-            SELECT [i1].[value] AS [itemValue]
-            FROM [Items2] AS [i1]
-            WHERE [i1].[category] = 'A'
-        )
-    ) AS [u1]
+            (
+                SELECT [i].[value] AS [itemValue]
+                FROM [Items1] AS [i]
+                WHERE [i].[category] = 'A'
+            )
+            UNION
+            (
+                SELECT [i1].[value] AS [itemValue]
+                FROM [Items2] AS [i1]
+                WHERE [i1].[category] = 'A'
+            )
+        ) AS [u1]
     FOR JSON PATH, INCLUDE_NULL_VALUES
 ), '[]')) AS [CategoryAValues]
-FROM [Users] AS [u]
-    `;
+FROM [Users] AS [u]`;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
