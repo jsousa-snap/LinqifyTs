@@ -112,23 +112,6 @@ ORDER BY [u].[age] ASC
   });
 
   it("Teste OrderBy 8: should generate correct SQL for orderBy using projected field alias (less common but possible)", () => {
-    // Note: SQL typically orders by the source column before projection,
-    // but let's test if ordering by the *result* of a select works conceptually.
-    // The translator might optimize this back to the source column.
-    const query = users
-      .select((u) => ({ NameUpper: u.name.toUpperCase(), Age: u.age })) // Select projection
-      .orderBy((dto) => dto.Age); // Order by projected 'Age'
-
-    // Expected: ORDER BY happens on the source table column
-    const expectedSql = `
-SELECT UPPER([u].[name]) AS [NameUpper], [u].[age] AS [Age]
-FROM [Users] AS [u]
-ORDER BY [u].[age] ASC
-    `;
-    // How UPPER is translated might vary, assuming a simple UPPER function for now.
-    // The key point is that ORDER BY [t0].[age] refers to the *source* table.
-
-    // Let's refine the test slightly, as `toUpperCase` isn't translated yet.
     const querySimple = users
       .select((u) => ({ NameVal: u.name, AgeVal: u.age })) // Simple projection
       .orderBy((dto) => dto.AgeVal); // Order by projected 'AgeVal'
