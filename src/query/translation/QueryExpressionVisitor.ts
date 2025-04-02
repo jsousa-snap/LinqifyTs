@@ -1,3 +1,5 @@
+// --- START OF FILE src/query/translation/QueryExpressionVisitor.ts ---
+
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -22,7 +24,7 @@ import {
   SqlBinaryExpression,
   ProjectionExpression,
   InnerJoinExpression,
-  LeftJoinExpression, // <<< IMPORTAR LeftJoinExpression
+  LeftJoinExpression,
   JoinExpressionBase,
   SqlExpressionType,
   SqlExistsExpression,
@@ -34,12 +36,12 @@ import {
   SqlScalarSubqueryExpression,
   CompositeUnionExpression,
   TableExpressionBase,
-  SqlCaseExpression, // <<< IMPORTAR SqlCaseExpression
+  SqlCaseExpression,
+  SqlInExpression,
 } from "../../sql-expressions";
 
 import { TranslationContext, SqlDataSource } from "./TranslationContext";
-import { getTableName, OperatorType } from "../generation/utils/sqlUtils"; // Import OperatorType from sqlUtils
-// *** NOVO: Importa AliasGenerator ***
+import { getTableName, OperatorType } from "../generation/utils/sqlUtils";
 import { AliasGenerator } from "../generation/AliasGenerator";
 
 // Importa visitors de métodos
@@ -47,8 +49,8 @@ import {
   visitWhereCall,
   visitSelectCall,
   visitJoinCall,
-  visitLeftJoinCall, // <<< IMPORTAR visitLeftJoinCall
-  visitIncludesCall, // Usaremos este como base para outros métodos de string
+  visitLeftJoinCall,
+  visitIncludesCall, // Este visitor trata APENAS string.includes -> LIKE
   visitOrderByCall,
   visitThenByCall,
   visitCountCall,
@@ -81,12 +83,10 @@ const AGGREGATE_FUNCTION_NAMES = new Set([
  */
 export class QueryExpressionVisitor {
   private context: TranslationContext;
-  // *** NOVO: Instância do gerador de alias ***
   private aliasGenerator: AliasGenerator;
 
   constructor() {
     this.context = new TranslationContext();
-    // *** NOVO: Inicializa o gerador de alias ***
     this.aliasGenerator = new AliasGenerator();
   }
 
@@ -94,16 +94,14 @@ export class QueryExpressionVisitor {
    * Ponto de entrada principal para a tradução.
    */
   public translate(expression: LinqExpression): SqlExpression {
-    // *** NOVO: Reseta/Recria o gerador e o contexto para cada tradução ***
     this.context = new TranslationContext();
-    this.aliasGenerator = new AliasGenerator(); // Garante estado limpo por consulta
+    this.aliasGenerator = new AliasGenerator();
 
     const result = this.visit(expression);
     if (!result) throw new Error("Translation resulted in a null expression.");
 
     let finalResult = result;
 
-    // Se o resultado for uma tabela base ou união, envolve em um SELECT *
     if (
       result instanceof TableExpression ||
       result instanceof CompositeUnionExpression
@@ -111,12 +109,10 @@ export class QueryExpressionVisitor {
       finalResult = this.createDefaultSelect(result);
     }
 
-    // Valida o tipo do resultado final antes de retornar
     if (
       finalResult instanceof SelectExpression ||
       finalResult instanceof SqlExistsExpression
     ) {
-      // Permite agregações sem GROUP BY como resultado final
       if (
         finalResult instanceof SelectExpression &&
         finalResult.projection.length === 1
@@ -133,7 +129,6 @@ export class QueryExpressionVisitor {
       return finalResult;
     }
 
-    // Se não for Select ou Exists (ou agregação), lança erro
     console.error("Unexpected final translation result type:", finalResult);
     throw new Error(
       `Unexpected translation result type at root: ${finalResult.constructor.name}. Expected SelectExpression or SqlExistsExpression.`
@@ -142,49 +137,41 @@ export class QueryExpressionVisitor {
 
   /**
    * Cria uma SelectExpression padrão (SELECT [alias].*) para uma fonte TableExpressionBase.
-   * Garante que a fonte tenha um alias gerado se necessário.
    */
   private createDefaultSelect(source: TableExpressionBase): SelectExpression {
-    // *** NOVO: Usa aliasGenerator se a fonte não tiver alias ***
     const sourceAlias =
       source.alias ||
       this.aliasGenerator.generateAlias(
-        source instanceof TableExpression ? source.name : source.type // Base para o prefixo
+        source instanceof TableExpression ? source.name : source.type
       );
-    // Se a fonte original não tinha alias, atualiza-a (mutação controlada aqui)
     if (!source.alias && source instanceof TableExpressionBase) {
-      // Esta mutação é geralmente segura no fluxo de tradução, pois a fonte
-      // original (TableExpression ou CompositeUnion) não será reutilizada
-      // diretamente com alias diferente após esta etapa.
       (source as { alias: string }).alias = sourceAlias;
     }
 
-    // Cria uma referência de tabela temporária para a coluna '*'
     const tableRefForColumn = new TableExpression(
       source.type === SqlExpressionType.Table
         ? (source as TableExpression).name
-        : "(<derived>)", // Placeholder para fontes não-tabela
-      sourceAlias // Usa o alias garantido
+        : "(<derived>)",
+      sourceAlias
     );
     const placeholderProjection = new ProjectionExpression(
-      new ColumnExpression("*", tableRefForColumn), // Coluna '*' referenciando o alias da fonte
-      "*" // Alias da projeção também é '*'
+      new ColumnExpression("*", tableRefForColumn),
+      "*"
     );
 
-    // O alias da SelectExpression que *envolve* a fonte base é o mesmo da fonte
     const selectAlias = sourceAlias;
 
     return new SelectExpression(
-      selectAlias, // alias (Reutiliza da fonte)
-      [placeholderProjection], // projection
-      source, // from (a própria fonte)
-      null, // predicate
-      null, // having
-      [], // joins
-      [], // orderBy
-      null, // offset
-      null, // limit
-      [] // groupBy
+      selectAlias,
+      [placeholderProjection],
+      source,
+      null,
+      null,
+      [],
+      [],
+      null,
+      null,
+      []
     );
   }
 
@@ -192,40 +179,55 @@ export class QueryExpressionVisitor {
    * Método dispatcher principal para visitar nós da árvore LINQ.
    */
   protected visit(expression: LinqExpression | null): SqlExpression | null {
-    // (Lógica do dispatcher inalterada, mas precisa saber que visitMethodCall agora pode retornar SqlExpression)
     if (!expression) return null;
 
-    // Tratamento especial para chamadas de método que *não* são extensões LINQ
-    // e que podem retornar expressões SQL simples (não SelectExpression).
+    // --- INTERCEPTAÇÃO DE MethodCallExpression ---
     if (expression.type === LinqExpressionType.Call) {
       const callExpr = expression as LinqMethodCallExpression;
       switch (callExpr.methodName) {
-        // **** NOVO: Tratamento para o marcador interno do ternário ****
-        case "__internal_ternary__":
-          return this.translateTernaryPlaceholder(callExpr);
-        case "exists":
-          return this.translateExistsExpression(callExpr);
-        // Métodos de string/data que retornam um valor (não uma queryable)
+        // **** TRATAMENTO CORRIGIDO PARA 'includes' ****
+        case "includes":
+          // 1. Tenta traduzir como array.includes(value) -> IN
+          const inExpr = this.tryTranslateArrayIncludes(callExpr);
+          if (inExpr) {
+            return inExpr; // Sucesso, retorna SqlInExpression
+          }
+          // 2. Se falhou, assume que é string.includes(value) -> LIKE
+          // Chama o visitor específico que gera SqlLikeExpression
+          return visitIncludesCall(
+            callExpr,
+            this.context,
+            this.visit.bind(this)
+          );
+        // **** FIM TRATAMENTO CORRIGIDO ****
+
+        // --- Outros métodos de instância ---
         case "toUpperCase":
         case "toLowerCase":
         case "trim":
         case "startsWith":
         case "endsWith":
-        case "includes": // includes já era tratado por visitIncludesCall
-        case "substring": // Adicionar substring
-        // Métodos de data
+        // Não precisa mais do 'includes' aqui
+        case "substring":
         case "getFullYear":
         case "getMonth":
         case "getDate":
         case "getHours":
         case "getMinutes":
         case "getSeconds":
-          return this.visitInstanceMethodCall(callExpr);
+          return this.visitInstanceMethodCall(callExpr); // Chama o método para tratá-los
+
+        // --- Métodos especiais/internos ---
+        case "__internal_ternary__":
+          return this.translateTernaryPlaceholder(callExpr);
+        case "exists":
+          return this.translateExistsExpression(callExpr);
       }
-      // Se não for um método de instância conhecido nem 'exists', continua para o switch abaixo
+      // Se não for nenhum método especial/de instância acima,
+      // cai para o switch principal para tratar como método de extensão LINQ.
     }
 
-    // Switch principal para tipos de expressão LINQ
+    // --- SWITCH PRINCIPAL PARA TIPOS LINQ ---
     switch (expression.type) {
       case LinqExpressionType.Constant:
         return this.visitConstant(expression as LinqConstantExpression);
@@ -233,9 +235,7 @@ export class QueryExpressionVisitor {
         return this.visitParameter(expression as LinqParameterExpression);
       case LinqExpressionType.MemberAccess:
         return this.visitMember(expression as LinqMemberExpression);
-      case LinqExpressionType.Call:
-        // Chega aqui apenas para métodos de extensão LINQ (where, select, join, etc.)
-        // ou métodos não tratados no bloco 'if' acima.
+      case LinqExpressionType.Call: // Métodos de extensão LINQ (where, select, join, etc.)
         return this.visitLinqExtensionMethodCall(
           expression as LinqMethodCallExpression
         );
@@ -248,68 +248,86 @@ export class QueryExpressionVisitor {
           "Internal Error: Cannot directly visit LambdaExpression."
         );
       case LinqExpressionType.NewObject:
-        // Não deve ser visitado diretamente, mas sim dentro de projeções.
-        // Retornar null ou lançar erro pode ser apropriado.
-        // Lançar erro é mais seguro para detectar problemas de lógica.
         throw new Error(
           "Internal Error: Cannot directly visit NewObjectExpression. It should be handled by projection logic."
         );
       case LinqExpressionType.Scope:
-        // Visita a expressão fonte, ignorando o escopo aqui (usado pelo parser)
         return this.visit((expression as ScopeExpression).sourceExpression);
       default:
-        // Garante que todos os tipos sejam tratados (se ExpressionType fosse um enum completo)
         const exhaustiveCheck: never = expression.type;
         throw new Error(`Unsupported LINQ expression type: ${exhaustiveCheck}`);
     }
   }
 
   /**
-   * Visita ConstantExpression (Tabela). Usa AliasGenerator.
+   * Tenta traduzir uma MethodCallExpression 'includes' como array.includes(value) -> SqlInExpression.
+   * Retorna SqlInExpression se bem-sucedido, ou null caso contrário.
    */
+  private tryTranslateArrayIncludes(
+    callExpr: LinqMethodCallExpression
+  ): SqlInExpression | null {
+    if (!callExpr.source || callExpr.args.length !== 1) {
+      return null;
+    }
+
+    const arraySourceSql = this.visit(callExpr.source);
+    const valueToFindSql = this.visit(callExpr.args[0]);
+
+    if (
+      arraySourceSql instanceof SqlConstantExpression &&
+      Array.isArray(arraySourceSql.value) &&
+      valueToFindSql
+    ) {
+      const valuesArray = arraySourceSql.value as any[];
+      if (valuesArray.length === 0) {
+        // Não retorna null, lança erro pois IN () não é válido
+        throw new Error(
+          "Translation Error: Array provided to 'includes' (for SQL IN) cannot be empty."
+        );
+      }
+      const constantValuesSql = valuesArray.map(
+        (val) => new SqlConstantExpression(val)
+      );
+      return new SqlInExpression(valueToFindSql, constantValuesSql);
+    }
+
+    return null; // Não correspondeu ao padrão array.includes(column)
+  }
+
+  /** Visita ConstantExpression (Tabela ou Literal). Usa AliasGenerator. */
   protected visitConstant(expression: LinqConstantExpression): SqlExpression {
     const value = expression.value;
-    // Se for uma definição de tabela
     if (value && typeof value === "object" && value.type === "Table") {
       const tableName = getTableName(expression);
       if (!tableName)
         throw new Error("Could not get table name from ConstantExpression.");
-      // *** NOVO: Usa aliasGenerator ***
       const alias = this.aliasGenerator.generateAlias(tableName);
       return new TableExpression(tableName, alias);
     } else {
-      // Se for outro tipo de constante (literal, etc.)
+      // Retorna SqlConstantExpression para valores literais ou externos
       return new SqlConstantExpression(value);
     }
   }
 
-  /**
-   * Visita LiteralExpression.
-   */
+  /** Visita LiteralExpression. */
   protected visitLiteral(expression: LinqLiteralExpression): SqlExpression {
     return new SqlConstantExpression(expression.value);
   }
 
-  /**
-   * Visita ParameterExpression. Retorna a fonte de dados SQL associada.
-   */
+  /** Visita ParameterExpression. Retorna a fonte de dados SQL associada. */
   protected visitParameter(expression: LinqParameterExpression): SqlExpression {
-    // Procura a fonte de dados (Tabela, Select, Union) associada a este parâmetro no contexto
     return this.context.getDataSourceForParameterStrict(expression);
   }
 
-  /**
-   * Visita MemberExpression (acesso a propriedade ou `.length`).
-   * **ATUALIZADO:** Adiciona tratamento para `.length`.
-   */
+  /** Visita MemberExpression (acesso a propriedade ou `.length`). */
   protected visitMember(expression: LinqMemberExpression): SqlExpression {
+    // (Lógica existente - Inalterada)
     const memberName = expression.memberName;
-    const sourceSqlBase = this.visit(expression.objectExpression); // Visita a expressão do objeto (ex: 'u' ou 'p')
+    const sourceSqlBase = this.visit(expression.objectExpression);
 
     if (!sourceSqlBase)
       throw new Error(`Could not resolve source for member '${memberName}'.`);
 
-    // Tratamento para acesso a chave de GroupBy (inalterado)
     if ((sourceSqlBase as any).isGroupKeyPlaceholder) {
       const keySql = (sourceSqlBase as any).getSqlForKeyAccess(memberName);
       if (keySql) return keySql;
@@ -319,12 +337,10 @@ export class QueryExpressionVisitor {
         );
     }
     if (sourceSqlBase && (sourceSqlBase as any).isGroupKeyPlaceholder) {
-      // Caso simplificado para chave não-objeto
       const keySql = (sourceSqlBase as any).getSqlForKeyAccess();
       if (keySql) return keySql;
     }
 
-    // Se a fonte for uma tabela base, seleção ou união (algo que tem alias)
     if (sourceSqlBase instanceof TableExpressionBase) {
       const sourceAlias = sourceSqlBase.alias;
       if (!sourceAlias) {
@@ -333,23 +349,16 @@ export class QueryExpressionVisitor {
         );
       }
 
-      // Se a fonte for uma Tabela física
       if (sourceSqlBase instanceof TableExpression) {
         return new ColumnExpression(memberName, sourceSqlBase);
-      }
-      // Se a fonte for uma Seleção (subquery ou projeção anterior)
-      else if (sourceSqlBase instanceof SelectExpression) {
-        // Tenta encontrar uma projeção explícita com esse nome
+      } else if (sourceSqlBase instanceof SelectExpression) {
         const projection = sourceSqlBase.projection.find(
           (p) => p.alias === memberName
         );
         if (projection) {
-          // Retorna a expressão SQL da projeção encontrada
-          // (pode ser uma coluna, constante, função, etc.)
           return projection.expression;
         }
 
-        // Verifica se há uma projeção '*' que poderia conter a coluna
         const starProjection = sourceSqlBase.projection.find(
           (p) =>
             p.alias === "*" &&
@@ -361,18 +370,15 @@ export class QueryExpressionVisitor {
           starProjection.expression instanceof ColumnExpression &&
           starProjection.expression.table
         ) {
-          // Aviso: Acessar via '*' pode ser ambíguo se houver joins
           console.warn(
             `Accessing member '${memberName}' via '*' projection on SelectExpression [${sourceAlias}]. This might be ambiguous.`
           );
-          // Assume que a coluna existe na tabela referenciada pela projeção '*'
           return new ColumnExpression(
             memberName,
             starProjection.expression.table
           );
         }
 
-        // Verifica se há uma projeção de tabela inteira (alias_all)
         const tablePlaceholderAlias = memberName + "_all";
         const tableProjection = sourceSqlBase.projection.find(
           (p) =>
@@ -385,44 +391,27 @@ export class QueryExpressionVisitor {
           tableProjection.expression instanceof ColumnExpression &&
           tableProjection.expression.table
         ) {
-          // Se encontrou uma projeção como { user: u }, retorna a TableExpression de 'u'
           return tableProjection.expression.table;
         }
 
-        // Se não encontrou projeção explícita, assume que é uma coluna da fonte SELECT
-        // Cria uma referência de Tabela temporária representando a SelectExpression
         const tempTableForSelect = new TableExpression(
-          `(<select>)`, // Nome placeholder
+          `(<select>)`,
           sourceAlias
         );
         return new ColumnExpression(memberName, tempTableForSelect);
-      }
-      // Se a fonte for uma União
-      else if (sourceSqlBase instanceof CompositeUnionExpression) {
-        // Assume que a coluna existe no resultado da UNION
+      } else if (sourceSqlBase instanceof CompositeUnionExpression) {
         const tempTableForUnion = new TableExpression(`(<union>)`, sourceAlias);
         return new ColumnExpression(memberName, tempTableForUnion);
-      }
-      // Caso inesperado
-      else {
+      } else {
         throw new Error(
           `Unexpected type derived from TableExpressionBase: ${sourceSqlBase.constructor.name}`
         );
       }
-    }
-    // **NOVO: Tratamento para .length em expressões SQL que resultam em string**
-    else if (memberName === "length") {
-      // Assume que sourceSqlBase é uma expressão que resulta em string (Column, Function, etc.)
-      // Mapeia para a função SQL LEN (SQL Server) ou LENGTH (padrão)
+    } else if (memberName === "length") {
       return new SqlFunctionCallExpression("LEN", [sourceSqlBase]);
-    }
-    // Se a fonte for uma Coluna (acesso a membro em coluna? Ex: dateCol.Year - Mapear para função SQL)
-    // (Este caso pode ser tratado em visitInstanceMethodCall ou aqui)
-    else if (sourceSqlBase instanceof ColumnExpression) {
-      // Se for Year, Month, Day em uma coluna de data, mapeia para função
+    } else if (sourceSqlBase instanceof ColumnExpression) {
       const funcName = mapPropertyToSqlFunction(memberName);
       if (funcName) {
-        // Trata placeholders para DATEPART
         if (funcName.startsWith("DATEPART")) {
           const part = funcName.substring(9, funcName.indexOf(","));
           return new SqlFunctionCallExpression("DATEPART", [
@@ -435,65 +424,48 @@ export class QueryExpressionVisitor {
       throw new Error(
         `Accessing member '${memberName}' on a ColumnExpression ('${sourceSqlBase.name}') is not yet supported unless it maps to a known SQL function (like Year, Month, Day).`
       );
-    }
-    // Erro se tentar acessar membro de constante, etc.
-    else if (sourceSqlBase instanceof SqlConstantExpression) {
+    } else if (sourceSqlBase instanceof SqlConstantExpression) {
       throw new Error(
         `Accessing member '${memberName}' on a ConstantExpression is not supported.`
       );
-    }
-    // Erro genérico para outros tipos de SQL base
-    else {
+    } else {
       throw new Error(
         `Cannot access member '${memberName}' on SQL type: ${sourceSqlBase.constructor.name}`
       );
     }
   }
 
-  /**
-   * Visita BinaryExpression.
-   */
+  /** Visita BinaryExpression. */
   protected visitBinary(expression: LinqBinaryExpression): SqlExpression {
+    // (Lógica existente - Inalterada)
     const leftLinq = expression.left;
     const rightLinq = expression.right;
-    // Usa o OperatorType do sqlUtils importado
     const operator = expression.operator as OperatorType;
 
-    // Visita os operandos esquerdo e direito
     const leftSql = this.visit(leftLinq);
     const rightSql = this.visit(rightLinq);
 
-    // Valida se a tradução dos operandos foi bem-sucedida
     if (!leftSql || !rightSql) {
       throw new Error(
         `Binary operands translation failed for operator ${operator}. Left: ${leftLinq?.toString()}, Right: ${rightLinq?.toString()}`
       );
     }
 
-    // *** CORREÇÃO: Tratamento de nulidade para LEFT JOIN ***
-    // Se estiver comparando um TableExpressionBase (resultado de um join) com null
     if (
       leftSql instanceof TableExpressionBase &&
       rightSql instanceof SqlConstantExpression &&
       rightSql.value === null
     ) {
       if (operator === LinqOperatorType.Equal) {
-        // Gera [alias].[alguma_coluna] IS NULL. Escolhemos a primeira coluna do join key como heurística (pode precisar de ajuste)
-        // Esta parte é complexa. Por simplicidade, vamos assumir que a chave primária da tabela é a primeira coluna do ON.
-        // Ou, melhor ainda, checar uma coluna de chave primária se tivéssemos essa info.
-        // Solução pragmática: Checar o próprio alias (não padrão SQL, mas pode funcionar com COALESCE no gerador ou se o DB permitir)
-        // Ou, idealmente, o visitMember deveria retornar a coluna chave quando o acesso é feito.
-        // Por enquanto, vamos gerar [alias].PrimaryKey IS NULL (assumindo que temos a PK) - se não, usar uma coluna conhecida.
-        // No teste de Department, a chave é 'deptId'.
         const primaryKeyColName =
           leftSql instanceof TableExpression && leftSql.name === "Departments"
             ? "deptId"
-            : "Id"; // Ajuste conforme necessário
+            : "Id";
         return new SqlBinaryExpression(
           new ColumnExpression(primaryKeyColName, leftSql as TableExpression),
           OperatorType.Equal,
           rightSql
-        ); // Isso vai gerar [alias].[pk] IS NULL no gerador
+        );
       } else if (operator === LinqOperatorType.NotEqual) {
         const primaryKeyColName =
           leftSql instanceof TableExpression && leftSql.name === "Departments"
@@ -503,10 +475,9 @@ export class QueryExpressionVisitor {
           new ColumnExpression(primaryKeyColName, leftSql as TableExpression),
           OperatorType.NotEqual,
           rightSql
-        ); // Gera [alias].[pk] IS NOT NULL
+        );
       }
     }
-    // O mesmo para o lado direito sendo a tabela e o esquerdo sendo null
     if (
       rightSql instanceof TableExpressionBase &&
       leftSql instanceof SqlConstantExpression &&
@@ -521,7 +492,7 @@ export class QueryExpressionVisitor {
           new ColumnExpression(primaryKeyColName, rightSql as TableExpression),
           OperatorType.Equal,
           leftSql
-        ); // [alias].[pk] IS NULL
+        );
       } else if (operator === LinqOperatorType.NotEqual) {
         const primaryKeyColName =
           rightSql instanceof TableExpression && rightSql.name === "Departments"
@@ -531,13 +502,10 @@ export class QueryExpressionVisitor {
           new ColumnExpression(primaryKeyColName, rightSql as TableExpression),
           OperatorType.NotEqual,
           leftSql
-        ); // [alias].[pk] IS NOT NULL
+        );
       }
     }
-    // *** FIM CORREÇÃO ***
 
-    // Otimização: Inverte a ordem se for constante à esquerda e coluna à direita
-    // Ex: 5 > u.age => u.age < 5
     if (
       leftSql instanceof SqlConstantExpression &&
       rightSql instanceof ColumnExpression
@@ -552,23 +520,19 @@ export class QueryExpressionVisitor {
       else if (operator === LinqOperatorType.GreaterThanOrEqual)
         flippedOp = LinqOperatorType.LessThanOrEqual;
 
-      // Se o operador foi invertido, retorna a expressão com operandos trocados
       if (flippedOp !== operator) {
         return new SqlBinaryExpression(rightSql, flippedOp, leftSql);
       }
     }
 
-    // Cria a expressão binária SQL
     return new SqlBinaryExpression(leftSql, operator, rightSql);
   }
 
-  /**
-   * Visita chamadas de método de extensão LINQ (where, select, join, orderBy, etc.).
-   * Retorna SelectExpression ou CompositeUnionExpression.
-   */
+  /** Visita chamadas de método de extensão LINQ (where, select, join, orderBy, etc.). */
   protected visitLinqExtensionMethodCall(
     expression: LinqMethodCallExpression
   ): SelectExpression | CompositeUnionExpression {
+    // (Lógica existente - Inalterada)
     const methodName = expression.methodName;
     const sourceLinqExpr = expression.source;
 
@@ -578,20 +542,16 @@ export class QueryExpressionVisitor {
       );
     }
 
-    // Tratamento especial para union/concat (retorna CompositeUnionExpression)
     if (methodName === "union" || methodName === "concat") {
-      // (Lógica do union/concat inalterada...)
       if (expression.args.length !== 1) {
         throw new Error(`Invalid arguments for '${methodName}'.`);
       }
       const isDistinct = methodName === "union";
       const secondLinqExpr = expression.args[0];
 
-      // Visita a primeira e a segunda fontes
       const firstVisited = this.visit(sourceLinqExpr);
       const secondVisited = this.visit(secondLinqExpr);
 
-      // Garante que a segunda fonte seja um SelectExpression (ou converte)
       let secondSelect: SelectExpression;
       if (
         secondVisited instanceof TableExpression ||
@@ -606,18 +566,15 @@ export class QueryExpressionVisitor {
         );
       }
 
-      // Otimização: Se a primeira fonte já for uma Union compatível, adiciona a segunda
       if (
         firstVisited instanceof CompositeUnionExpression &&
         firstVisited.distinct === isDistinct
       ) {
         const existingSources = firstVisited.sources;
         const newSources = [...existingSources, secondSelect];
-        // Gera um novo alias para a união expandida
         const unionAlias = this.aliasGenerator.generateAlias("union");
         return new CompositeUnionExpression(newSources, unionAlias, isDistinct);
       } else {
-        // Caso contrário, cria uma nova Union a partir da primeira e segunda fontes
         let firstSelect: SelectExpression;
         if (
           firstVisited instanceof TableExpression ||
@@ -631,7 +588,6 @@ export class QueryExpressionVisitor {
             `First argument for '${methodName}' did not translate to Table, Select, or Union.`
           );
         }
-        // Gera alias para a nova união
         const unionAlias = this.aliasGenerator.generateAlias("union");
         return new CompositeUnionExpression(
           [firstSelect, secondSelect],
@@ -639,9 +595,8 @@ export class QueryExpressionVisitor {
           isDistinct
         );
       }
-    } // Fim tratamento union/concat
+    }
 
-    // Para outros métodos LINQ, visita a fonte e garante que seja SelectExpression
     const baseSql = this.visit(sourceLinqExpr);
     if (!baseSql) {
       throw new Error(
@@ -649,32 +604,28 @@ export class QueryExpressionVisitor {
       );
     }
 
-    // Converte a fonte base (Tabela, União) para uma SelectExpression se necessário
     let currentSelect: SelectExpression;
-    let sourceForLambda: SqlDataSource; // Fonte a ser usada no contexto das lambdas
+    let sourceForLambda: SqlDataSource;
     if (baseSql instanceof TableExpression) {
       currentSelect = this.createDefaultSelect(baseSql);
-      sourceForLambda = baseSql; // Lambda opera sobre a tabela base
+      sourceForLambda = baseSql;
     } else if (baseSql instanceof SelectExpression) {
       currentSelect = baseSql;
-      sourceForLambda = currentSelect; // Lambda opera sobre o resultado do select anterior
+      sourceForLambda = currentSelect;
     } else if (baseSql instanceof CompositeUnionExpression) {
       currentSelect = this.createDefaultSelect(baseSql);
-      sourceForLambda = currentSelect; // Lambda opera sobre o resultado da união
+      sourceForLambda = currentSelect;
     } else {
       throw new Error(
         `Translation Error: Cannot apply LINQ method '${methodName}' to SQL source of type '${baseSql.constructor.name}'. Expected Table, Select, or Union.`
       );
     }
 
-    // Prepara a função de visita no contexto (para passar aos visitors de método)
     const boundVisitInContext: VisitInContextFn =
       this.visitInContext.bind(this);
 
-    // Tratamento de Where vs Having (baseado se a fonte é GroupBy)
     if (methodName === "where") {
       let isSourceGroupBy = false;
-      // Verifica se a expressão LINQ *fonte* foi uma chamada a groupBy
       if (
         sourceLinqExpr.type === LinqExpressionType.Call &&
         (sourceLinqExpr as LinqMethodCallExpression).methodName === "groupBy"
@@ -682,7 +633,6 @@ export class QueryExpressionVisitor {
         isSourceGroupBy = true;
       }
 
-      // Se for where após groupBy, traduz como HAVING
       if (isSourceGroupBy) {
         return visitHavingCall(
           expression,
@@ -692,7 +642,6 @@ export class QueryExpressionVisitor {
           boundVisitInContext
         );
       } else {
-        // Caso contrário, traduz como WHERE normal
         return visitWhereCall(
           expression,
           currentSelect,
@@ -703,7 +652,6 @@ export class QueryExpressionVisitor {
       }
     }
 
-    // Dispatch para visitors específicos de cada método LINQ
     switch (methodName) {
       case "select":
         return visitSelectCall(
@@ -711,24 +659,22 @@ export class QueryExpressionVisitor {
           currentSelect,
           sourceForLambda,
           this.context,
-          this.createProjections.bind(this), // Passa a função para criar projeções
+          this.createProjections.bind(this),
           this.aliasGenerator
         );
       case "join":
         return visitJoinCall(
           expression,
           currentSelect,
-          sourceForLambda, // sourceForOuterLambda renomeada
+          sourceForLambda,
           this.context,
-          this.visit.bind(this), // Passa a função de visita principal
+          this.visit.bind(this),
           boundVisitInContext,
           this.createProjections.bind(this),
           this.aliasGenerator
         );
-      // **** NOVO CASO: leftJoin ****
       case "leftJoin":
         return visitLeftJoinCall(
-          // <<< CHAMA visitLeftJoinCall
           expression,
           currentSelect,
           sourceForLambda,
@@ -816,10 +762,9 @@ export class QueryExpressionVisitor {
           sourceForLambda,
           this.context,
           boundVisitInContext,
-          this, // Passa o próprio visitor raiz
+          this,
           this.aliasGenerator
         );
-      // Adicionar outros métodos LINQ aqui (distinct, etc.)
       default:
         throw new Error(
           `Unsupported LINQ extension method call during translation: ${methodName}`
@@ -827,10 +772,11 @@ export class QueryExpressionVisitor {
     }
   }
 
-  // **** NOVO MÉTODO: Traduz o placeholder do ternário para SqlCaseExpression ****
+  /** Traduz o placeholder do ternário para SqlCaseExpression. */
   protected translateTernaryPlaceholder(
     expression: LinqMethodCallExpression
   ): SqlCaseExpression {
+    // (Lógica existente - Inalterada)
     if (expression.args.length !== 3) {
       throw new Error(
         "Internal Error: Invalid number of arguments for internal ternary placeholder."
@@ -850,18 +796,15 @@ export class QueryExpressionVisitor {
       );
     }
 
-    // Cria a cláusula WHEN/THEN e a expressão CASE
     const whenClause = { when: testSql, then: consequentSql };
     return new SqlCaseExpression([whenClause], alternateSql);
   }
 
-  /**
-   * Visita chamadas de método de *instância* (string, data, etc.).
-   * Retorna uma SqlExpression simples (não SelectExpression).
-   */
+  /** Visita chamadas de método de *instância* (string, data, etc.). */
   protected visitInstanceMethodCall(
     expression: LinqMethodCallExpression
   ): SqlExpression {
+    // (Lógica existente, MAS o case 'includes' foi removido - Inalterada)
     if (!expression.source) {
       throw new Error(
         `Instance method call '${expression.methodName}' requires a source expression.`
@@ -875,9 +818,7 @@ export class QueryExpressionVisitor {
       );
     }
 
-    // Mapeia métodos JS para funções/operações SQL
     switch (expression.methodName) {
-      // --- Métodos de String (sem alterações) ---
       case "toUpperCase":
         if (expression.args.length !== 0)
           throw new Error("'toUpperCase' takes no arguments.");
@@ -890,9 +831,9 @@ export class QueryExpressionVisitor {
         if (expression.args.length !== 0)
           throw new Error("'trim' takes no arguments.");
         return new SqlFunctionCallExpression("TRIM", [sourceSql]);
+      // 'includes' não está mais aqui
       case "startsWith":
       case "endsWith":
-      case "includes":
         if (expression.args.length !== 1)
           throw new Error(`'${expression.methodName}' requires one argument.`);
         const patternArgSql = this.visit(expression.args[0]);
@@ -915,17 +856,15 @@ export class QueryExpressionVisitor {
         let likePattern: string;
         if (expression.methodName === "startsWith") {
           likePattern = `${escapedPattern}%`;
-        } else if (expression.methodName === "endsWith") {
-          likePattern = `%${escapedPattern}`;
         } else {
-          likePattern = `%${escapedPattern}%`;
+          // endsWith
+          likePattern = `%${escapedPattern}`;
         }
         return new SqlLikeExpression(
           sourceSql,
           new SqlConstantExpression(likePattern)
         );
       case "substring":
-        // Lógica do substring permanece a mesma (ajusta o start + 1, usa 8000 para length omitido)
         if (expression.args.length < 1 || expression.args.length > 2)
           throw new Error(
             "'substring' requires one or two arguments (start, [length]). Note: SQL SUBSTRING uses length, not end index."
@@ -939,7 +878,7 @@ export class QueryExpressionVisitor {
             "'substring' start argument must be a constant number."
           );
         }
-        const sqlStart = new SqlConstantExpression(startArgSql.value + 1); // JS 0-based to SQL 1-based
+        const sqlStart = new SqlConstantExpression(startArgSql.value + 1);
         let lengthArgSql: SqlExpression;
         if (expression.args.length === 2) {
           const lenArg = this.visit(expression.args[1]);
@@ -953,20 +892,18 @@ export class QueryExpressionVisitor {
           }
           lengthArgSql = lenArg;
         } else {
-          lengthArgSql = new SqlConstantExpression(8000); // To end of string
+          lengthArgSql = new SqlConstantExpression(8000);
         }
         return new SqlFunctionCallExpression("SUBSTRING", [
           sourceSql,
           sqlStart,
           lengthArgSql,
         ]);
-
-      // --- Métodos de Data ---
       case "getFullYear":
         if (expression.args.length !== 0)
           throw new Error("'getFullYear' takes no arguments.");
         return new SqlFunctionCallExpression("YEAR", [sourceSql]);
-      case "getMonth": // JS retorna 0-11, SQL MONTH retorna 1-12
+      case "getMonth":
         if (expression.args.length !== 0)
           throw new Error("'getMonth' takes no arguments.");
         const monthSql = new SqlFunctionCallExpression("MONTH", [sourceSql]);
@@ -975,7 +912,7 @@ export class QueryExpressionVisitor {
           OperatorType.Subtract,
           new SqlConstantExpression(1)
         );
-      case "getDate": // Dia do mês
+      case "getDate":
         if (expression.args.length !== 0)
           throw new Error("'getDate' takes no arguments.");
         return new SqlFunctionCallExpression("DAY", [sourceSql]);
@@ -1000,26 +937,23 @@ export class QueryExpressionVisitor {
           new SqlConstantExpression("second"),
           sourceSql,
         ]);
-
       default:
         throw new Error(
           `Unsupported instance method call during translation: ${expression.methodName}`
         );
     }
   }
-  /**
-   * Traduz uma chamada ao método 'exists'.
-   */
+
+  /** Traduz uma chamada ao método 'exists'. */
   private translateExistsExpression(
     expression: LinqMethodCallExpression
   ): SqlExistsExpression {
+    // (Lógica existente - Inalterada)
     if (!expression.source) throw new Error("'exists' requires a source.");
 
-    // Visita a expressão fonte do 'exists'
     let sourceSql = this.visit(expression.source);
     if (!sourceSql) throw new Error("Could not translate 'exists' source.");
 
-    // Garante que a fonte seja uma SelectExpression (ou converte)
     let selectForExists: SelectExpression;
     if (
       sourceSql instanceof TableExpression ||
@@ -1034,7 +968,6 @@ export class QueryExpressionVisitor {
       );
     }
 
-    // Se houver um predicado (exists(predicate))
     if (expression.args.length > 0) {
       if (
         expression.args.length !== 1 ||
@@ -1045,17 +978,14 @@ export class QueryExpressionVisitor {
       const lambda = expression.args[0] as LinqLambdaExpression;
       const param = lambda.parameters[0];
 
-      // Define a fonte para resolver a lambda do predicado.
-      // Se a projeção for '*', usa a fonte FROM original, caso contrário usa o próprio SELECT.
       const sourceForPredicate: SqlDataSource =
         selectForExists.from instanceof TableExpressionBase &&
         selectForExists.projection.length === 1 &&
         selectForExists.projection[0].expression instanceof ColumnExpression &&
         selectForExists.projection[0].expression.name === "*"
-          ? selectForExists.from // Usa a tabela/união original se for SELECT *
-          : selectForExists; // Usa o próprio SELECT se houver projeção específica
+          ? selectForExists.from
+          : selectForExists;
 
-      // Cria contexto filho para visitar o corpo da lambda
       const predicateContext = this.context.createChildContext(
         [param],
         [sourceForPredicate]
@@ -1064,22 +994,19 @@ export class QueryExpressionVisitor {
       if (!predicateSql)
         throw new Error("Could not translate 'exists' predicate.");
 
-      // Combina o novo predicado com o predicado WHERE existente no SELECT
       const newPredicate = selectForExists.predicate
         ? new SqlBinaryExpression(
             selectForExists.predicate,
-            OperatorType.And, // Usa o OperatorType importado de sqlUtils
+            OperatorType.And,
             predicateSql
           )
         : predicateSql;
 
-      // Atualiza o SelectExpression com o novo predicado combinado
-      // Mantendo o mesmo alias e outras cláusulas
       selectForExists = new SelectExpression(
         selectForExists.alias,
         selectForExists.projection,
         selectForExists.from,
-        newPredicate, // Atualizado
+        newPredicate,
         selectForExists.having,
         selectForExists.joins,
         selectForExists.orderBy,
@@ -1089,82 +1016,70 @@ export class QueryExpressionVisitor {
       );
     }
 
-    // Cria a projeção para a subconsulta EXISTS (SELECT 1)
     const existsProjection = new ProjectionExpression(
-      new SqlConstantExpression(1), // Projeta a constante 1
-      "exists_val" // Alias interno (opcional, não usado no SQL final do EXISTS)
+      new SqlConstantExpression(1),
+      "exists_val"
     );
-    const existsAlias = ""; // Alias vazio para a subconsulta EXISTS
+    const existsAlias = "";
 
-    // Cria a SelectExpression final para dentro do EXISTS
     const finalSelectForExists = new SelectExpression(
-      existsAlias, // Alias vazio
-      [existsProjection], // Projeção (SELECT 1)
-      selectForExists.from, // FROM original
-      selectForExists.predicate, // Predicado WHERE (original ou combinado)
-      selectForExists.having, // HAVING (se houver)
-      selectForExists.joins, // Joins (originais)
-      [], // Remove ORDER BY dentro do EXISTS
-      null, // Remove OFFSET dentro do EXISTS
-      null, // Remove LIMIT dentro do EXISTS
-      selectForExists.groupBy // Preserva GROUP BY dentro do EXISTS
+      existsAlias,
+      [existsProjection],
+      selectForExists.from,
+      selectForExists.predicate,
+      selectForExists.having,
+      selectForExists.joins,
+      [],
+      null,
+      null,
+      selectForExists.groupBy
     );
 
-    // Retorna a expressão SQL EXISTS envolvendo o SELECT final
     return new SqlExistsExpression(finalSelectForExists);
   }
 
-  /**
-   * Visita uma expressão LINQ dentro de um contexto específico (geralmente para lambdas).
-   */
+  /** Visita uma expressão LINQ dentro de um contexto específico. */
   private visitInContext(
     expression: LinqExpression,
     context: TranslationContext
   ): SqlExpression | null {
-    const originalContext = this.context; // Salva o contexto atual
-    this.context = context; // Define o contexto para a visita
+    // (Lógica existente - Inalterada)
+    const originalContext = this.context;
+    this.context = context;
     let result: SqlExpression | null = null;
     try {
-      result = this.visit(expression); // Visita a expressão no novo contexto
+      result = this.visit(expression);
     } finally {
-      this.context = originalContext; // Restaura o contexto original
+      this.context = originalContext;
     }
     return result;
   }
 
-  /**
-   * Cria as projeções SQL (colunas do SELECT) a partir do corpo de uma lambda LINQ (select ou join).
-   */
+  /** Cria as projeções SQL (colunas do SELECT) a partir do corpo de uma lambda LINQ. */
   public createProjections(
     body: LinqExpression,
     context: TranslationContext
   ): ProjectionExpression[] {
+    // (Lógica existente - Inalterada, mas valida SqlInExpression)
     const projections: ProjectionExpression[] = [];
-    // Função helper para visitar expressões dentro deste contexto de projeção
     const visit = (expr: LinqExpression) => this.visitInContext(expr, context);
 
-    // Caso 1: Projeção é um objeto anônimo (NewObjectExpression)
     if (body.type === LinqExpressionType.NewObject) {
       const newObject = body as LinqNewObjectExpression;
-      // Itera sobre as propriedades do objeto { alias: expression }
       for (const [alias, expr] of newObject.properties.entries()) {
-        let sqlExpr = visit(expr); // Visita a expressão que define o valor da propriedade
+        let sqlExpr = visit(expr);
 
         if (!sqlExpr)
           throw new Error(`Projection failed for alias '${alias}'.`);
 
-        // Se a expressão resultar em uma tabela (ex: { user: u }), projeta todas as colunas dessa tabela
         if (sqlExpr instanceof TableExpression) {
           projections.push(
             new ProjectionExpression(
-              new ColumnExpression("*", sqlExpr), // Cria SELECT alias.*
-              alias + "_all" // Adiciona sufixo para indicar projeção de tabela inteira
+              new ColumnExpression("*", sqlExpr),
+              alias + "_all"
             )
           );
-        }
-        // Se a expressão resultar em uma subconsulta SELECT (ex: { Posts: posts.where(...) })
-        else if (sqlExpr instanceof SelectExpression) {
-          // Verifica se é uma agregação conhecida (COUNT, SUM, etc.) sem paginação/joins/grouping complexos
+        } else if (sqlExpr instanceof SelectExpression) {
           let isKnownAggregate = false;
           if (
             sqlExpr.projection.length === 1 &&
@@ -1177,33 +1092,27 @@ export class QueryExpressionVisitor {
             isKnownAggregate = AGGREGATE_FUNCTION_NAMES.has(funcName);
           }
 
-          // Condições para usar subconsulta escalar simples (SELECT (SELECT AGG(...) ...))
           const useScalarSubquery =
-            isKnownAggregate && // É uma agregação conhecida
-            !sqlExpr.offset && // Sem OFFSET
-            !sqlExpr.limit && // Sem LIMIT
-            sqlExpr.joins.length === 0 && // Sem JOINs
-            sqlExpr.groupBy.length === 0 && // Sem GROUP BY
-            !sqlExpr.having; // Sem HAVING
+            isKnownAggregate &&
+            !sqlExpr.offset &&
+            !sqlExpr.limit &&
+            sqlExpr.joins.length === 0 &&
+            sqlExpr.groupBy.length === 0 &&
+            !sqlExpr.having;
 
           let subqueryExpression: SqlExpression;
           if (useScalarSubquery) {
-            // Cria uma subconsulta escalar simples (SELECT (subquery))
             subqueryExpression = new SqlScalarSubqueryExpression(sqlExpr);
           } else {
-            // Caso contrário, usa subconsulta formatada como JSON (FOR JSON)
-            // Verifica se deve usar WITHOUT_ARRAY_WRAPPER (para take(1))
             const useWithoutArrayWrapper =
               sqlExpr.limit instanceof SqlConstantExpression &&
               sqlExpr.limit.value === 1;
 
-            // Garante que o SELECT interno tenha um alias se não for escalar
             if (!sqlExpr.alias && !useScalarSubquery) {
               console.warn(
                 `SelectExpression for JSON projection '${alias}' was missing alias. Generating one.`
               );
               const subAlias = this.aliasGenerator.generateAlias("select");
-              // Recria o Select com um alias novo
               sqlExpr = new SelectExpression(
                 subAlias,
                 sqlExpr.projection,
@@ -1217,51 +1126,41 @@ export class QueryExpressionVisitor {
                 sqlExpr.groupBy
               );
             }
-            // Cria a expressão para gerar JSON
             subqueryExpression = new SqlScalarSubqueryAsJsonExpression(
               sqlExpr as SelectExpression,
-              undefined, // mode (default PATH)
-              undefined, // includeNullValues (default true)
-              useWithoutArrayWrapper // withoutArrayWrapper (baseado no take(1))
+              undefined,
+              undefined,
+              useWithoutArrayWrapper
             );
           }
-          // Adiciona a projeção da subconsulta com o alias da propriedade
           projections.push(new ProjectionExpression(subqueryExpression, alias));
-        }
-        // Se a expressão resultar em Coluna, Constante, Função, Binária, Case ou Like
-        else if (
+        } else if (
           sqlExpr instanceof ColumnExpression ||
           sqlExpr instanceof SqlConstantExpression ||
           sqlExpr instanceof SqlFunctionCallExpression ||
           sqlExpr instanceof SqlBinaryExpression ||
-          sqlExpr instanceof SqlCaseExpression || // <<< Incluir Case
-          sqlExpr instanceof SqlLikeExpression
+          sqlExpr instanceof SqlCaseExpression ||
+          sqlExpr instanceof SqlLikeExpression ||
+          sqlExpr instanceof SqlInExpression // <<< INCLUI SqlInExpression
         ) {
-          // Adiciona a projeção simples com o alias da propriedade
           projections.push(new ProjectionExpression(sqlExpr, alias));
-        }
-        // Tipo de expressão SQL inesperado na projeção
-        else {
+        } else {
           throw new Error(
             `Unexpected SQL expression type (${sqlExpr.constructor.name}) encountered during projection creation for alias '${alias}'.`
           );
         }
       }
-    }
-    // Caso 2: Projeção é um parâmetro direto (ex: select(u => u))
-    else if (body.type === LinqExpressionType.Parameter) {
+    } else if (body.type === LinqExpressionType.Parameter) {
       const param = body as LinqParameterExpression;
-      const source = visit(param); // Obtém a fonte SQL para o parâmetro
+      const source = visit(param);
 
       let tableOrUnionSource: TableExpressionBase | null = null;
-      // Verifica se a fonte é Tabela, Select ou União
       if (source instanceof TableExpression) {
         tableOrUnionSource = source;
       } else if (
         source instanceof SelectExpression &&
         source.from instanceof TableExpressionBase
       ) {
-        // Se for um Select, pega a fonte FROM dele
         tableOrUnionSource = source.from;
         console.warn(
           `Identity projection on a SelectExpression [${tableOrUnionSource?.alias}]. Projecting underlying source columns.`
@@ -1278,44 +1177,37 @@ export class QueryExpressionVisitor {
           `Identity projection did not resolve to a base table or union source. Found: ${source?.constructor.name}`
         );
 
-      // Cria uma referência de tabela temporária para projetar todas as colunas
       const tempTable = new TableExpression(
         tableOrUnionSource.type === SqlExpressionType.Union
-          ? "(<union>)" // Nome placeholder para união
-          : "(<table>)", // Nome placeholder para tabela/select
-        tableOrUnionSource.alias // Usa o alias da fonte original
+          ? "(<union>)"
+          : "(<table>)",
+        tableOrUnionSource.alias
       );
-      // Adiciona a projeção SELECT alias.*
       projections.push(
         new ProjectionExpression(new ColumnExpression("*", tempTable), "*")
       );
-    }
-    // Caso 3: Projeção é uma expressão simples (ex: select(u => u.Name), select(u => u.Age + 1))
-    else {
-      const sqlExpr = visit(body); // Visita a expressão da projeção
+    } else {
+      const sqlExpr = visit(body);
       if (!sqlExpr)
         throw new Error(
           `Simple projection translation failed for: ${body.toString()}`
         );
 
-      // Verifica se o resultado é um tipo SQL simples (coluna, constante, função, etc.)
       if (
         sqlExpr instanceof ColumnExpression ||
         sqlExpr instanceof SqlConstantExpression ||
         sqlExpr instanceof SqlFunctionCallExpression ||
         sqlExpr instanceof SqlBinaryExpression ||
-        sqlExpr instanceof SqlCaseExpression || // <<< Incluir Case
-        sqlExpr instanceof SqlLikeExpression
+        sqlExpr instanceof SqlCaseExpression ||
+        sqlExpr instanceof SqlLikeExpression ||
+        sqlExpr instanceof SqlInExpression // <<< INCLUI SqlInExpression
       ) {
-        // Determina o alias: nome do membro se for MemberAccess, ou 'exprN'
         const alias =
           body.type === LinqExpressionType.MemberAccess
             ? (body as LinqMemberExpression).memberName
-            : `expr${projections.length}`; // Gera um alias padrão
+            : `expr${projections.length}`;
         projections.push(new ProjectionExpression(sqlExpr, alias));
-      }
-      // Erro se a projeção simples resultar em Tabela/Select/União (inesperado)
-      else if (
+      } else if (
         sqlExpr instanceof TableExpression ||
         sqlExpr instanceof SelectExpression ||
         sqlExpr instanceof CompositeUnionExpression
@@ -1323,9 +1215,7 @@ export class QueryExpressionVisitor {
         throw new Error(
           `Simple projection resolved to a Table/Select/Union expression unexpectedly: ${body.toString()}`
         );
-      }
-      // Erro para outros tipos SQL inesperados
-      else {
+      } else {
         throw new Error(
           `Simple projection did not resolve to a simple column/value/aggregate/known SQL type. Result type: ${
             sqlExpr.constructor.name
@@ -1334,7 +1224,6 @@ export class QueryExpressionVisitor {
       }
     }
 
-    // Validação final: garante que pelo menos uma projeção foi criada
     if (projections.length === 0) {
       throw new Error(
         "Internal Error: Projection creation resulted in empty list."
@@ -1346,26 +1235,26 @@ export class QueryExpressionVisitor {
 
 // --- Mapeamento Simples de Propriedade JS para Função SQL ---
 function mapPropertyToSqlFunction(propertyName: string): string | null {
+  // (Lógica existente - Inalterada)
   switch (propertyName.toLowerCase()) {
     case "year":
       return "YEAR";
     case "month":
-      // Poderia ajustar para MONTH()-1 aqui se necessário, mas mantemos direto
       return "MONTH";
-    case "day": // Mapeia 'day' (ou 'date') para DAY
+    case "day":
     case "date":
       return "DAY";
-    case "hour": // Mapeia 'hour' ou 'hours' para DATEPART(hour,...)
+    case "hour":
     case "hours":
-      return "DATEPART(hour,...)"; // Placeholder - será tratado no visitMember
-    case "minute": // Mapeia 'minute' ou 'minutes' para DATEPART(minute,...)
+      return "DATEPART(hour,...)";
+    case "minute":
     case "minutes":
-      return "DATEPART(minute,...)"; // Placeholder
-    case "second": // Mapeia 'second' ou 'seconds' para DATEPART(second,...)
+      return "DATEPART(minute,...)";
+    case "second":
     case "seconds":
-      return "DATEPART(second,...)"; // Placeholder
-    // Adicionar outros mapeamentos se necessário (ex: DayOfWeek -> DATEPART(weekday,...))
+      return "DATEPART(second,...)";
     default:
-      return null; // Propriedade não mapeada
+      return null;
   }
 }
+// --- END OF FILE src/query/translation/QueryExpressionVisitor.ts ---

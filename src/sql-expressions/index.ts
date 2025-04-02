@@ -12,7 +12,8 @@ export * from "./SelectExpression";
 export * from "./SqlConstantExpression";
 export * from "./SqlBinaryExpression";
 export * from "./SqlLikeExpression";
-export * from "./SqlCaseExpression"; // <<< EXPORTAR SqlCaseExpression
+export * from "./SqlCaseExpression";
+export * from "./SqlInExpression"; // <<< EXPORTAR SqlInExpression
 export * from "./JoinExpressionBase";
 export * from "./InnerJoinExpression";
 export * from "./LeftJoinExpression";
@@ -22,6 +23,6 @@ export * from "./SqlScalarSubqueryAsJsonExpression";
 export * from "./SqlScalarSubqueryExpression";
 export * from "./SqlOrdering";
 export * from "./SqlFunctionCallExpression";
-export * from "./CompositeUnionExpression"; // <<< EXPORTAR NOVA CLASSE
+export * from "./CompositeUnionExpression";
 
 // --- END OF FILE src/sql-expressions/index.ts ---

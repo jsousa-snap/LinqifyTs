@@ -20,7 +20,8 @@ export enum SqlExpressionType {
   Binary = "Binary", // Representa uma operação binária (ex: +, -, =, AND, OR).
   Like = "Like", // Representa uma operação SQL LIKE.
   FunctionCall = "FunctionCall", // Representa uma chamada de função SQL (ex: COUNT, MAX, UPPER).
-  Case = "Case", // <<< NOVO: Representa uma expressão CASE WHEN.
+  Case = "Case", // Representa uma expressão CASE WHEN.
+  In = "In", // <<< NOVO: Representa uma operação IN (value IN (list)).
 
   // Joins
   InnerJoin = "InnerJoin", // Representa uma operação INNER JOIN.
