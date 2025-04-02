@@ -5,7 +5,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
-import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO
+import { normalizeSql } from "./utils/testUtils";
 
 // --- Interfaces ---
 interface User {
@@ -23,9 +23,7 @@ interface Post {
 
 // --- Fim Interfaces ---
 
-// normalizeSql REMOVIDO DAQUI
-
-describe("Queryable Count Operator Tests", () => {
+describe("Queryable Count Operator Tests (Async)", () => {
   let dbContext: DbContext;
   let users: IQueryable<User>;
   let posts: IQueryable<Post>;
@@ -34,44 +32,39 @@ describe("Queryable Count Operator Tests", () => {
     dbContext = new DbContext();
     users = dbContext.set<User>("Users");
     posts = dbContext.set<Post>("Posts");
-    // Mock console.warn para evitar poluir a saída do teste com mensagens de simulação
     jest.spyOn(console, "warn").mockImplementation();
   });
 
   afterEach(() => {
-    // Restaura o mock
     jest.restoreAllMocks();
   });
 
-  it("Teste Count 1: should generate correct SQL for simple count()", () => {
-    const query = users; // Base query
+  it("Teste Count 1: should generate correct SQL for simple countAsync()", async () => {
+    const query = users;
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
     `;
-    // Verifica o SQL gerado pela expressão correspondente
     const countExpression =
       new (require("../expressions").MethodCallExpression)(
-        "count",
+        "count", // Nome interno
         query.expression,
         []
       );
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
-    // Verifica a execução (simulada)
-    expect(query.count()).toBe(10); // Valor simulado retornado pelo provider.execute
+    expect(await query.countAsync()).toBe(10); // Chama countAsync
   });
 
-  it("Teste Count 2: should generate correct SQL for count(predicate)", () => {
+  it("Teste Count 2: should generate correct SQL for countAsync(predicate)", async () => {
     const predicate = (u: User) => u.age > 30;
-    const query = users; // Base query
+    const query = users;
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
 WHERE [u].[age] > 30
     `;
-    // Verifica o SQL gerado pela expressão correspondente
     const predicateLambda = new (require("../parsing").LambdaParser)().parse(
       predicate
     );
@@ -84,82 +77,74 @@ WHERE [u].[age] > 30
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
-    // Verifica a execução (simulada)
-    expect(query.count(predicate)).toBe(10);
+    expect(await query.countAsync(predicate)).toBe(10); // Chama countAsync
   });
 
-  it("Teste Count 3: should generate correct SQL for count() after where()", () => {
+  it("Teste Count 3: should generate correct SQL for countAsync() after where()", async () => {
     const query = users.where((u) => u.name === "Alice");
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
 WHERE [u].[name] = 'Alice'
     `;
-    // Verifica o SQL gerado pela expressão correspondente
     const countExpression =
       new (require("../expressions").MethodCallExpression)(
         "count",
-        query.expression, // Expressão já contém o WHERE
+        query.expression,
         []
       );
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
-    // Verifica a execução (simulada)
-    expect(query.count()).toBe(10);
+    expect(await query.countAsync()).toBe(10); // Chama countAsync
   });
 
-  it("Teste Count 4: should generate correct SQL for count(predicate) after where()", () => {
+  it("Teste Count 4: should generate correct SQL for countAsync(predicate) after where()", async () => {
     const predicate = (u: User) => u.age < 25;
-    const query = users.where((u) => u.name.includes("a")); // WHERE inicial
+    const query = users.where((u) => u.name.includes("a"));
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
 WHERE [u].[name] LIKE '%a%' AND [u].[age] < 25
     `;
-    // Verifica o SQL gerado pela expressão correspondente
     const predicateLambda = new (require("../parsing").LambdaParser)().parse(
       predicate
     );
     const countExpression =
       new (require("../expressions").MethodCallExpression)(
         "count",
-        query.expression, // Expressão já contém o WHERE inicial
-        [predicateLambda] // Predicado adicional
+        query.expression,
+        [predicateLambda]
       );
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
-    // Verifica a execução (simulada)
-    expect(query.count(predicate)).toBe(10);
+    expect(await query.countAsync(predicate)).toBe(10); // Chama countAsync
   });
 
-  it("Teste Count 5: should generate correct SQL for count() after select() (should ignore projection)", () => {
-    // O COUNT deve operar sobre a fonte *antes* da projeção
+  it("Teste Count 5: should generate correct SQL for countAsync() after select() (should ignore projection)", async () => {
     const query = users.select((u) => ({ nameOnly: u.name }));
     const expectedSql = `
 SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
     `;
-    // Verifica o SQL gerado pela expressão correspondente
     const countExpression =
       new (require("../expressions").MethodCallExpression)(
         "count",
-        query.expression, // Expressão contém o SELECT
+        query.expression,
         []
       );
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
-    // Verifica a execução (simulada)
-    expect(query.count()).toBe(10);
+    expect(await query.countAsync()).toBe(10); // Chama countAsync
   });
 
-  it("Teste Count 6: should generate correct SQL for count() in subquery", () => {
-    // O COUNT deve operar sobre a fonte *antes* da projeção
+  it("Teste Count 6: should generate correct SQL for countAsync() in subquery", () => {
+    // countAsync() na construção da expressão
     const query = users.provideScope({ posts }).select((u) => ({
       nameOnly: u.name,
-      quantity: posts.where((p) => p.authorId === u.id).count(),
+      quantity: posts.where((p) => p.authorId === u.id).countAsync(),
     }));
 
     const expectedSql = `
@@ -170,8 +155,8 @@ SELECT [u].[name] AS [nameOnly], (
 ) AS [quantity]
 FROM [Users] AS [u]
           `;
-    const actualSql = query.toQueryString(); // Armazena o resultado
-    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql)); // Compara
+    const actualSql = query.toQueryString();
+    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
 // --- END OF FILE src/__tests__/count.test.ts ---

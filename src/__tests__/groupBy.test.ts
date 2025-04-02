@@ -1,13 +1,12 @@
 // --- START OF FILE src/__tests__/groupBy.test.ts ---
 
-// --- START OF FILE src/__tests__/groupBy.test.ts ---
-
 // src/__tests__/groupBy.test.ts
 
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
-import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
+import { normalizeSql } from "./utils/testUtils";
+
 // --- Interfaces ---
 interface Employee {
   id: number;
@@ -25,21 +24,18 @@ describe("Queryable GroupBy Tests", () => {
   beforeEach(() => {
     dbContext = new DbContext();
     employees = dbContext.set<Employee>("Employees");
-
-    // Mock console.warn to avoid polluting test output
     jest.spyOn(console, "warn").mockImplementation();
-    // Mock console.error as well if needed for specific tests
-    // jest.spyOn(console, 'error').mockImplementation();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks(); // Restore original console functions
+    jest.restoreAllMocks();
   });
 
   it("Teste GroupBy 1: Group by single key and count", () => {
     const query = employees.groupBy(
-      (e) => e.department, // keySelector
-      (key, group) => ({ Department: key, EmployeeCount: group.count() }) // resultSelector
+      (e) => e.department,
+      // **** CORREÇÃO: Usa group.count() ****
+      (key, group) => ({ Department: key, EmployeeCount: group.count() })
     );
 
     const expectedSql = `
@@ -54,9 +50,10 @@ GROUP BY [e].[department]
   it("Teste GroupBy 2: Group by single key and sum salary", () => {
     const query = employees.groupBy(
       (e) => e.department,
+      // **** CORREÇÃO: Usa group.sum() ****
       (key, group) => ({
         Department: key,
-        TotalSalary: group.sum((e) => e.salary),
+        TotalSalary: group.sum((e: Employee) => e.salary),
       })
     );
 
@@ -71,11 +68,12 @@ GROUP BY [e].[department]
 
   it("Teste GroupBy 3: Group by composite key and calculate average salary", () => {
     const query = employees.groupBy(
-      (e) => ({ dept: e.department, country: e.country }), // Composite key
+      (e) => ({ dept: e.department, country: e.country }),
+      // **** CORREÇÃO: Usa group.avg() ****
       (key, group) => ({
-        Department: key.dept, // Access composite key member
-        Country: key.country, // Access composite key member
-        AverageSalary: group.avg((e) => e.salary),
+        Department: key.dept,
+        Country: key.country,
+        AverageSalary: group.avg((e: Employee) => e.salary),
       })
     );
 
@@ -91,11 +89,12 @@ GROUP BY [e].[department], [e].[country]
   it("Teste GroupBy 4: Group by key and multiple aggregates", () => {
     const query = employees.groupBy(
       (e) => e.country,
+      // **** CORREÇÃO: Usa group.count(), min(), max() ****
       (key, group) => ({
         Country: key,
         Count: group.count(),
-        MinSalary: group.min((e) => e.salary),
-        MaxSalary: group.max((e) => e.salary),
+        MinSalary: group.min((e: Employee) => e.salary),
+        MaxSalary: group.max((e: Employee) => e.salary),
       })
     );
 
@@ -113,6 +112,7 @@ GROUP BY [e].[country]
       .where((e) => e.salary > 50000)
       .groupBy(
         (e) => e.department,
+        // **** CORREÇÃO: Usa group.count() ****
         (key, group) => ({ Department: key, HighSalaryCount: group.count() })
       );
 
@@ -126,16 +126,15 @@ GROUP BY [e].[department]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // Simula o HAVING usando Where após GroupBy
   it("Teste GroupBy 6: Group by and filter groups (HAVING equivalent)", () => {
     const query = employees
       .groupBy(
         (e) => e.department,
+        // **** CORREÇÃO: Usa group.count() ****
         (key, group) => ({ Department: key, Count: group.count() })
       )
-      .where((g) => g.Count > 10); // Filtro aplicado *após* o GroupBy
+      .where((g) => g.Count > 10);
 
-    // *** CORRIGIDO: Espera HAVING agora ***
     const expectedSql = `
 SELECT [e].[department] AS [Department], COUNT(1) AS [Count]
 FROM [Employees] AS [e]
@@ -143,22 +142,19 @@ GROUP BY [e].[department]
 HAVING COUNT(1) > 10
     `;
     const actualSql = query.toQueryString();
-    // *** CORRIGIDO: Descomentado e comparando com HAVING ***
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste GroupBy 7: Group by constant key (groups all)", () => {
     const query = employees.groupBy(
-      (e) => 1, // Group all employees into a single group
+      (e) => 1,
+      // **** CORREÇÃO: Usa group.count(), avg() ****
       (key, group) => ({
         TotalEmployees: group.count(),
-        AverageSalary: group.avg((e) => e.salary),
+        AverageSalary: group.avg((e: Employee) => e.salary),
       })
     );
 
-    // Grouping by a constant doesn't usually translate to GROUP BY 1 in SQL.
-    // It typically results in aggregates over the whole table without a GROUP BY clause.
-    // O SQL Server aceita GROUP BY <constante>, então manteremos assim por enquanto.
     const expectedSql = `
 SELECT COUNT(1) AS [TotalEmployees], AVG([e].[salary]) AS [AverageSalary]
 FROM [Employees] AS [e]

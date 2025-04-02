@@ -27,7 +27,7 @@ import {
   LeftJoinExpression,
   JoinExpressionBase,
   SqlExpressionType,
-  SqlExistsExpression,
+  SqlExistsExpression, // Mantém SqlExistsExpression, pois representa o SQL
   SqlScalarSubqueryAsJsonExpression,
   SqlLikeExpression,
   SqlOrdering,
@@ -109,30 +109,34 @@ export class QueryExpressionVisitor {
       finalResult = this.createDefaultSelect(result);
     }
 
-    if (
-      finalResult instanceof SelectExpression ||
-      finalResult instanceof SqlExistsExpression
-    ) {
-      if (
-        finalResult instanceof SelectExpression &&
-        finalResult.projection.length === 1
-      ) {
-        const projExpr = finalResult.projection[0].expression;
-        if (
-          projExpr instanceof SqlFunctionCallExpression &&
-          AGGREGATE_FUNCTION_NAMES.has(projExpr.functionName.toUpperCase()) &&
-          finalResult.groupBy.length === 0
-        ) {
-          return finalResult;
-        }
-      }
+    if (finalResult instanceof SqlExistsExpression) {
       return finalResult;
     }
 
-    console.error("Unexpected final translation result type:", finalResult);
-    throw new Error(
-      `Unexpected translation result type at root: ${finalResult.constructor.name}. Expected SelectExpression or SqlExistsExpression.`
-    );
+    if (!(finalResult instanceof SelectExpression)) {
+      console.error("Unexpected final translation result type:", finalResult);
+      throw new Error(
+        `Unexpected translation result type at root: ${finalResult.constructor.name}. Expected SelectExpression or SqlExistsExpression.`
+      );
+    }
+
+    if (
+      finalResult instanceof SelectExpression &&
+      finalResult.projection.length === 1
+    ) {
+      const projExpr = finalResult.projection[0].expression;
+      const alias = finalResult.projection[0].alias;
+      if (
+        (projExpr instanceof SqlFunctionCallExpression &&
+          AGGREGATE_FUNCTION_NAMES.has(projExpr.functionName.toUpperCase()) &&
+          finalResult.groupBy.length === 0) ||
+        alias?.endsWith("_result")
+      ) {
+        return finalResult;
+      }
+    }
+
+    return finalResult;
   }
 
   /**
@@ -165,13 +169,13 @@ export class QueryExpressionVisitor {
       selectAlias,
       [placeholderProjection],
       source,
-      null,
-      null,
-      [],
-      [],
-      null,
-      null,
-      []
+      null, // predicate
+      null, // having
+      [], // joins
+      [], // orderBy
+      null, // offset
+      null, // limit
+      [] // groupBy
     );
   }
 
@@ -181,33 +185,24 @@ export class QueryExpressionVisitor {
   protected visit(expression: LinqExpression | null): SqlExpression | null {
     if (!expression) return null;
 
-    // --- INTERCEPTAÇÃO DE MethodCallExpression ---
     if (expression.type === LinqExpressionType.Call) {
       const callExpr = expression as LinqMethodCallExpression;
       switch (callExpr.methodName) {
-        // **** TRATAMENTO CORRIGIDO PARA 'includes' ****
         case "includes":
-          // 1. Tenta traduzir como array.includes(value) -> IN
           const inExpr = this.tryTranslateArrayIncludes(callExpr);
           if (inExpr) {
-            return inExpr; // Sucesso, retorna SqlInExpression
+            return inExpr;
           }
-          // 2. Se falhou, assume que é string.includes(value) -> LIKE
-          // Chama o visitor específico que gera SqlLikeExpression
           return visitIncludesCall(
             callExpr,
             this.context,
             this.visit.bind(this)
           );
-        // **** FIM TRATAMENTO CORRIGIDO ****
-
-        // --- Outros métodos de instância ---
         case "toUpperCase":
         case "toLowerCase":
         case "trim":
         case "startsWith":
         case "endsWith":
-        // Não precisa mais do 'includes' aqui
         case "substring":
         case "getFullYear":
         case "getMonth":
@@ -215,19 +210,14 @@ export class QueryExpressionVisitor {
         case "getHours":
         case "getMinutes":
         case "getSeconds":
-          return this.visitInstanceMethodCall(callExpr); // Chama o método para tratá-los
-
-        // --- Métodos especiais/internos ---
+          return this.visitInstanceMethodCall(callExpr);
         case "__internal_ternary__":
           return this.translateTernaryPlaceholder(callExpr);
-        case "exists":
-          return this.translateExistsExpression(callExpr);
+        case "any": // Trata a chamada 'any'
+          return this.translateAnyExpression(callExpr);
       }
-      // Se não for nenhum método especial/de instância acima,
-      // cai para o switch principal para tratar como método de extensão LINQ.
     }
 
-    // --- SWITCH PRINCIPAL PARA TIPOS LINQ ---
     switch (expression.type) {
       case LinqExpressionType.Constant:
         return this.visitConstant(expression as LinqConstantExpression);
@@ -235,7 +225,7 @@ export class QueryExpressionVisitor {
         return this.visitParameter(expression as LinqParameterExpression);
       case LinqExpressionType.MemberAccess:
         return this.visitMember(expression as LinqMemberExpression);
-      case LinqExpressionType.Call: // Métodos de extensão LINQ (where, select, join, etc.)
+      case LinqExpressionType.Call: // Métodos de extensão LINQ
         return this.visitLinqExtensionMethodCall(
           expression as LinqMethodCallExpression
         );
@@ -280,7 +270,6 @@ export class QueryExpressionVisitor {
     ) {
       const valuesArray = arraySourceSql.value as any[];
       if (valuesArray.length === 0) {
-        // Não retorna null, lança erro pois IN () não é válido
         throw new Error(
           "Translation Error: Array provided to 'includes' (for SQL IN) cannot be empty."
         );
@@ -291,7 +280,7 @@ export class QueryExpressionVisitor {
       return new SqlInExpression(valueToFindSql, constantValuesSql);
     }
 
-    return null; // Não correspondeu ao padrão array.includes(column)
+    return null;
   }
 
   /** Visita ConstantExpression (Tabela ou Literal). Usa AliasGenerator. */
@@ -304,7 +293,6 @@ export class QueryExpressionVisitor {
       const alias = this.aliasGenerator.generateAlias(tableName);
       return new TableExpression(tableName, alias);
     } else {
-      // Retorna SqlConstantExpression para valores literais ou externos
       return new SqlConstantExpression(value);
     }
   }
@@ -321,7 +309,6 @@ export class QueryExpressionVisitor {
 
   /** Visita MemberExpression (acesso a propriedade ou `.length`). */
   protected visitMember(expression: LinqMemberExpression): SqlExpression {
-    // (Lógica existente - Inalterada)
     const memberName = expression.memberName;
     const sourceSqlBase = this.visit(expression.objectExpression);
 
@@ -437,7 +424,6 @@ export class QueryExpressionVisitor {
 
   /** Visita BinaryExpression. */
   protected visitBinary(expression: LinqBinaryExpression): SqlExpression {
-    // (Lógica existente - Inalterada)
     const leftLinq = expression.left;
     const rightLinq = expression.right;
     const operator = expression.operator as OperatorType;
@@ -511,14 +497,14 @@ export class QueryExpressionVisitor {
       rightSql instanceof ColumnExpression
     ) {
       let flippedOp = operator;
-      if (operator === LinqOperatorType.LessThan)
-        flippedOp = LinqOperatorType.GreaterThan;
-      else if (operator === LinqOperatorType.LessThanOrEqual)
-        flippedOp = LinqOperatorType.GreaterThanOrEqual;
-      else if (operator === LinqOperatorType.GreaterThan)
-        flippedOp = LinqOperatorType.LessThan;
-      else if (operator === LinqOperatorType.GreaterThanOrEqual)
-        flippedOp = LinqOperatorType.LessThanOrEqual;
+      if (operator === OperatorType.LessThan)
+        flippedOp = OperatorType.GreaterThan;
+      else if (operator === OperatorType.LessThanOrEqual)
+        flippedOp = OperatorType.GreaterThanOrEqual;
+      else if (operator === OperatorType.GreaterThan)
+        flippedOp = OperatorType.LessThan;
+      else if (operator === OperatorType.GreaterThanOrEqual)
+        flippedOp = OperatorType.LessThanOrEqual;
 
       if (flippedOp !== operator) {
         return new SqlBinaryExpression(rightSql, flippedOp, leftSql);
@@ -531,8 +517,8 @@ export class QueryExpressionVisitor {
   /** Visita chamadas de método de extensão LINQ (where, select, join, orderBy, etc.). */
   protected visitLinqExtensionMethodCall(
     expression: LinqMethodCallExpression
-  ): SelectExpression | CompositeUnionExpression {
-    // (Lógica existente - Inalterada)
+  ): SelectExpression | CompositeUnionExpression | SqlExistsExpression {
+    // Pode retornar SqlExists para 'any'
     const methodName = expression.methodName;
     const sourceLinqExpr = expression.source;
 
@@ -542,6 +528,7 @@ export class QueryExpressionVisitor {
       );
     }
 
+    // Tratamento especial para UNION e CONCAT
     if (methodName === "union" || methodName === "concat") {
       if (expression.args.length !== 1) {
         throw new Error(`Invalid arguments for '${methodName}'.`);
@@ -597,6 +584,7 @@ export class QueryExpressionVisitor {
       }
     }
 
+    // Visita a fonte para os demais métodos LINQ
     const baseSql = this.visit(sourceLinqExpr);
     if (!baseSql) {
       throw new Error(
@@ -604,6 +592,7 @@ export class QueryExpressionVisitor {
       );
     }
 
+    // Garante que a fonte seja um SelectExpression
     let currentSelect: SelectExpression;
     let sourceForLambda: SqlDataSource;
     if (baseSql instanceof TableExpression) {
@@ -615,6 +604,9 @@ export class QueryExpressionVisitor {
     } else if (baseSql instanceof CompositeUnionExpression) {
       currentSelect = this.createDefaultSelect(baseSql);
       sourceForLambda = currentSelect;
+    } else if (baseSql instanceof SqlExistsExpression && methodName === "any") {
+      // Se a fonte já é o resultado de 'any' e chamamos 'any' de novo, apenas retorna
+      return baseSql;
     } else {
       throw new Error(
         `Translation Error: Cannot apply LINQ method '${methodName}' to SQL source of type '${baseSql.constructor.name}'. Expected Table, Select, or Union.`
@@ -624,6 +616,7 @@ export class QueryExpressionVisitor {
     const boundVisitInContext: VisitInContextFn =
       this.visitInContext.bind(this);
 
+    // Tratamento de Where (pode virar HAVING)
     if (methodName === "where") {
       let isSourceGroupBy = false;
       if (
@@ -652,6 +645,7 @@ export class QueryExpressionVisitor {
       }
     }
 
+    // Tratamento dos demais métodos LINQ
     switch (methodName) {
       case "select":
         return visitSelectCall(
@@ -710,7 +704,9 @@ export class QueryExpressionVisitor {
         return visitSkipCall(expression, currentSelect, this.context);
       case "take":
         return visitTakeCall(expression, currentSelect, this.context);
-      case "count":
+      // Métodos de agregação e execução (countAsync, avgAsync, etc.)
+      case "count": // O método na expressão LINQ ainda é 'count'
+      case "countAsync":
         return visitCountCall(
           expression,
           currentSelect,
@@ -719,7 +715,8 @@ export class QueryExpressionVisitor {
           boundVisitInContext,
           this.aliasGenerator
         );
-      case "avg":
+      case "avg": // O método na expressão LINQ ainda é 'avg'
+      case "avgAsync":
         return visitAvgCall(
           expression,
           currentSelect,
@@ -728,7 +725,8 @@ export class QueryExpressionVisitor {
           boundVisitInContext,
           this.aliasGenerator
         );
-      case "sum":
+      case "sum": // O método na expressão LINQ ainda é 'sum'
+      case "sumAsync":
         return visitSumCall(
           expression,
           currentSelect,
@@ -737,7 +735,8 @@ export class QueryExpressionVisitor {
           boundVisitInContext,
           this.aliasGenerator
         );
-      case "min":
+      case "min": // O método na expressão LINQ ainda é 'min'
+      case "minAsync":
         return visitMinCall(
           expression,
           currentSelect,
@@ -746,7 +745,8 @@ export class QueryExpressionVisitor {
           boundVisitInContext,
           this.aliasGenerator
         );
-      case "max":
+      case "max": // O método na expressão LINQ ainda é 'max'
+      case "maxAsync":
         return visitMaxCall(
           expression,
           currentSelect,
@@ -765,7 +765,101 @@ export class QueryExpressionVisitor {
           this,
           this.aliasGenerator
         );
+      // Métodos de execução (firstAsync, singleAsync, toListAsync, etc.)
+      case "first": // Usado por first síncrono (se existisse)
+      case "firstAsync":
+      case "firstOrDefault": // Usado por firstOrDefault síncrono (se existisse)
+      case "firstOrDefaultAsync":
+      case "single": // Usado por single síncrono (se existisse)
+      case "singleAsync":
+      case "singleOrDefault": // Usado por singleOrDefault síncrono (se existisse)
+      case "singleOrDefaultAsync":
+      case "toList": // Usado por toList síncrono (se existisse)
+      case "toListAsync": {
+        let finalSelect = currentSelect;
+        const isSingle = methodName.startsWith("single");
+        // Define take(1) para first, take(2) para single
+        const takeCount = methodName.startsWith("first")
+          ? 1
+          : isSingle
+          ? 2
+          : null;
+
+        // Aplica predicado se fornecido (ex: firstAsync(u => u.id == 1))
+        if (
+          expression.args.length > 0 &&
+          expression.args[0].type === LinqExpressionType.Lambda
+        ) {
+          const predicateLambda = expression.args[0] as LinqLambdaExpression;
+          // Cria uma chamada 'where' temporária
+          // ** CORREÇÃO: Usa expression.source como fonte LINQ para where/take **
+          const whereCall = new LinqMethodCallExpression(
+            "where",
+            expression.source,
+            [predicateLambda]
+          );
+          finalSelect = visitWhereCall(
+            whereCall,
+            finalSelect,
+            sourceForLambda,
+            this.context,
+            boundVisitInContext
+          );
+        }
+
+        // Aplica take se for first ou single
+        if (takeCount !== null) {
+          // ** CORREÇÃO: Usa expression.source como fonte LINQ para where/take **
+          const takeCall = new LinqMethodCallExpression(
+            "take",
+            expression.source,
+            [new LinqConstantExpression(takeCount)]
+          );
+          finalSelect = visitTakeCall(takeCall, finalSelect, this.context);
+        }
+
+        // Adiciona alias de resultado na projeção (ajuda o provider a identificar a intenção)
+        const resultAliasMap: { [key: string]: string } = {
+          first: "first_result",
+          firstAsync: "first_result",
+          firstOrDefault: "firstOrDefault_result",
+          firstOrDefaultAsync: "firstOrDefault_result",
+          single: "single_result",
+          singleAsync: "single_result",
+          singleOrDefault: "singleOrDefault_result",
+          singleOrDefaultAsync: "singleOrDefault_result",
+          toList: "toList_result",
+          toListAsync: "toList_result",
+        };
+        // Usa o nome do método original (com ou sem Async) para buscar o alias
+        const baseMethodName = methodName.replace(/Async$/, "");
+        const resultAlias = resultAliasMap[baseMethodName];
+
+        // Atualiza projeções
+        const finalProjections = finalSelect.projection.map(
+          (p) =>
+            new ProjectionExpression(
+              p.expression,
+              p.alias && p.alias !== "*" ? p.alias : resultAlias
+            )
+        );
+
+        return new SelectExpression(
+          finalSelect.alias,
+          finalProjections,
+          finalSelect.from,
+          finalSelect.predicate,
+          finalSelect.having,
+          finalSelect.joins,
+          finalSelect.orderBy,
+          finalSelect.offset,
+          finalSelect.limit, // Contém take(1) ou take(2) se aplicável
+          finalSelect.groupBy
+        );
+      }
+
       default:
+        // Método LINQ não suportado
         throw new Error(
           `Unsupported LINQ extension method call during translation: ${methodName}`
         );
@@ -776,7 +870,6 @@ export class QueryExpressionVisitor {
   protected translateTernaryPlaceholder(
     expression: LinqMethodCallExpression
   ): SqlCaseExpression {
-    // (Lógica existente - Inalterada)
     if (expression.args.length !== 3) {
       throw new Error(
         "Internal Error: Invalid number of arguments for internal ternary placeholder."
@@ -804,7 +897,6 @@ export class QueryExpressionVisitor {
   protected visitInstanceMethodCall(
     expression: LinqMethodCallExpression
   ): SqlExpression {
-    // (Lógica existente, MAS o case 'includes' foi removido - Inalterada)
     if (!expression.source) {
       throw new Error(
         `Instance method call '${expression.methodName}' requires a source expression.`
@@ -831,7 +923,6 @@ export class QueryExpressionVisitor {
         if (expression.args.length !== 0)
           throw new Error("'trim' takes no arguments.");
         return new SqlFunctionCallExpression("TRIM", [sourceSql]);
-      // 'includes' não está mais aqui
       case "startsWith":
       case "endsWith":
         if (expression.args.length !== 1)
@@ -857,7 +948,6 @@ export class QueryExpressionVisitor {
         if (expression.methodName === "startsWith") {
           likePattern = `${escapedPattern}%`;
         } else {
-          // endsWith
           likePattern = `%${escapedPattern}`;
         }
         return new SqlLikeExpression(
@@ -944,15 +1034,14 @@ export class QueryExpressionVisitor {
     }
   }
 
-  /** Traduz uma chamada ao método 'exists'. */
-  private translateExistsExpression(
+  /** Traduz uma chamada ao método 'any'. Retorna SqlExistsExpression. */
+  private translateAnyExpression(
     expression: LinqMethodCallExpression
   ): SqlExistsExpression {
-    // (Lógica existente - Inalterada)
-    if (!expression.source) throw new Error("'exists' requires a source.");
+    if (!expression.source) throw new Error("'any' requires a source.");
 
     let sourceSql = this.visit(expression.source);
-    if (!sourceSql) throw new Error("Could not translate 'exists' source.");
+    if (!sourceSql) throw new Error("Could not translate 'any' source.");
 
     let selectForExists: SelectExpression;
     if (
@@ -964,7 +1053,7 @@ export class QueryExpressionVisitor {
       selectForExists = sourceSql;
     } else {
       throw new Error(
-        `'exists' requires Table, Select or Union source. Found: ${sourceSql.constructor.name}`
+        `'any' requires Table, Select or Union source. Found: ${sourceSql.constructor.name}`
       );
     }
 
@@ -973,7 +1062,7 @@ export class QueryExpressionVisitor {
         expression.args.length !== 1 ||
         expression.args[0].type !== LinqExpressionType.Lambda
       ) {
-        throw new Error("Invalid 'exists' predicate arguments.");
+        throw new Error("Invalid 'any' predicate arguments.");
       }
       const lambda = expression.args[0] as LinqLambdaExpression;
       const param = lambda.parameters[0];
@@ -992,7 +1081,7 @@ export class QueryExpressionVisitor {
       );
       const predicateSql = this.visitInContext(lambda.body, predicateContext);
       if (!predicateSql)
-        throw new Error("Could not translate 'exists' predicate.");
+        throw new Error("Could not translate 'any' predicate.");
 
       const newPredicate = selectForExists.predicate
         ? new SqlBinaryExpression(
@@ -1018,20 +1107,20 @@ export class QueryExpressionVisitor {
 
     const existsProjection = new ProjectionExpression(
       new SqlConstantExpression(1),
-      "exists_val"
+      "exists_val" // Alias interno
     );
-    const existsAlias = "";
+    const existsAlias = ""; // Alias para o SELECT interno do EXISTS
 
     const finalSelectForExists = new SelectExpression(
       existsAlias,
-      [existsProjection],
+      [existsProjection], // SELECT 1
       selectForExists.from,
       selectForExists.predicate,
       selectForExists.having,
       selectForExists.joins,
-      [],
-      null,
-      null,
+      [], // ORDER BY
+      null, // OFFSET
+      null, // LIMIT
       selectForExists.groupBy
     );
 
@@ -1043,7 +1132,6 @@ export class QueryExpressionVisitor {
     expression: LinqExpression,
     context: TranslationContext
   ): SqlExpression | null {
-    // (Lógica existente - Inalterada)
     const originalContext = this.context;
     this.context = context;
     let result: SqlExpression | null = null;
@@ -1060,7 +1148,6 @@ export class QueryExpressionVisitor {
     body: LinqExpression,
     context: TranslationContext
   ): ProjectionExpression[] {
-    // (Lógica existente - Inalterada, mas valida SqlInExpression)
     const projections: ProjectionExpression[] = [];
     const visit = (expr: LinqExpression) => this.visitInContext(expr, context);
 
@@ -1141,7 +1228,7 @@ export class QueryExpressionVisitor {
           sqlExpr instanceof SqlBinaryExpression ||
           sqlExpr instanceof SqlCaseExpression ||
           sqlExpr instanceof SqlLikeExpression ||
-          sqlExpr instanceof SqlInExpression // <<< INCLUI SqlInExpression
+          sqlExpr instanceof SqlInExpression
         ) {
           projections.push(new ProjectionExpression(sqlExpr, alias));
         } else {
@@ -1200,7 +1287,7 @@ export class QueryExpressionVisitor {
         sqlExpr instanceof SqlBinaryExpression ||
         sqlExpr instanceof SqlCaseExpression ||
         sqlExpr instanceof SqlLikeExpression ||
-        sqlExpr instanceof SqlInExpression // <<< INCLUI SqlInExpression
+        sqlExpr instanceof SqlInExpression
       ) {
         const alias =
           body.type === LinqExpressionType.MemberAccess
@@ -1231,11 +1318,10 @@ export class QueryExpressionVisitor {
     }
     return projections;
   }
-} // Fim da classe QueryExpressionVisitor
+}
 
-// --- Mapeamento Simples de Propriedade JS para Função SQL ---
+// Mapeamento Simples de Propriedade JS para Função SQL (Inalterado)
 function mapPropertyToSqlFunction(propertyName: string): string | null {
-  // (Lógica existente - Inalterada)
   switch (propertyName.toLowerCase()) {
     case "year":
       return "YEAR";
@@ -1246,15 +1332,15 @@ function mapPropertyToSqlFunction(propertyName: string): string | null {
       return "DAY";
     case "hour":
     case "hours":
-      return "DATEPART(hour,...)";
+      return "DATEPART(hour,...)"; // Marcador para DATEPART
     case "minute":
     case "minutes":
-      return "DATEPART(minute,...)";
+      return "DATEPART(minute,...)"; // Marcador para DATEPART
     case "second":
     case "seconds":
-      return "DATEPART(second,...)";
+      return "DATEPART(second,...)"; // Marcador para DATEPART
     default:
-      return null;
+      return null; // Propriedade não mapeada
   }
 }
 // --- END OF FILE src/query/translation/QueryExpressionVisitor.ts ---

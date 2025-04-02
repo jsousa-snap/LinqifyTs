@@ -158,21 +158,60 @@ export interface IQueryable<T> {
    */
   provideScope(scope: { [key: string]: IQueryable<any> | any }): IQueryable<T>;
 
-  /**
-   * Determina se uma sequência contém quaisquer elementos.
-   *
-   * @returns {boolean} `true` se a sequência de origem contiver quaisquer elementos; caso contrário, `false`.
-   * @memberof IQueryable
-   */
-  exists(): boolean; // Sobrecarga sem predicado
-  /**
-   * Determina se algum elemento de uma sequência satisfaz uma condição.
-   *
-   * @param {(entity: T) => boolean} predicate Uma função para testar cada elemento quanto a uma condição.
-   * @returns {boolean} `true` se algum elemento na sequência de origem passar no teste da função de predicado especificada; caso contrário, `false`.
-   * @memberof IQueryable
-   */
-  exists(predicate: (entity: T) => boolean): boolean; // Sobrecarga com predicado
+  // **** PARES Síncrono/Assíncrono ****
+  any(): boolean; // Síncrono
+  any(predicate: (entity: T) => boolean): boolean; // Síncrono
+  anyAsync(): Promise<boolean>; // Assíncrono
+  anyAsync(predicate: (entity: T) => boolean): Promise<boolean>; // Assíncrono
+
+  count(): number; // Síncrono
+  count(predicate: (entity: T) => boolean): number; // Síncrono
+  countAsync(): Promise<number>; // Assíncrono
+  countAsync(predicate: (entity: T) => boolean): Promise<number>; // Assíncrono
+
+  avg(selector: (entity: T) => number): number | null; // Síncrono
+  avgAsync(selector: (entity: T) => number): Promise<number | null>; // Assíncrono
+
+  sum(selector: (entity: T) => number): number | null; // Síncrono
+  sumAsync(selector: (entity: T) => number): Promise<number | null>; // Assíncrono
+
+  min<TResult extends number | string | Date>(
+    selector: (entity: T) => TResult
+  ): TResult | null; // Síncrono
+  minAsync<TResult extends number | string | Date>(
+    selector: (entity: T) => TResult
+  ): Promise<TResult | null>; // Assíncrono
+
+  max<TResult extends number | string | Date>(
+    selector: (entity: T) => TResult
+  ): TResult | null; // Síncrono
+  maxAsync<TResult extends number | string | Date>(
+    selector: (entity: T) => TResult
+  ): Promise<TResult | null>; // Assíncrono
+
+  first(): T; // Síncrono
+  first(predicate?: (entity: T) => boolean): T; // Síncrono
+  firstAsync(): Promise<T>; // Assíncrono
+  firstAsync(predicate?: (entity: T) => boolean): Promise<T>; // Assíncrono
+
+  firstOrDefault(): T | null; // Síncrono
+  firstOrDefault(predicate?: (entity: T) => boolean): T | null; // Síncrono
+  firstOrDefaultAsync(): Promise<T | null>; // Assíncrono
+  firstOrDefaultAsync(predicate?: (entity: T) => boolean): Promise<T | null>; // Assíncrono
+
+  single(): T; // Síncrono
+  single(predicate?: (entity: T) => boolean): T; // Síncrono
+  singleAsync(): Promise<T>; // Assíncrono
+  singleAsync(predicate?: (entity: T) => boolean): Promise<T>; // Assíncrono
+
+  singleOrDefault(): T | null; // Síncrono
+  singleOrDefault(predicate?: (entity: T) => boolean): T | null; // Síncrono
+  singleOrDefaultAsync(): Promise<T | null>; // Assíncrono
+  singleOrDefaultAsync(predicate?: (entity: T) => boolean): Promise<T | null>; // Assíncrono
+
+  // toList permanece apenas Async
+  toListAsync(): Promise<T[]>;
+  // **** FIM PARES ****
 
   /**
    * Classifica os elementos de uma sequência em ordem crescente de acordo com uma chave.
@@ -196,22 +235,6 @@ export interface IQueryable<T> {
   ): IOrderedQueryable<T>;
 
   /**
-   * Retorna o número de elementos em uma sequência.
-   *
-   * @returns {number} O número de elementos na sequência de entrada.
-   * @memberof IQueryable
-   */
-  count(): number; // Sobrecarga sem predicado
-  /**
-   * Retorna um número que representa quantos elementos na sequência especificada satisfazem uma condição.
-   *
-   * @param {(entity: T) => boolean} predicate Uma função para testar cada elemento quanto a uma condição.
-   * @returns {number} Um número que representa quantos elementos na sequência satisfazem a condição na função de predicado.
-   * @memberof IQueryable
-   */
-  count(predicate: (entity: T) => boolean): number; // Sobrecarga com predicado
-
-  /**
    * Ignora um número especificado de elementos em uma sequência e retorna os elementos restantes.
    * Requer que a consulta seja ordenada (`orderBy` ou `orderByDescending`) para garantir resultados consistentes.
    *
@@ -232,60 +255,13 @@ export interface IQueryable<T> {
   take(count: number): IQueryable<T>;
 
   /**
-   * Calcula a média de uma sequência de valores numéricos que são obtidos
-   * invocando uma função de transformação em cada elemento da sequência de entrada.
-   * Retorna `null` se a sequência estiver vazia ou contiver apenas valores `null`.
-   *
-   * @param {(entity: T) => number} selector Uma função para extrair o valor numérico de cada elemento.
-   * @returns {(number | null)} A média dos valores na sequência, ou `null` se a sequência estiver vazia.
-   * @memberof IQueryable
-   */
-  avg(selector: (entity: T) => number): number | null;
-  /**
-   * Calcula a soma de uma sequência de valores numéricos que são obtidos
-   * invocando uma função de transformação em cada elemento da sequência de entrada.
-   * Retorna `null` se a sequência estiver vazia ou contiver apenas valores `null` (ou 0 se for configurado assim no DB).
-   *
-   * @param {(entity: T) => number} selector Uma função para extrair o valor numérico de cada elemento.
-   * @returns {(number | null)} A soma dos valores na sequência, ou `null` se vazia.
-   * @memberof IQueryable
-   */
-  sum(selector: (entity: T) => number): number | null;
-  /**
-   * Retorna o valor mínimo em uma sequência de valores que são obtidos
-   * invocando uma função de transformação em cada elemento da sequência de entrada.
-   * Aplicável a números, strings e datas. Retorna `null` se a sequência estiver vazia.
-   *
-   * @template TResult O tipo do valor a ser comparado (number, string ou Date).
-   * @param {(entity: T) => TResult} selector Uma função para extrair o valor de cada elemento.
-   * @returns {(TResult | null)} O valor mínimo na sequência, ou `null` se vazia.
-   * @memberof IQueryable
-   */
-  min<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): TResult | null;
-  /**
-   * Retorna o valor máximo em uma sequência de valores que são obtidos
-   * invocando uma função de transformação em cada elemento da sequência de entrada.
-   * Aplicável a números, strings e datas. Retorna `null` se a sequência estiver vazia.
-   *
-   * @template TResult O tipo do valor a ser comparado (number, string ou Date).
-   * @param {(entity: T) => TResult} selector Uma função para extrair o valor de cada elemento.
-   * @returns {(TResult | null)} O valor máximo na sequência, ou `null` se vazia.
-   * @memberof IQueryable
-   */
-  max<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): TResult | null;
-
-  /**
    * Agrupa os elementos de uma sequência de acordo com uma função de seletor de chave especificada
    * e cria um valor de resultado para cada grupo e sua chave.
    *
    * @template TKey O tipo da chave retornada por `keySelector`.
    * @template TResult O tipo do valor de resultado criado por `resultSelector`.
    * @param {(entity: T) => TKey} keySelector Uma função para extrair a chave de cada elemento.
-   * @param {(key: TKey, group: IQueryable<T>) => TResult} resultSelector Uma função para criar um valor de resultado a partir de cada grupo. O segundo parâmetro (`group`) representa o grupo e permite chamadas de agregação (ex: `group.count()`, `group.sum(g => g.salary)`).
+   * @param {(key: TKey, group: IQueryable<T>) => TResult} resultSelector Uma função para criar um valor de resultado a partir de cada grupo. O segundo parâmetro (`group`) representa o grupo e permite chamadas de agregação (ex: `group.countAsync()`, `group.sumAsync(g => g.salary)`).
    * @returns {IQueryable<TResult>} Um IQueryable onde cada elemento representa uma projeção sobre um grupo, conforme definido por `resultSelector`.
    * @throws {Error} Se os seletores forem nulos ou a tradução falhar.
    * @memberof IQueryable
@@ -295,7 +271,6 @@ export interface IQueryable<T> {
     resultSelector: (key: TKey, group: IQueryable<T>) => TResult
   ): IQueryable<TResult>;
 
-  // **** NOVAS ASSINATURAS UNION / CONCAT ****
   /**
    * Produz a união de conjuntos de duas sequências usando o comparador de igualdade padrão.
    * Remove elementos duplicados. Corresponde ao operador SQL UNION.
@@ -317,7 +292,6 @@ export interface IQueryable<T> {
    * @memberof IQueryable
    */
   concat(second: IQueryable<T>): IQueryable<T>;
-  // **** FIM NOVAS ASSINATURAS ****
 }
 
 /**
@@ -376,15 +350,17 @@ export interface IQueryProvider {
   ): IQueryable<TElement>;
 
   /**
-   * Executa a consulta representada por uma árvore de expressão especificada.
-   * Usado para operações que retornam um único valor (ex: count, exists, avg, first).
+   * Executa (assincronamente ou sincronicamente para 'any') a consulta representada
+   * por uma árvore de expressão especificada.
    *
-   * @template TResultExecute O tipo do valor que resulta da execução da consulta.
+   * @template TResultExecute O tipo do valor ou coleção que resulta da execução da consulta.
    * @param {Expression} expression Uma árvore de expressão que representa uma consulta LINQ.
-   * @returns {TResultExecute} O valor que resulta da execução da consulta especificada.
+   * @returns {Promise<TResultExecute> | TResultExecute} O valor/coleção resultante ou uma Promise para ele.
    * @memberof IQueryProvider
    */
-  execute<TResultExecute>(expression: Expression): TResultExecute;
+  execute<TResultExecute>(
+    expression: Expression
+  ): Promise<TResultExecute> | TResultExecute; // Pode ser sync (any) ou async
 
   /**
    * Obtém a representação textual (ex: SQL) da consulta representada pela árvore de expressão.

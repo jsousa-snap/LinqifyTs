@@ -1,9 +1,11 @@
-// Em src/__tests__/scope.test.ts (ou adicione ao exists.test.ts)
+// --- START OF FILE src/__tests__/scope.test.ts ---
+
+// Em src/__tests__/scope.test.ts
 
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions";
-import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
+import { normalizeSql } from "./utils/testUtils";
 
 // --- Interfaces ---
 interface User {
@@ -28,6 +30,11 @@ describe("Queryable ProvideScope Tests", () => {
     dbContext = new DbContext();
     users = dbContext.set<User>("Users");
     posts = dbContext.set<Post>("Posts");
+    jest.spyOn(console, "warn").mockImplementation();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it("Teste Scope 1: should handle scalar value in scope for where clause", () => {
@@ -35,8 +42,8 @@ describe("Queryable ProvideScope Tests", () => {
     const minAge = 25;
 
     const query = users
-      .provideScope({ searchName, minAge }) // Passa string e número
-      .where((u) => u.name === searchName && u.age >= minAge); // Usa os valores do escopo
+      .provideScope({ searchName, minAge })
+      .where((u) => u.name === searchName && u.age >= minAge);
 
     const expectedSql = `
 SELECT [u].*
@@ -50,14 +57,13 @@ WHERE [u].[name] = 'Bob' AND [u].[age] >= 25`;
   it("Teste Scope 2: should handle mixed IQueryable and scalar values in scope", () => {
     const specificTitle = "Specific Post";
 
-    // Teste original do exists não-terminal, mas agora com provideScope
-    const query = users
-      .provideScope({ posts, specificTitle }) // Passa IQueryable e string
-      .where((u) =>
+    // Usa any() não-terminal
+    const query = users.provideScope({ posts, specificTitle }).where(
+      (u) =>
         posts
           .where((p) => p.authorId === u.id)
-          .exists((p) => p.title == specificTitle)
-      );
+          .any((p) => p.title == specificTitle) // **** USA any() ****
+    );
 
     const expectedSql = `
 SELECT [u].*
@@ -72,14 +78,12 @@ WHERE EXISTS (
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // Teste para o seu exemplo original (usando 'includes' - ainda pode falhar se includes não for traduzido)
   it("Teste Scope 3: should handle scalar value with includes translated to LIKE", () => {
     const searchTerm = "usuario1";
     const query = users
-      .provideScope({ searchTerm }) // Só precisa do searchTerm aqui
+      .provideScope({ searchTerm })
       .where((u) => u.name.includes(searchTerm));
 
-    // Agora esperamos LIKE
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
@@ -89,14 +93,12 @@ WHERE [u].[name] LIKE '%usuario1%'`;
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // Adicionar teste para caracteres especiais no includes
   it("Teste Scope 4: should handle includes with special LIKE characters", () => {
-    const searchTerm = "user%"; // Contém %
+    const searchTerm = "user%";
     const query = users
       .provideScope({ searchTerm })
       .where((u) => u.name.includes(searchTerm));
 
-    // Esperamos que o % seja escapado no padrão
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
@@ -107,7 +109,7 @@ WHERE [u].[name] LIKE '%user[%]%'`;
   });
 
   it("Teste Scope 5: should handle includes with underscore", () => {
-    const searchTerm = "user_1"; // Contém _
+    const searchTerm = "user_1";
     const query = users
       .provideScope({ searchTerm })
       .where((u) => u.name.includes(searchTerm));
@@ -121,3 +123,4 @@ WHERE [u].[name] LIKE '%user[_]1%'`;
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
+// --- END OF FILE src/__tests__/scope.test.ts ---

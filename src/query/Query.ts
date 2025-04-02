@@ -50,21 +50,15 @@ export class Query<T> implements IOrderedQueryable<T> {
   }
 
   // --- Declarações Placeholder (Implementadas em QueryableExtensions) ---
-  // Estes métodos lançam erro se chamados diretamente, pois a implementação
-  // real é adicionada ao protótipo por QueryableExtensions.
 
   select<TResultSelect>(
     selector: (entity: T) => TResultSelect
   ): IQueryable<TResultSelect> {
-    console.error(
-      "Error: Calling Query.select base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.select declaration should not be executed.");
     throw new Error("Base Query.select declaration should not be executed.");
   }
   where(predicate: (entity: T) => boolean): IQueryable<T> {
-    console.error(
-      "Error: Calling Query.where base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.where declaration should not be executed.");
     throw new Error("Base Query.where declaration should not be executed.");
   }
   join<TInnerJoin, TKeyJoin, TResultJoin>(
@@ -73,139 +67,197 @@ export class Query<T> implements IOrderedQueryable<T> {
     innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
     resultSelector: (outer: T, inner: TInnerJoin) => TResultJoin
   ): IQueryable<TResultJoin> {
-    console.error(
-      "Error: Calling Query.join base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.join declaration should not be executed.");
     throw new Error("Base Query.join declaration should not be executed.");
   }
-  // **** NOVO Placeholder: leftJoin ****
   leftJoin<TInnerJoin, TKeyJoin, TResultJoin>(
     inner: IQueryable<TInnerJoin>,
     outerKeySelector: (outer: T) => TKeyJoin,
     innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
     resultSelector: (outer: T, inner: TInnerJoin | null) => TResultJoin
   ): IQueryable<TResultJoin> {
-    console.error(
-      "Error: Calling Query.leftJoin base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.leftJoin declaration should not be executed.");
     throw new Error("Base Query.leftJoin declaration should not be executed.");
   }
-  // **** FIM Placeholder ****
   provideScope(scope: { [key: string]: IQueryable<any> | any }): IQueryable<T> {
     console.error(
-      "Error: Calling Query.provideScope base declaration. Check QueryableExtensions."
+      "Base Query.provideScope declaration should not be executed."
     );
     throw new Error(
       "Base Query.provideScope declaration should not be executed."
     );
   }
-  exists(predicate?: (entity: T) => boolean): boolean {
-    console.error(
-      "Error: Calling Query.exists base declaration. Check QueryableExtensions."
-    );
-    throw new Error("Base Query.exists declaration should not be executed.");
+  any(predicate?: (entity: T) => boolean): boolean {
+    console.error("Base Query.any declaration should not be executed.");
+    throw new Error("Base Query.any declaration should not be executed.");
+  }
+  async anyAsync(predicate?: (entity: T) => boolean): Promise<boolean> {
+    console.error("Base Query.anyAsync declaration should not be executed.");
+    throw new Error("Base Query.anyAsync declaration should not be executed.");
   }
   orderBy<TKey>(keySelector: (entity: T) => TKey): IOrderedQueryable<T> {
-    console.error(
-      "Error: Calling Query.orderBy base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.orderBy declaration should not be executed.");
     throw new Error("Base Query.orderBy declaration should not be executed.");
   }
   orderByDescending<TKey>(
     keySelector: (entity: T) => TKey
   ): IOrderedQueryable<T> {
     console.error(
-      "Error: Calling Query.orderByDescending base declaration. Check QueryableExtensions."
+      "Base Query.orderByDescending declaration should not be executed."
     );
     throw new Error(
       "Base Query.orderByDescending declaration should not be executed."
     );
   }
   thenBy<TKey>(keySelector: (entity: T) => TKey): IOrderedQueryable<T> {
-    console.error(
-      "Error: Calling Query.thenBy base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.thenBy declaration should not be executed.");
     throw new Error("Base Query.thenBy declaration should not be executed.");
   }
   thenByDescending<TKey>(
     keySelector: (entity: T) => TKey
   ): IOrderedQueryable<T> {
     console.error(
-      "Error: Calling Query.thenByDescending base declaration. Check QueryableExtensions."
+      "Base Query.thenByDescending declaration should not be executed."
     );
     throw new Error(
       "Base Query.thenByDescending declaration should not be executed."
     );
   }
   count(predicate?: (entity: T) => boolean): number {
-    console.error(
-      "Error: Calling Query.count base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.count declaration should not be executed.");
     throw new Error("Base Query.count declaration should not be executed.");
   }
-  skip(count: number): IQueryable<T> {
-    console.error(
-      "Error: Calling Query.skip base declaration. Check QueryableExtensions."
+  async countAsync(predicate?: (entity: T) => boolean): Promise<number> {
+    console.error("Base Query.countAsync declaration should not be executed.");
+    throw new Error(
+      "Base Query.countAsync declaration should not be executed."
     );
+  }
+  skip(count: number): IQueryable<T> {
+    console.error("Base Query.skip declaration should not be executed.");
     throw new Error("Base Query.skip declaration should not be executed.");
   }
   take(count: number): IQueryable<T> {
-    console.error(
-      "Error: Calling Query.take base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.take declaration should not be executed.");
     throw new Error("Base Query.take declaration should not be executed.");
   }
   avg(selector: (entity: T) => number): number | null {
-    console.error(
-      "Error: Calling Query.avg base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.avg declaration should not be executed.");
     throw new Error("Base Query.avg declaration should not be executed.");
   }
+  async avgAsync(selector: (entity: T) => number): Promise<number | null> {
+    console.error("Base Query.avgAsync declaration should not be executed.");
+    throw new Error("Base Query.avgAsync declaration should not be executed.");
+  }
   sum(selector: (entity: T) => number): number | null {
-    console.error(
-      "Error: Calling Query.sum base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.sum declaration should not be executed.");
     throw new Error("Base Query.sum declaration should not be executed.");
+  }
+  async sumAsync(selector: (entity: T) => number): Promise<number | null> {
+    console.error("Base Query.sumAsync declaration should not be executed.");
+    throw new Error("Base Query.sumAsync declaration should not be executed.");
   }
   min<TResult extends number | string | Date>(
     selector: (entity: T) => TResult
   ): TResult | null {
-    console.error(
-      "Error: Calling Query.min base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.min declaration should not be executed.");
     throw new Error("Base Query.min declaration should not be executed.");
+  }
+  async minAsync<TResult extends number | string | Date>(
+    selector: (entity: T) => TResult
+  ): Promise<TResult | null> {
+    console.error("Base Query.minAsync declaration should not be executed.");
+    throw new Error("Base Query.minAsync declaration should not be executed.");
   }
   max<TResult extends number | string | Date>(
     selector: (entity: T) => TResult
   ): TResult | null {
-    console.error(
-      "Error: Calling Query.max base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.max declaration should not be executed.");
     throw new Error("Base Query.max declaration should not be executed.");
+  }
+  async maxAsync<TResult extends number | string | Date>(
+    selector: (entity: T) => TResult
+  ): Promise<TResult | null> {
+    console.error("Base Query.maxAsync declaration should not be executed.");
+    throw new Error("Base Query.maxAsync declaration should not be executed.");
   }
   groupBy<TKey, TResult>(
     keySelector: (entity: T) => TKey,
     resultSelector: (key: TKey, group: IQueryable<T>) => TResult
   ): IQueryable<TResult> {
-    console.error(
-      "Error: Calling Query.groupBy base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.groupBy declaration should not be executed.");
     throw new Error("Base Query.groupBy declaration should not be executed.");
   }
-
-  // **** NOVAS DECLARAÇÕES PLACEHOLDER UNION / CONCAT ****
   union(second: IQueryable<T>): IQueryable<T> {
-    console.error(
-      "Error: Calling Query.union base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.union declaration should not be executed.");
     throw new Error("Base Query.union declaration should not be executed.");
   }
   concat(second: IQueryable<T>): IQueryable<T> {
-    console.error(
-      "Error: Calling Query.concat base declaration. Check QueryableExtensions."
-    );
+    console.error("Base Query.concat declaration should not be executed.");
     throw new Error("Base Query.concat declaration should not be executed.");
   }
-  // **** FIM NOVAS DECLARAÇÕES ****
+
+  async toListAsync(): Promise<T[]> {
+    console.error("Base Query.toListAsync declaration should not be executed.");
+    throw new Error(
+      "Base Query.toListAsync declaration should not be executed."
+    );
+  }
+  first(predicate?: (entity: T) => boolean): T {
+    console.error("Base Query.first declaration should not be executed.");
+    throw new Error("Base Query.first declaration should not be executed.");
+  }
+  async firstAsync(predicate?: (entity: T) => boolean): Promise<T> {
+    console.error("Base Query.firstAsync declaration should not be executed.");
+    throw new Error(
+      "Base Query.firstAsync declaration should not be executed."
+    );
+  }
+  firstOrDefault(predicate?: (entity: T) => boolean): T | null {
+    console.error(
+      "Base Query.firstOrDefault declaration should not be executed."
+    );
+    throw new Error(
+      "Base Query.firstOrDefault declaration should not be executed."
+    );
+  }
+  async firstOrDefaultAsync(
+    predicate?: (entity: T) => boolean
+  ): Promise<T | null> {
+    console.error(
+      "Base Query.firstOrDefaultAsync declaration should not be executed."
+    );
+    throw new Error(
+      "Base Query.firstOrDefaultAsync declaration should not be executed."
+    );
+  }
+  single(predicate?: (entity: T) => boolean): T {
+    console.error("Base Query.single declaration should not be executed.");
+    throw new Error("Base Query.single declaration should not be executed.");
+  }
+  async singleAsync(predicate?: (entity: T) => boolean): Promise<T> {
+    console.error("Base Query.singleAsync declaration should not be executed.");
+    throw new Error(
+      "Base Query.singleAsync declaration should not be executed."
+    );
+  }
+  singleOrDefault(predicate?: (entity: T) => boolean): T | null {
+    console.error(
+      "Base Query.singleOrDefault declaration should not be executed."
+    );
+    throw new Error(
+      "Base Query.singleOrDefault declaration should not be executed."
+    );
+  }
+  async singleOrDefaultAsync(
+    predicate?: (entity: T) => boolean
+  ): Promise<T | null> {
+    console.error(
+      "Base Query.singleOrDefaultAsync declaration should not be executed."
+    );
+    throw new Error(
+      "Base Query.singleOrDefaultAsync declaration should not be executed."
+    );
+  }
 }
 // --- END OF FILE src/query/Query.ts ---

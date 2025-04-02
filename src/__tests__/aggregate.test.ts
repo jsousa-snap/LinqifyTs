@@ -5,7 +5,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
-import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
+import { normalizeSql } from "./utils/testUtils";
 
 // --- Interfaces ---
 interface User {
@@ -13,7 +13,7 @@ interface User {
   name: string;
   email: string;
   age: number;
-  salary: number | null; // Adicionando um campo anulável para teste
+  salary: number | null;
 }
 interface Post {
   postId: number;
@@ -23,55 +23,50 @@ interface Post {
 }
 // --- Fim Interfaces ---
 
-// normalizeSql REMOVIDO DAQUI
-
-describe("Queryable Aggregate Operator Tests", () => {
+describe("Queryable Aggregate Operator Tests (Async)", () => {
   let dbContext: DbContext;
   let users: IQueryable<User>;
   let posts: IQueryable<Post>;
-  let emptyUsers: IQueryable<User>; // Para testar agregação em conjunto vazio
+  let emptyUsers: IQueryable<User>;
 
   beforeEach(() => {
     dbContext = new DbContext();
     users = dbContext.set<User>("Users");
     posts = dbContext.set<Post>("Posts");
-    // A lambda do where precisa aceitar um parâmetro, mesmo que não o use.
-    emptyUsers = users.where((_user) => false); // Cria um queryable "vazio"
-    // Mock console.warn para evitar poluir a saída do teste com mensagens de simulação
+    emptyUsers = users.where((_user) => false);
     jest.spyOn(console, "warn").mockImplementation();
   });
 
   afterEach(() => {
-    // Restaura o mock
     jest.restoreAllMocks();
   });
 
-  // --- Testes de Agregação Simples (1-9, Inalterados) ---
-  it("Teste Aggregate 1: should generate correct SQL for avg()", () => {
-    const query = users.avg((u) => u.age);
+  it("Teste Aggregate 1: should generate correct SQL for avgAsync()", async () => {
+    const queryPromise = users.avgAsync((u) => u.age); // Usa Async
     const expectedSql = `
 SELECT AVG([u].[age]) AS [avg_result]
 FROM [Users] AS [u]
     `;
-    expect(query).toBe(42.5); // Simulado
+    expect(await queryPromise).toBe(42.5);
     const avgExpression = new (require("../expressions").MethodCallExpression)(
       "avg",
       users.expression,
       [new (require("../parsing").LambdaParser)().parse((u: User) => u.age)]
     );
     const actualSql = dbContext["queryProvider"].getQueryText(avgExpression);
-    // Usa a função importada
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 2: should generate correct SQL for avg() after where()", () => {
-    const query = users.where((u) => u.name === "Alice").avg((u) => u.age);
+  it("Teste Aggregate 2: should generate correct SQL for avgAsync() after where()", async () => {
+    const queryPromise = users
+      .where((u) => u.name === "Alice")
+      .avgAsync((u) => u.age); // Usa Async
     const expectedSql = `
 SELECT AVG([u].[age]) AS [avg_result]
 FROM [Users] AS [u]
 WHERE [u].[name] = 'Alice'
     `;
-    expect(query).toBe(42.5); // Simulado
+    expect(await queryPromise).toBe(42.5);
     const filteredUsers = users.where((u) => u.name === "Alice");
     const avgExpression = new (require("../expressions").MethodCallExpression)(
       "avg",
@@ -82,13 +77,13 @@ WHERE [u].[name] = 'Alice'
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 3: should generate correct SQL for avg() on nullable field", () => {
-    const query = users.avg((u) => u.salary!);
+  it("Teste Aggregate 3: should generate correct SQL for avgAsync() on nullable field", async () => {
+    const queryPromise = users.avgAsync((u) => u.salary!); // Usa Async
     const expectedSql = `
 SELECT AVG([u].[salary]) AS [avg_result]
 FROM [Users] AS [u]
     `;
-    expect(query).toBe(42.5); // Simulado
+    expect(await queryPromise).toBe(42.5);
     const avgExpression = new (require("../expressions").MethodCallExpression)(
       "avg",
       users.expression,
@@ -98,13 +93,13 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 4: should generate correct SQL for sum()", () => {
-    const query = posts.sum((p) => p.views);
+  it("Teste Aggregate 4: should generate correct SQL for sumAsync()", async () => {
+    const queryPromise = posts.sumAsync((p) => p.views); // Usa Async
     const expectedSql = `
 SELECT SUM([p].[views]) AS [sum_result]
 FROM [Posts] AS [p]
     `;
-    expect(query).toBe(1234); // Simulado
+    expect(await queryPromise).toBe(1234);
     const sumExpression = new (require("../expressions").MethodCallExpression)(
       "sum",
       posts.expression,
@@ -114,14 +109,16 @@ FROM [Posts] AS [p]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 5: should generate correct SQL for sum() after where()", () => {
-    const query = posts.where((p) => p.authorId === 1).sum((p) => p.views);
+  it("Teste Aggregate 5: should generate correct SQL for sumAsync() after where()", async () => {
+    const queryPromise = posts
+      .where((p) => p.authorId === 1)
+      .sumAsync((p) => p.views); // Usa Async
     const expectedSql = `
 SELECT SUM([p].[views]) AS [sum_result]
 FROM [Posts] AS [p]
 WHERE [p].[authorId] = 1
     `;
-    expect(query).toBe(1234); // Simulado
+    expect(await queryPromise).toBe(1234);
     const filteredPosts = posts.where((p) => p.authorId === 1);
     const sumExpression = new (require("../expressions").MethodCallExpression)(
       "sum",
@@ -132,13 +129,13 @@ WHERE [p].[authorId] = 1
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 6: should generate correct SQL for min()", () => {
-    const query = users.min((u) => u.age);
+  it("Teste Aggregate 6: should generate correct SQL for minAsync()", async () => {
+    const queryPromise = users.minAsync((u) => u.age); // Usa Async
     const expectedSql = `
 SELECT MIN([u].[age]) AS [min_result]
 FROM [Users] AS [u]
     `;
-    expect(query).toBe(1); // Simulado
+    expect(await queryPromise).toBe(1);
     const minExpression = new (require("../expressions").MethodCallExpression)(
       "min",
       users.expression,
@@ -148,13 +145,13 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 7: should generate correct SQL for min() on strings", () => {
-    const query = users.min((u) => u.name);
+  it("Teste Aggregate 7: should generate correct SQL for minAsync() on strings", async () => {
+    const queryPromise = users.minAsync((u) => u.name); // Usa Async
     const expectedSql = `
 SELECT MIN([u].[name]) AS [min_result]
 FROM [Users] AS [u]
     `;
-    expect(query).toBe(1); // Simulado (retorno genérico)
+    expect(await queryPromise).toBe(1); // Simulado
     const minExpression = new (require("../expressions").MethodCallExpression)(
       "min",
       users.expression,
@@ -164,13 +161,13 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 8: should generate correct SQL for max()", () => {
-    const query = posts.max((p) => p.views);
+  it("Teste Aggregate 8: should generate correct SQL for maxAsync()", async () => {
+    const queryPromise = posts.maxAsync((p) => p.views); // Usa Async
     const expectedSql = `
 SELECT MAX([p].[views]) AS [max_result]
 FROM [Posts] AS [p]
     `;
-    expect(query).toBe(99); // Simulado
+    expect(await queryPromise).toBe(99);
     const maxExpression = new (require("../expressions").MethodCallExpression)(
       "max",
       posts.expression,
@@ -180,14 +177,14 @@ FROM [Posts] AS [p]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 9: should generate correct SQL for max() after where()", () => {
-    const query = users.where((u) => u.age < 30).max((u) => u.age);
+  it("Teste Aggregate 9: should generate correct SQL for maxAsync() after where()", async () => {
+    const queryPromise = users.where((u) => u.age < 30).maxAsync((u) => u.age); // Usa Async
     const expectedSql = `
 SELECT MAX([u].[age]) AS [max_result]
 FROM [Users] AS [u]
 WHERE [u].[age] < 30
     `;
-    expect(query).toBe(99); // Simulado
+    expect(await queryPromise).toBe(99);
     const filteredUsers = users.where((u) => u.age < 30);
     const maxExpression = new (require("../expressions").MethodCallExpression)(
       "max",
@@ -198,14 +195,14 @@ WHERE [u].[age] < 30
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 10: should generate correct SQL for avg() on empty set", () => {
-    const query = emptyUsers.avg((u) => u.age);
+  it("Teste Aggregate 10: should generate correct SQL for avgAsync() on empty set", async () => {
+    const queryPromise = emptyUsers.avgAsync((u) => u.age); // Usa Async
     const expectedSql = `
 SELECT AVG([u].[age]) AS [avg_result]
 FROM [Users] AS [u]
 WHERE 0
     `;
-    expect(query).toBe(42.5); // Mantém o valor simulado atual
+    expect(await queryPromise).toBe(null); // AVG de vazio é NULL
     const avgExpression = new (require("../expressions").MethodCallExpression)(
       "avg",
       emptyUsers.expression,
@@ -215,14 +212,12 @@ WHERE 0
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // --- NOVOS TESTES COM SUBQUERY ---
-
-  it("Teste Aggregate 11 (Subquery): should generate correct SQL for avg() in projection", () => {
+  it("Teste Aggregate 11 (Subquery): should generate correct SQL for avgAsync() in projection", () => {
     const query = users.provideScope({ posts }).select((u) => ({
       UserName: u.name,
       AveragePostViews: posts
         .where((p) => p.authorId === u.id)
-        .avg((p) => p.views),
+        .avgAsync((p) => p.views), // Usa Async
     }));
 
     const expectedSql = `
@@ -237,12 +232,12 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 12 (Subquery): should generate correct SQL for sum() in projection", () => {
+  it("Teste Aggregate 12 (Subquery): should generate correct SQL for sumAsync() in projection", () => {
     const query = users.provideScope({ posts }).select((u) => ({
       UserName: u.name,
       TotalPostViews: posts
         .where((p) => p.authorId === u.id)
-        .sum((p) => p.views),
+        .sumAsync((p) => p.views), // Usa Async
     }));
 
     const expectedSql = `
@@ -257,10 +252,12 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 13 (Subquery): should generate correct SQL for min() in projection", () => {
+  it("Teste Aggregate 13 (Subquery): should generate correct SQL for minAsync() in projection", () => {
     const query = users.provideScope({ posts }).select((u) => ({
       UserName: u.name,
-      MinPostViews: posts.where((p) => p.authorId === u.id).min((p) => p.views),
+      MinPostViews: posts
+        .where((p) => p.authorId === u.id)
+        .minAsync((p) => p.views), // Usa Async
     }));
 
     const expectedSql = `
@@ -275,10 +272,12 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste Aggregate 14 (Subquery): should generate correct SQL for max() in projection", () => {
+  it("Teste Aggregate 14 (Subquery): should generate correct SQL for maxAsync() in projection", () => {
     const query = users.provideScope({ posts }).select((u) => ({
       UserName: u.name,
-      MaxPostViews: posts.where((p) => p.authorId === u.id).max((p) => p.views),
+      MaxPostViews: posts
+        .where((p) => p.authorId === u.id)
+        .maxAsync((p) => p.views), // Usa Async
     }));
 
     const expectedSql = `
@@ -293,15 +292,13 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // Opcional: Teste com agregação na query externa após subquery (embora menos comum)
-  it("Teste Aggregate 15 (Subquery): should generate correct SQL for avg() on outer query containing subquery aggregate", () => {
-    // Calcula a média das idades dos usuários que têm alguma postagem com mais de 50 visualizações
-    const query = users
+  it("Teste Aggregate 15 (Subquery): should generate correct SQL for avgAsync() on outer query containing subquery", async () => {
+    const queryPromise = users
       .provideScope({ posts })
-      .where((u) =>
-        posts.where((p) => p.authorId === u.id).exists((p) => p.views > 50)
+      .where(
+        (u) => posts.where((p) => p.authorId === u.id).any((p) => p.views > 50) // Usa any() não-terminal
       )
-      .avg((u) => u.age);
+      .avgAsync((u) => u.age); // avgAsync finaliza
 
     const expectedSql = `
 SELECT AVG([u].[age]) AS [avg_result]
@@ -313,11 +310,13 @@ WHERE EXISTS (
     )
     `;
 
-    expect(query).toBe(42.5); // Simulado
+    expect(await queryPromise).toBe(42.5); // Simulado
+
+    // Verifica SQL gerado (lógica interna)
     const filteredUsers = users
       .provideScope({ posts })
       .where((u) =>
-        posts.where((p) => p.authorId === u.id).exists((p) => p.views > 50)
+        posts.where((p) => p.authorId === u.id).any((p) => p.views > 50)
       );
     const avgExpression = new (require("../expressions").MethodCallExpression)(
       "avg",

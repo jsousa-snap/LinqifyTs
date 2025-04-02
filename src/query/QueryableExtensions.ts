@@ -24,83 +24,128 @@ import {
 import { LambdaParser } from "../parsing";
 import { Query } from "./Query";
 
-// --- Declaração de Módulo (Adicionar leftJoin, groupBy, union, concat) ---
+// --- Declaração de Módulo (Com pares Sync/Async) ---
 declare module "../interfaces" {
   interface IQueryable<T> {
-    // Assinaturas existentes...
+    // **** PARES Síncrono/Assíncrono ****
+    any(): boolean;
+    any(predicate: (entity: T) => boolean): boolean;
+    anyAsync(): Promise<boolean>;
+    anyAsync(predicate: (entity: T) => boolean): Promise<boolean>;
+
+    count(): number;
+    count(predicate: (entity: T) => boolean): number;
+    countAsync(): Promise<number>;
+    countAsync(predicate: (entity: T) => boolean): Promise<number>;
+
     avg(selector: (entity: T) => number): number | null;
+    avgAsync(selector: (entity: T) => number): Promise<number | null>;
+
     sum(selector: (entity: T) => number): number | null;
+    sumAsync(selector: (entity: T) => number): Promise<number | null>;
+
     min<TResult extends number | string | Date>(
       selector: (entity: T) => TResult
     ): TResult | null;
+    minAsync<TResult extends number | string | Date>(
+      selector: (entity: T) => TResult
+    ): Promise<TResult | null>;
+
     max<TResult extends number | string | Date>(
       selector: (entity: T) => TResult
     ): TResult | null;
+    maxAsync<TResult extends number | string | Date>(
+      selector: (entity: T) => TResult
+    ): Promise<TResult | null>;
 
-    // Assinatura leftJoin
+    first(): T;
+    first(predicate?: (entity: T) => boolean): T;
+    firstAsync(): Promise<T>;
+    firstAsync(predicate?: (entity: T) => boolean): Promise<T>;
+
+    firstOrDefault(): T | null;
+    firstOrDefault(predicate?: (entity: T) => boolean): T | null;
+    firstOrDefaultAsync(): Promise<T | null>;
+    firstOrDefaultAsync(predicate?: (entity: T) => boolean): Promise<T | null>;
+
+    single(): T;
+    single(predicate?: (entity: T) => boolean): T;
+    singleAsync(): Promise<T>;
+    singleAsync(predicate?: (entity: T) => boolean): Promise<T>;
+
+    singleOrDefault(): T | null;
+    singleOrDefault(predicate?: (entity: T) => boolean): T | null;
+    singleOrDefaultAsync(): Promise<T | null>;
+    singleOrDefaultAsync(predicate?: (entity: T) => boolean): Promise<T | null>;
+
+    // toList permanece apenas Async
+    toListAsync(): Promise<T[]>;
+    // **** FIM PARES ****
+
+    // Métodos não-terminais (inalterados)
     leftJoin<TInnerJoin, TKeyJoin, TResultJoin>(
       inner: IQueryable<TInnerJoin>,
       outerKeySelector: (outer: T) => TKeyJoin,
       innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
-      resultSelector: (outer: T, inner: TInnerJoin | null) => TResultJoin // <<< INNER PODE SER NULL
+      resultSelector: (outer: T, inner: TInnerJoin | null) => TResultJoin
     ): IQueryable<TResultJoin>;
-
-    // Assinatura groupBy
     groupBy<TKey, TResult>(
       keySelector: (entity: T) => TKey,
       resultSelector: (key: TKey, group: IQueryable<T>) => TResult
     ): IQueryable<TResult>;
-
-    // Assinaturas union e concat
     union(second: IQueryable<T>): IQueryable<T>;
     concat(second: IQueryable<T>): IQueryable<T>;
+    // ... outros métodos não-terminais ...
   }
 }
 // --- Fim Declaração ---
 
 // Helper findScopeMap (inalterado)
-/**
- * Percorre a árvore de expressão para cima a partir da expressão dada,
- * acumulando todos os scopeMaps encontrados em ScopeExpressions.
- * @param expression A expressão inicial para começar a busca.
- * @returns Um ReadonlyMap combinado de todos os escopos encontrados, ou undefined se nenhum for encontrado.
- */
 function findScopeMap(
   expression: Expression
 ): ReadonlyMap<string, Expression> | undefined {
   let current: Expression | null = expression;
   let combinedScope: Map<string, Expression> | null = null;
 
-  // Navega para cima na árvore de expressões
   while (current) {
     if (current.type === ExpressionType.Scope) {
-      // Se encontrar uma ScopeExpression, mescla seu scopeMap
       const scopeExpr = current as ScopeExpression;
       if (!combinedScope) {
-        // Se for o primeiro, cria o mapa combinado
         combinedScope = new Map(scopeExpr.scopeMap);
       } else {
-        // Se já existe, adiciona/sobrescreve as entradas do escopo atual
         scopeExpr.scopeMap.forEach((value, key) =>
           combinedScope!.set(key, value)
         );
       }
-      // Continua a busca a partir da expressão fonte da ScopeExpression
       current = scopeExpr.sourceExpression;
     } else if (current.type === ExpressionType.Call) {
-      // Se for uma chamada de método, continua a busca a partir da fonte da chamada
       current = (current as MethodCallExpression).source;
     } else {
-      // Se não for Scope ou Call, para a busca (ex: ConstantExpression no início)
       current = null;
     }
   }
-  // Retorna o mapa combinado ou undefined se nenhum escopo foi encontrado
   return combinedScope ?? undefined;
 }
 
 // Instância única do parser de lambda
 const lambdaParser = new LambdaParser();
+
+// Helper para lidar com resultado síncrono/assíncrono do provider
+function handleSyncExecution<TResult>(
+  methodName: string,
+  result: Promise<TResult> | TResult
+): TResult {
+  if (result instanceof Promise) {
+    console.error(
+      `Error: IQueryProvider.execute returned a Promise for synchronous method '${methodName}'. A sync provider or specific handling is required for truly synchronous execution.`
+    );
+    // Lançar erro é a opção mais segura para indicar a inconsistência.
+    throw new Error(
+      `Internal Error: Unexpected Promise returned for '${methodName}'.`
+    );
+  }
+  return result;
+}
 
 // Implementação de provideScope (inalterada)
 Query.prototype.provideScope = function <T>(
@@ -109,31 +154,25 @@ Query.prototype.provideScope = function <T>(
 ): IQueryable<T> {
   const scopeMap = new Map<string, Expression>();
   for (const key in scope) {
-    // Verifica se a propriedade pertence ao objeto scope (e não ao protótipo)
     if (Object.prototype.hasOwnProperty.call(scope, key)) {
       const value = scope[key];
-      // Verifica se o valor é um objeto IQueryable (possui expression e provider)
       if (
         value &&
         typeof value === "object" &&
         "expression" in value &&
         "provider" in value &&
-        value.expression instanceof Expression // Verifica se expression é do tipo correto
+        value.expression instanceof Expression
       ) {
         const queryable = value as IQueryable<any>;
         if (!queryable.expression)
           throw new Error(`Invalid IQueryable for scope key '${key}'.`);
-        // Mapeia o nome da variável para a expressão raiz do IQueryable
         scopeMap.set(key, queryable.expression);
       } else {
-        // Se não for IQueryable, trata como valor constante
         scopeMap.set(key, new ConstantExpression(value));
       }
     }
   }
-  // Cria a ScopeExpression envolvendo a expressão atual e o mapa de escopo
   const scopeExpr = new ScopeExpression(this.expression, scopeMap);
-  // Cria um novo IQueryable com a ScopeExpression
   return this.provider.createQuery<T>(scopeExpr, this.elementType);
 };
 
@@ -142,21 +181,16 @@ Query.prototype.select = function <T, TResult>(
   this: IQueryable<T>,
   selector: (entity: T) => TResult
 ): IQueryable<TResult> {
-  // Encontra o escopo disponível (se houver)
   const scopeMap = findScopeMap(this.expression);
-  // Parseia a lambda do seletor, passando o escopo
   const lambdaExpr: LambdaExpression = lambdaParser.parse(
     selector,
-    [], // Pilha inicial vazia (parâmetros da lambda são internos)
+    [],
     scopeMap
   );
-  // Cria a expressão de chamada de método 'select'
   const callExpr = new MethodCallExpression("select", this.expression, [
     lambdaExpr,
   ]);
-  // O tipo do elemento resultante é desconhecido a priori, usa Object como placeholder
   const resultElementType = Object as ElementType;
-  // Cria um novo IQueryable com a expressão de chamada 'select'
   return this.provider.createQuery<TResult>(callExpr, resultElementType);
 };
 
@@ -176,7 +210,6 @@ Query.prototype.where = function <T>(
   const callExpr = new MethodCallExpression("where", this.expression, [
     lambdaExpr,
   ]);
-  // 'where' não muda o tipo do elemento
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
@@ -189,7 +222,6 @@ Query.prototype.join = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   resultSelector: (outer: TOuter, inner: TInnerJoin) => TResultJoin
 ): IQueryable<TResultJoin> {
   const currentScopeMap = findScopeMap(this.expression);
-  // Parseia as lambdas de seleção de chave e de resultado
   const outerKeyLambda: LambdaExpression = lambdaParser.parse(
     outerKeySelector,
     [],
@@ -207,9 +239,8 @@ Query.prototype.join = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   );
   if (resultLambda.parameters.length !== 2)
     throw new Error("Join result selector lambda needs 2 parameters.");
-  // Cria a expressão de chamada 'join' com a expressão interna e as lambdas
   const callExpr = new MethodCallExpression("join", this.expression, [
-    innerSource.expression, // Passa a expressão da fonte interna
+    innerSource.expression,
     outerKeyLambda,
     innerKeyLambda,
     resultLambda,
@@ -218,20 +249,15 @@ Query.prototype.join = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   return this.provider.createQuery<TResultJoin>(callExpr, resultElementType);
 };
 
-// **** NOVA IMPLEMENTAÇÃO: leftJoin ****
-/**
- * Cria a expressão LINQ para uma operação LEFT JOIN.
- * A lógica é muito similar ao 'join', mas chama o método 'leftJoin'.
- */
+// Implementação de leftJoin (inalterada)
 Query.prototype.leftJoin = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   this: IQueryable<TOuter>,
   innerSource: IQueryable<TInnerJoin>,
   outerKeySelector: (outer: TOuter) => TKeyJoin,
   innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
-  resultSelector: (outer: TOuter, inner: TInnerJoin | null) => TResultJoin // Inner pode ser null
+  resultSelector: (outer: TOuter, inner: TInnerJoin | null) => TResultJoin
 ): IQueryable<TResultJoin> {
   const currentScopeMap = findScopeMap(this.expression);
-  // Parseia as lambdas, exatamente como no 'join'
   const outerKeyLambda: LambdaExpression = lambdaParser.parse(
     outerKeySelector,
     [],
@@ -249,10 +275,7 @@ Query.prototype.leftJoin = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   );
   if (resultLambda.parameters.length !== 2)
     throw new Error("LeftJoin result selector lambda needs 2 parameters.");
-
-  // Cria a expressão de chamada 'leftJoin'
   const callExpr = new MethodCallExpression("leftJoin", this.expression, [
-    // <<< NOME DO MÉTODO: leftJoin
     innerSource.expression,
     outerKeyLambda,
     innerKeyLambda,
@@ -261,30 +284,50 @@ Query.prototype.leftJoin = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   const resultElementType = Object as ElementType;
   return this.provider.createQuery<TResultJoin>(callExpr, resultElementType);
 };
-// **** FIM NOVA IMPLEMENTAÇÃO ****
 
-// Implementação de exists (inalterada)
-Query.prototype.exists = function <T>(
+// **** Implementação de any (SÍNCRONO) ****
+Query.prototype.any = function <T>(
   this: IQueryable<T>,
   predicate?: (entity: T) => boolean
 ): boolean {
   const scopeMap = findScopeMap(this.expression);
   const args: Expression[] = [];
   if (predicate) {
-    // Se um predicado foi fornecido, parseia-o
     const lambdaExpr: LambdaExpression = lambdaParser.parse(
       predicate,
       [],
       scopeMap
     );
     if (lambdaExpr.parameters.length !== 1)
-      throw new Error("Exists lambda predicate needs 1 parameter.");
-    args.push(lambdaExpr); // Adiciona a lambda parseada aos argumentos
+      throw new Error("Any lambda predicate needs 1 parameter.");
+    args.push(lambdaExpr);
   }
-  // Cria a expressão de chamada 'exists'
-  const callExpr = new MethodCallExpression("exists", this.expression, args);
-  // Executa a expressão (método terminal)
-  return this.provider.execute<boolean>(callExpr);
+  const callExpr = new MethodCallExpression("any", this.expression, args);
+  // Chama execute e lida com o resultado (que deve ser síncrono para any)
+  return handleSyncExecution("any", this.provider.execute<boolean>(callExpr));
+};
+
+// **** Implementação de anyAsync ****
+Query.prototype.anyAsync = async function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): Promise<boolean> {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    if (lambdaExpr.parameters.length !== 1)
+      throw new Error("AnyAsync lambda predicate needs 1 parameter.");
+    args.push(lambdaExpr);
+  }
+  // Usa o nome 'any' na expressão, o provider diferencia pelo contexto async
+  const callExpr = new MethodCallExpression("any", this.expression, args);
+  // Executa assincronamente
+  return await this.provider.execute<boolean>(callExpr);
 };
 
 // Implementação de orderBy (inalterada)
@@ -303,7 +346,6 @@ Query.prototype.orderBy = function <T, TKey>(
   const callExpr = new MethodCallExpression("orderBy", this.expression, [
     lambdaExpr,
   ]);
-  // Retorna um IOrderedQueryable
   return this.provider.createQuery<T>(
     callExpr,
     this.elementType
@@ -336,7 +378,7 @@ Query.prototype.orderByDescending = function <T, TKey>(
 
 // Implementação de thenBy (inalterada)
 Query.prototype.thenBy = function <T, TKey>(
-  this: IOrderedQueryable<T>, // Note: Chamado em IOrderedQueryable
+  this: IOrderedQueryable<T>,
   keySelector: (entity: T) => TKey
 ): IOrderedQueryable<T> {
   const scopeMap = findScopeMap(this.expression);
@@ -358,7 +400,7 @@ Query.prototype.thenBy = function <T, TKey>(
 
 // Implementação de thenByDescending (inalterada)
 Query.prototype.thenByDescending = function <T, TKey>(
-  this: IOrderedQueryable<T>, // Note: Chamado em IOrderedQueryable
+  this: IOrderedQueryable<T>,
   keySelector: (entity: T) => TKey
 ): IOrderedQueryable<T> {
   const scopeMap = findScopeMap(this.expression);
@@ -380,7 +422,7 @@ Query.prototype.thenByDescending = function <T, TKey>(
   ) as IOrderedQueryable<T>;
 };
 
-// Implementação de count (inalterada)
+// **** Implementação de count (SÍNCRONO) ****
 Query.prototype.count = function <T>(
   this: IQueryable<T>,
   predicate?: (entity: T) => boolean
@@ -398,7 +440,29 @@ Query.prototype.count = function <T>(
     args.push(lambdaExpr);
   }
   const callExpr = new MethodCallExpression("count", this.expression, args);
-  return this.provider.execute<number>(callExpr);
+  return handleSyncExecution("count", this.provider.execute<number>(callExpr));
+};
+
+// **** Implementação de countAsync ****
+Query.prototype.countAsync = async function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): Promise<number> {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    if (lambdaExpr.parameters.length !== 1)
+      throw new Error("CountAsync lambda predicate needs 1 parameter.");
+    args.push(lambdaExpr);
+  }
+  // Usa o nome 'count' na expressão
+  const callExpr = new MethodCallExpression("count", this.expression, args);
+  return await this.provider.execute<number>(callExpr);
 };
 
 // Implementação de skip (inalterada)
@@ -406,15 +470,12 @@ Query.prototype.skip = function <T>(
   this: IQueryable<T>,
   count: number
 ): IQueryable<T> {
-  // Validação do argumento 'count'
   if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
     throw new Error(
       "Argument 'count' for 'skip' must be a non-negative integer."
     );
   }
-  // Cria uma ConstantExpression para o valor de 'count'
   const countExpression = new ConstantExpression(count);
-  // Cria a expressão de chamada 'skip'
   const callExpr = new MethodCallExpression("skip", this.expression, [
     countExpression,
   ]);
@@ -438,7 +499,7 @@ Query.prototype.take = function <T>(
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
-// Implementação de avg (inalterada)
+// **** Implementação de avg (SÍNCRONO) ****
 Query.prototype.avg = function <T>(
   this: IQueryable<T>,
   selector: (entity: T) => number
@@ -454,11 +515,32 @@ Query.prototype.avg = function <T>(
   const callExpr = new MethodCallExpression("avg", this.expression, [
     lambdaExpr,
   ]);
-  // Método terminal, executa a consulta
-  return this.provider.execute<number | null>(callExpr);
+  return handleSyncExecution(
+    "avg",
+    this.provider.execute<number | null>(callExpr)
+  );
 };
 
-// Implementação de sum (inalterada)
+// **** Implementação de avgAsync ****
+Query.prototype.avgAsync = async function <T>(
+  this: IQueryable<T>,
+  selector: (entity: T) => number
+): Promise<number | null> {
+  const scopeMap = findScopeMap(this.expression);
+  const lambdaExpr: LambdaExpression = lambdaParser.parse(
+    selector,
+    [],
+    scopeMap
+  );
+  if (lambdaExpr.parameters.length !== 1)
+    throw new Error("AvgAsync lambda selector needs 1 parameter.");
+  const callExpr = new MethodCallExpression("avg", this.expression, [
+    lambdaExpr,
+  ]);
+  return await this.provider.execute<number | null>(callExpr);
+};
+
+// **** Implementação de sum (SÍNCRONO) ****
 Query.prototype.sum = function <T>(
   this: IQueryable<T>,
   selector: (entity: T) => number
@@ -474,10 +556,32 @@ Query.prototype.sum = function <T>(
   const callExpr = new MethodCallExpression("sum", this.expression, [
     lambdaExpr,
   ]);
-  return this.provider.execute<number | null>(callExpr);
+  return handleSyncExecution(
+    "sum",
+    this.provider.execute<number | null>(callExpr)
+  );
 };
 
-// Implementação de min (inalterada)
+// **** Implementação de sumAsync ****
+Query.prototype.sumAsync = async function <T>(
+  this: IQueryable<T>,
+  selector: (entity: T) => number
+): Promise<number | null> {
+  const scopeMap = findScopeMap(this.expression);
+  const lambdaExpr: LambdaExpression = lambdaParser.parse(
+    selector,
+    [],
+    scopeMap
+  );
+  if (lambdaExpr.parameters.length !== 1)
+    throw new Error("SumAsync lambda selector needs 1 parameter.");
+  const callExpr = new MethodCallExpression("sum", this.expression, [
+    lambdaExpr,
+  ]);
+  return await this.provider.execute<number | null>(callExpr);
+};
+
+// **** Implementação de min (SÍNCRONO) ****
 Query.prototype.min = function <T, TResult extends number | string | Date>(
   this: IQueryable<T>,
   selector: (entity: T) => TResult
@@ -493,10 +597,35 @@ Query.prototype.min = function <T, TResult extends number | string | Date>(
   const callExpr = new MethodCallExpression("min", this.expression, [
     lambdaExpr,
   ]);
-  return this.provider.execute<TResult | null>(callExpr);
+  return handleSyncExecution(
+    "min",
+    this.provider.execute<TResult | null>(callExpr)
+  );
 };
 
-// Implementação de max (inalterada)
+// **** Implementação de minAsync ****
+Query.prototype.minAsync = async function <
+  T,
+  TResult extends number | string | Date
+>(
+  this: IQueryable<T>,
+  selector: (entity: T) => TResult
+): Promise<TResult | null> {
+  const scopeMap = findScopeMap(this.expression);
+  const lambdaExpr: LambdaExpression = lambdaParser.parse(
+    selector,
+    [],
+    scopeMap
+  );
+  if (lambdaExpr.parameters.length !== 1)
+    throw new Error("MinAsync lambda selector needs 1 parameter.");
+  const callExpr = new MethodCallExpression("min", this.expression, [
+    lambdaExpr,
+  ]);
+  return await this.provider.execute<TResult | null>(callExpr);
+};
+
+// **** Implementação de max (SÍNCRONO) ****
 Query.prototype.max = function <T, TResult extends number | string | Date>(
   this: IQueryable<T>,
   selector: (entity: T) => TResult
@@ -512,7 +641,32 @@ Query.prototype.max = function <T, TResult extends number | string | Date>(
   const callExpr = new MethodCallExpression("max", this.expression, [
     lambdaExpr,
   ]);
-  return this.provider.execute<TResult | null>(callExpr);
+  return handleSyncExecution(
+    "max",
+    this.provider.execute<TResult | null>(callExpr)
+  );
+};
+
+// **** Implementação de maxAsync ****
+Query.prototype.maxAsync = async function <
+  T,
+  TResult extends number | string | Date
+>(
+  this: IQueryable<T>,
+  selector: (entity: T) => TResult
+): Promise<TResult | null> {
+  const scopeMap = findScopeMap(this.expression);
+  const lambdaExpr: LambdaExpression = lambdaParser.parse(
+    selector,
+    [],
+    scopeMap
+  );
+  if (lambdaExpr.parameters.length !== 1)
+    throw new Error("MaxAsync lambda selector needs 1 parameter.");
+  const callExpr = new MethodCallExpression("max", this.expression, [
+    lambdaExpr,
+  ]);
+  return await this.provider.execute<TResult | null>(callExpr);
 };
 
 // Implementação de groupBy (inalterada)
@@ -522,7 +676,6 @@ Query.prototype.groupBy = function <T, TKey, TResult>(
   resultSelector: (key: TKey, group: IQueryable<T>) => TResult
 ): IQueryable<TResult> {
   const scopeMap = findScopeMap(this.expression);
-
   const keyLambda: LambdaExpression = lambdaParser.parse(
     keySelector,
     [],
@@ -533,7 +686,6 @@ Query.prototype.groupBy = function <T, TKey, TResult>(
       "'groupBy' keySelector lambda must have exactly one parameter."
     );
   }
-
   const resultLambda: LambdaExpression = lambdaParser.parse(
     resultSelector,
     [],
@@ -544,7 +696,6 @@ Query.prototype.groupBy = function <T, TKey, TResult>(
       "'groupBy' resultSelector lambda must have exactly two parameters (key, group)."
     );
   }
-
   const callExpr = new MethodCallExpression("groupBy", this.expression, [
     keyLambda,
     resultLambda,
@@ -561,11 +712,9 @@ Query.prototype.union = function <T>(
   if (!second || !second.expression || !second.provider) {
     throw new Error("Invalid second IQueryable provided for 'union'.");
   }
-  // Cria a MethodCallExpression para 'union', passando a expressão da segunda queryable como argumento.
   const callExpr = new MethodCallExpression("union", this.expression, [
     second.expression,
   ]);
-  // O tipo de elemento permanece o mesmo.
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
@@ -577,11 +726,187 @@ Query.prototype.concat = function <T>(
   if (!second || !second.expression || !second.provider) {
     throw new Error("Invalid second IQueryable provided for 'concat'.");
   }
-  // Cria a MethodCallExpression para 'concat', passando a expressão da segunda queryable.
   const callExpr = new MethodCallExpression("concat", this.expression, [
     second.expression,
   ]);
-  // O tipo de elemento permanece o mesmo.
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
+
+// **** IMPLEMENTAÇÕES DE EXECUÇÃO (Sync e Async) ****
+
+// Síncronas
+Query.prototype.first = function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): T {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    args.push(lambdaExpr);
+  }
+  const callExpr = new MethodCallExpression("first", this.expression, args);
+  return handleSyncExecution("first", this.provider.execute<T>(callExpr));
+};
+
+Query.prototype.firstOrDefault = function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): T | null {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    args.push(lambdaExpr);
+  }
+  const callExpr = new MethodCallExpression(
+    "firstOrDefault",
+    this.expression,
+    args
+  );
+  return handleSyncExecution(
+    "firstOrDefault",
+    this.provider.execute<T | null>(callExpr)
+  );
+};
+
+Query.prototype.single = function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): T {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    args.push(lambdaExpr);
+  }
+  const callExpr = new MethodCallExpression("single", this.expression, args);
+  return handleSyncExecution("single", this.provider.execute<T>(callExpr));
+};
+
+Query.prototype.singleOrDefault = function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): T | null {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    args.push(lambdaExpr);
+  }
+  const callExpr = new MethodCallExpression(
+    "singleOrDefault",
+    this.expression,
+    args
+  );
+  return handleSyncExecution(
+    "singleOrDefault",
+    this.provider.execute<T | null>(callExpr)
+  );
+};
+
+// Assíncronas
+Query.prototype.toListAsync = async function <T>(
+  this: IQueryable<T>
+): Promise<T[]> {
+  const callExpr = new MethodCallExpression("toList", this.expression, []); // Nome interno pode ser toList
+  return await this.provider.execute<T[]>(callExpr);
+};
+
+Query.prototype.firstAsync = async function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): Promise<T> {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    args.push(lambdaExpr);
+  }
+  const callExpr = new MethodCallExpression("first", this.expression, args); // Nome interno pode ser first
+  return await this.provider.execute<T>(callExpr);
+};
+
+Query.prototype.firstOrDefaultAsync = async function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): Promise<T | null> {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    args.push(lambdaExpr);
+  }
+  const callExpr = new MethodCallExpression(
+    "firstOrDefault", // Nome interno
+    this.expression,
+    args
+  );
+  return await this.provider.execute<T | null>(callExpr);
+};
+
+Query.prototype.singleAsync = async function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): Promise<T> {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    args.push(lambdaExpr);
+  }
+  const callExpr = new MethodCallExpression("single", this.expression, args); // Nome interno
+  return await this.provider.execute<T>(callExpr);
+};
+
+Query.prototype.singleOrDefaultAsync = async function <T>(
+  this: IQueryable<T>,
+  predicate?: (entity: T) => boolean
+): Promise<T | null> {
+  const scopeMap = findScopeMap(this.expression);
+  const args: Expression[] = [];
+  if (predicate) {
+    const lambdaExpr: LambdaExpression = lambdaParser.parse(
+      predicate,
+      [],
+      scopeMap
+    );
+    args.push(lambdaExpr);
+  }
+  const callExpr = new MethodCallExpression(
+    "singleOrDefault", // Nome interno
+    this.expression,
+    args
+  );
+  return await this.provider.execute<T | null>(callExpr);
+};
+
 // --- END OF FILE src/query/QueryableExtensions.ts ---

@@ -2,7 +2,10 @@
 
 // src/query/QueryProvider.ts
 
-import { Expression as LinqExpression } from "../expressions";
+import {
+  Expression as LinqExpression,
+  MethodCallExpression as LinqMethodCallExpression,
+} from "../expressions";
 import { IQueryable, IQueryProvider, ElementType } from "../interfaces";
 import { Query } from "./Query";
 import { QueryExpressionVisitor } from "./translation/QueryExpressionVisitor";
@@ -25,12 +28,11 @@ export class QueryProvider implements IQueryProvider {
     return new Query<TElement>(expression, this, elementType);
   }
 
-  // execute (Atualizado para simular mais agregações)
-  execute<TResult>(expression: LinqExpression): TResult {
+  // **** EXECUTE PODE SER SYNC OU ASYNC ****
+  execute<TResult>(expression: LinqExpression): Promise<TResult> | TResult {
     const translator = new QueryExpressionVisitor();
     const sqlGenerator = new SqlServerQuerySqlGenerator();
 
-    // Traduz LINQ para SQL
     const finalSqlExpression = translator.translate(expression);
     const sql = sqlGenerator.Generate(finalSqlExpression);
 
@@ -38,67 +40,135 @@ export class QueryProvider implements IQueryProvider {
     console.log(sql);
     console.log("----------------------------------");
 
-    // Simula a execução baseada no tipo de expressão SQL final
-    if (finalSqlExpression.type === SqlExpressionType.Exists) {
-      console.warn("Simulating DB execution for EXISTS: Returning TRUE.");
+    // Determina se a chamada original foi Async
+    const isAsyncCall =
+      expression instanceof LinqMethodCallExpression &&
+      expression.methodName.endsWith("Async");
+    // Obtém o nome base do método (sem Async)
+    const baseMethodName =
+      expression instanceof LinqMethodCallExpression
+        ? expression.methodName.replace(/Async$/, "")
+        : "unknown";
+
+    // ---- Simulação ----
+
+    // Tratamento especial para 'any' (SEMPRE SÍNCRONO)
+    if (baseMethodName === "any") {
+      console.warn(
+        "Simulating DB execution for ANY (synchronous): Returning TRUE."
+      );
       return true as TResult;
+    }
+
+    // Tratamento para 'toListAsync' (SEMPRE ASSÍNCRONO)
+    if (baseMethodName === "toList") {
+      // Note: a expressão LINQ pode ser só 'toList'
+      console.warn(
+        "Simulating DB execution for toListAsync: Returning mocked array."
+      );
+      return Promise.resolve([
+        { id: 1, name: "Mock 1" },
+        { id: 2, name: "Mock 2" },
+      ] as unknown as TResult);
+    }
+
+    // Simulação para outros métodos terminais
+    if (finalSqlExpression.type === SqlExpressionType.Exists) {
+      // Deve ser tratado pelo 'any' acima
+      console.error("Execution reached SqlExistsExpression unexpectedly.");
+      if (isAsyncCall) return Promise.resolve(true as TResult);
+      else return true as TResult; // Inconsistente, mas segue o fluxo
     } else if (finalSqlExpression.type === SqlExpressionType.Select) {
       const selectExpr = finalSqlExpression as SelectExpression;
 
-      // Verifica se é uma projeção de agregação (COUNT, AVG, SUM, MIN, MAX)
-      if (
-        selectExpr.projection.length === 1 &&
-        selectExpr.projection[0].expression.type ===
-          SqlExpressionType.FunctionCall
-      ) {
-        const funcCall = selectExpr.projection[0]
-          .expression as SqlFunctionCallExpression;
-        const funcName = funcCall.functionName.toUpperCase();
+      // Simulação para agregações e seleções de item único/primeiro
+      let simulatedResult: any = null; // Valor padrão
 
-        switch (funcName) {
-          case "COUNT_BIG":
-          case "COUNT":
-            console.warn("Simulating DB execution for COUNT: Returning 10.");
-            return 10 as TResult; // Simula retorno para Count
-          case "AVG":
-            console.warn("Simulating DB execution for AVG: Returning 42.5.");
-            return 42.5 as TResult; // Simula retorno para Avg
-          case "SUM":
-            console.warn("Simulating DB execution for SUM: Returning 1234.");
-            return 1234 as TResult; // Simula retorno para Sum
-          case "MIN":
-            console.warn("Simulating DB execution for MIN: Returning 1.");
-            // Poderia retornar string ou Date dependendo do selector, mas simplificamos
-            return 1 as TResult; // Simula retorno para Min
-          case "MAX":
-            console.warn("Simulating DB execution for MAX: Returning 99.");
-            return 99 as TResult; // Simula retorno para Max
-          default:
-            // Se for outra função não reconhecida como agregação terminal
-            console.error(
-              `Database execution simulation not implemented for SELECT with function: ${funcName}`
-            );
+      // Verifica se o SQL indica conjunto vazio (simplificação)
+      const isSimulatedEmpty =
+        sql.includes("WHERE 1 = 0") || sql.includes("WHERE 0");
+
+      switch (baseMethodName) {
+        case "count":
+          simulatedResult = 10;
+          break;
+        case "avg":
+          simulatedResult = isSimulatedEmpty ? null : 42.5;
+          break;
+        case "sum":
+          simulatedResult = 1234; // Ou null se vazio? Depende da definição
+          break;
+        case "min":
+          simulatedResult = isSimulatedEmpty ? null : 1; // Exemplo para número
+          break;
+        case "max":
+          simulatedResult = isSimulatedEmpty ? null : 99; // Exemplo para número
+          break;
+        case "first":
+          if (isSimulatedEmpty)
             throw new Error(
-              `Query execution simulation for SELECT with function ${funcName} not implemented.`
+              "Simulation: Sequence contains no elements (for First)."
             );
-        }
+          simulatedResult = { id: 1, name: "Mock First" };
+          break;
+        case "firstOrDefault":
+          simulatedResult = isSimulatedEmpty
+            ? null
+            : { id: 1, name: "Mock FirstOrDefault" };
+          break;
+        case "single":
+          // Simulação simplificada, não verifica unicidade
+          if (isSimulatedEmpty)
+            throw new Error(
+              "Simulation: Sequence contains no elements (for Single)."
+            );
+          simulatedResult = { id: 5, name: "Mock Single" };
+          break;
+        case "singleOrDefault":
+          // Simulação simplificada, não verifica unicidade > 1
+          simulatedResult = isSimulatedEmpty
+            ? null
+            : { id: 5, name: "Mock SingleOrDefault" };
+          break;
+        default:
+          // Se não for um método terminal conhecido que retorna valor único
+          const originalMethod =
+            (expression as LinqMethodCallExpression)?.methodName ?? "unknown";
+          console.error(
+            `Simulation not handled for method '${originalMethod}' resulting in standard SELECT.`
+          );
+          // Retorna erro para async, ou lança para sync
+          const error = new Error(
+            `Simulation not handled for method '${originalMethod}'.`
+          );
+          if (isAsyncCall) return Promise.reject(error);
+          else throw error;
+      }
+
+      // Retorna Promise para chamadas Async, valor direto para síncronas
+      if (isAsyncCall) {
+        console.warn(
+          `Simulating DB execution for ${baseMethodName.toUpperCase()} (async): Returning ${JSON.stringify(
+            simulatedResult
+          )}.`
+        );
+        return Promise.resolve(simulatedResult as TResult);
       } else {
-        // Se for um SELECT normal (não agregação terminal)
-        console.error(
-          `Database execution simulation not implemented for non-aggregate SELECT.`
+        // Não deveria chegar aqui para métodos que só têm versão Async (toList)
+        console.warn(
+          `Simulating DB execution for ${baseMethodName.toUpperCase()} (sync): Returning ${JSON.stringify(
+            simulatedResult
+          )}.`
         );
-        throw new Error(
-          "Query execution simulation for result sets or single objects not implemented yet."
-        );
+        return simulatedResult as TResult;
       }
     } else {
-      // Tipo de expressão SQL não suportado para execução direta
-      console.error(
-        `Cannot simulate execution for SQL expression type: ${finalSqlExpression.type}`
-      );
-      throw new Error(
+      // Tipo SQL final inesperado
+      const error = new Error(
         `Execution simulation not supported for SQL expression type ${finalSqlExpression.type}`
       );
+      if (isAsyncCall) return Promise.reject(error);
+      else throw error;
     }
   }
 
