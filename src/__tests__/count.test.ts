@@ -144,7 +144,7 @@ FROM [Users] AS [u]
     // countAsync() na construção da expressão
     const query = users.provideScope({ posts }).select((u) => ({
       nameOnly: u.name,
-      quantity: posts.where((p) => p.authorId === u.id).countAsync(),
+      quantity: posts.where((p) => p.authorId === u.id).count(),
     }));
 
     const expectedSql = `
