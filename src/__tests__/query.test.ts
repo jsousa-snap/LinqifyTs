@@ -268,7 +268,15 @@ WHERE [u].[age] < 25
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // --- Testes de Join Removidos (Agora em join.test.ts) ---
+  it("Teste 11: should handle identity select (x => x)", () => {
+    const nameQuery = users.select((u) => u.name).select((result) => result);
+    const expectedSql = `
+SELECT [u].[name]
+FROM [Users] AS [u]
+    `;
+    const actualSql = nameQuery.toQueryString();
+    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
+  });
 });
 
 // --- END OF FILE src/__tests__/query.test.ts ---

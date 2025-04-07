@@ -222,6 +222,49 @@ WHERE [p].[title] IS NOT NULL AND [c].[name] = 'Tech'`;
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSqlNotNull));
   });
 
+  it("Teste INNER Join 6: should select a single field from join result", () => {
+    const userPostsQuery = users
+      .join(
+        posts,
+        (user) => user.id,
+        (post) => post.authorId,
+        (user: User, post: Post) => ({
+          UserName: user.name,
+          PostTitle: post.title,
+        })
+      )
+      .select((result) => result.UserName);
+    const expectedSql = `
+SELECT [u].[name] AS [UserName]
+FROM [Users] AS [u]
+INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
+      `;
+    const actualSql = userPostsQuery.toQueryString();
+    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
+  });
+
+  it("Teste INNER Join 7: should handle inner join with where clause", () => {
+    const userPostsQuery = users
+      .join(
+        posts,
+        (user) => user.id,
+        (post) => post.authorId,
+        (user: User, post: Post) => ({
+          UserName: user.name,
+          PostTitle: post.title,
+        })
+      )
+      .where((result) => result.UserName == "Alice");
+
+    const expectedSql = `
+SELECT [u].[name] AS [UserName], [p].[title] AS [PostTitle]
+FROM [Users] AS [u]
+INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
+WHERE [u].[name] = 'Alice'`;
+
+    const actualSql = userPostsQuery.toQueryString();
+    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
+  });
   // --- LEFT JOIN Tests ---
 
   it("Teste LEFT Join 1: Simple Left Join", () => {

@@ -7,6 +7,7 @@ import {
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
+  ParameterExpression as LinqParameterExpression, // Importar ParameterExpression
 } from "../../../expressions";
 import {
   SqlExpression,
@@ -20,6 +21,7 @@ import { AliasGenerator } from "../../generation/AliasGenerator";
 
 /**
  * Traduz uma chamada de método LINQ 'select'.
+ * Identifica projeções de identidade (x => x) para reutilizar projeções anteriores.
  * @param expression A expressão da chamada de método 'select'.
  * @param currentSelect A SelectExpression atual.
  * @param sourceForOuterLambda A fonte de dados para resolver a lambda selector.
@@ -46,31 +48,60 @@ export function visitSelectCall(
     throw new Error("Invalid arguments for 'select' method call.");
   }
   const lambda = expression.args[0] as LinqLambdaExpression;
-  const param = lambda.parameters[0];
-  const projectionContext = context.createChildContext(
-    [param],
-    [sourceForOuterLambda]
-  );
-  const newProjections = createProjections(lambda.body, projectionContext);
-  if (newProjections.length === 0) {
-    throw new Error("Select projection resulted in no columns.");
+  if (lambda.parameters.length !== 1) {
+    throw new Error("'select' lambda needs 1 parameter.");
   }
+  const param = lambda.parameters[0];
 
-  // SELECT cria uma nova forma, precisa de um alias
-  // *** NOVO: Usa aliasGenerator ***
-  const selectAlias = aliasGenerator.generateAlias("select"); // Gera alias como s0, s1, etc.
+  // **** CORREÇÃO: Tipar finalProjections como ReadonlyArray ****
+  let finalProjections: ReadonlyArray<ProjectionExpression>;
+  let selectAlias: string;
 
+  // **** DETECÇÃO DA PROJEÇÃO DE IDENTIDADE ****
+  if (
+    lambda.body.type === LinqExpressionType.Parameter &&
+    (lambda.body as LinqParameterExpression).name === param.name
+  ) {
+    // É uma projeção de identidade (x => x)
+    // **** CORREÇÃO: Reutiliza a projeção readonly diretamente ****
+    finalProjections = currentSelect.projection;
+    console.warn(
+      "Detected identity select (x => x). Reusing previous projections."
+    );
+    // Ainda precisa de um novo alias para o SELECT externo
+    selectAlias = aliasGenerator.generateAlias("selectId"); // Alias específico ou padrão
+  } else {
+    // Projeção normal
+    const projectionContext = context.createChildContext(
+      [param],
+      [sourceForOuterLambda]
+    );
+    // createProjections retorna ProjectionExpression[], que é atribuível a ReadonlyArray
+    const createdProjections = createProjections(
+      lambda.body,
+      projectionContext
+    );
+    if (createdProjections.length === 0) {
+      throw new Error("Select projection resulted in no columns.");
+    }
+    finalProjections = createdProjections; // Atribuição válida
+    // Gera um novo alias padrão para projeções não-identidade
+    selectAlias = aliasGenerator.generateAlias("select");
+  }
+  // **** FIM DA DETECÇÃO ****
+
+  // Cria a nova SelectExpression com as projeções corretas e o alias gerado
   return new SelectExpression(
-    selectAlias, // <<< alias
-    newProjections, // projection (Atualiza)
-    currentSelect.from, // from
-    currentSelect.predicate, // predicate
-    currentSelect.having, // having (Preserva)
-    currentSelect.joins, // joins
-    currentSelect.orderBy, // orderBy (Preserva)
-    currentSelect.offset, // offset (Preserva)
-    currentSelect.limit, // limit (Preserva)
-    currentSelect.groupBy // groupBy (Preserva)
+    selectAlias,
+    finalProjections, // <<< Passa finalProjections (ReadonlyArray)
+    currentSelect.from,
+    currentSelect.predicate,
+    currentSelect.having,
+    currentSelect.joins,
+    currentSelect.orderBy, // Preserva ordenação (importante!)
+    currentSelect.offset, // Preserva paginação
+    currentSelect.limit, // Preserva paginação
+    currentSelect.groupBy // Preserva agrupamento
   );
 }
 // --- END OF FILE src/query/translation/method-visitors/visitSelectCall.ts ---
