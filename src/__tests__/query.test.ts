@@ -268,7 +268,7 @@ WHERE [u].[age] < 25
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  it("Teste 11: should handle identity select (x => x)", () => {
+  it("Teste 12: should handle identity select (x => x)", () => {
     const nameQuery = users.select((u) => u.name).select((result) => result);
     const expectedSql = `
 SELECT [u].[name]

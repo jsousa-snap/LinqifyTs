@@ -297,7 +297,7 @@ LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
     // Se necessário, um teste mais específico para o CASE WHEN seria criado.
   });
 
-  it("Teste LEFT Join 3: Multiple Left Joins", () => {
+  it("Teste LEFT Join 2: Multiple Left Joins", () => {
     const query = users // u
       .leftJoin(
         profiles, // p
@@ -329,7 +329,7 @@ LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
     );
   });
 
-  it("Teste LEFT Join 4: Inner Join followed by Left Join", () => {
+  it("Teste LEFT Join 3: Inner Join followed by Left Join", () => {
     const query = users // u
       .join(
         posts, // p
