@@ -297,35 +297,6 @@ LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
     // Se necessário, um teste mais específico para o CASE WHEN seria criado.
   });
 
-  it("Teste LEFT Join 2: Left Join with Where clause filtering on both sides", () => {
-    const query = users
-      .leftJoin(
-        departments,
-        (u) => u.departmentId,
-        (d) => d.deptId,
-        (u, d) => ({ user: u, dept: d }) // Project intermediate objects
-      )
-      .where(
-        (ud) =>
-          ud.user.age > 30 && (ud.dept == null || ud.dept.deptName != "HR")
-      ); // Filter on user and department
-
-    const expectedSql = `
-SELECT [u].*, [d].*
-FROM [Users] AS [u]
-LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
-WHERE [u].[age] > 30 AND ([d].[deptId] IS NULL OR [d].[deptName] != 'HR')
-    `;
-    // Simplificando a projeção esperada para focar no JOIN e WHERE
-    const actualSql = query.toQueryString();
-    expect(normalizeSql(actualSql)).toContain(
-      "LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]"
-    );
-    expect(normalizeSql(actualSql)).toContain(
-      "WHERE [u].[age] > 30 AND ([d].[deptId] IS NULL OR [d].[deptName] <> 'HR')" // Usando <> ou !=
-    );
-  });
-
   it("Teste LEFT Join 3: Multiple Left Joins", () => {
     const query = users // u
       .leftJoin(

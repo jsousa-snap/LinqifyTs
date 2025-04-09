@@ -438,61 +438,6 @@ export class QueryExpressionVisitor {
     }
 
     if (
-      leftSql instanceof TableExpressionBase &&
-      rightSql instanceof SqlConstantExpression &&
-      rightSql.value === null
-    ) {
-      if (operator === LinqOperatorType.Equal) {
-        const primaryKeyColName =
-          leftSql instanceof TableExpression && leftSql.name === "Departments"
-            ? "deptId"
-            : "Id";
-        return new SqlBinaryExpression(
-          new ColumnExpression(primaryKeyColName, leftSql as TableExpression),
-          OperatorType.Equal,
-          rightSql
-        );
-      } else if (operator === LinqOperatorType.NotEqual) {
-        const primaryKeyColName =
-          leftSql instanceof TableExpression && leftSql.name === "Departments"
-            ? "deptId"
-            : "Id";
-        return new SqlBinaryExpression(
-          new ColumnExpression(primaryKeyColName, leftSql as TableExpression),
-          OperatorType.NotEqual,
-          rightSql
-        );
-      }
-    }
-    if (
-      rightSql instanceof TableExpressionBase &&
-      leftSql instanceof SqlConstantExpression &&
-      leftSql.value === null
-    ) {
-      if (operator === LinqOperatorType.Equal) {
-        const primaryKeyColName =
-          rightSql instanceof TableExpression && rightSql.name === "Departments"
-            ? "deptId"
-            : "Id";
-        return new SqlBinaryExpression(
-          new ColumnExpression(primaryKeyColName, rightSql as TableExpression),
-          OperatorType.Equal,
-          leftSql
-        );
-      } else if (operator === LinqOperatorType.NotEqual) {
-        const primaryKeyColName =
-          rightSql instanceof TableExpression && rightSql.name === "Departments"
-            ? "deptId"
-            : "Id";
-        return new SqlBinaryExpression(
-          new ColumnExpression(primaryKeyColName, rightSql as TableExpression),
-          OperatorType.NotEqual,
-          leftSql
-        );
-      }
-    }
-
-    if (
       leftSql instanceof SqlConstantExpression &&
       rightSql instanceof ColumnExpression
     ) {
