@@ -37,10 +37,13 @@ describe("Queryable ProvideScope Tests", () => {
     const searchName = "Bob";
     const minAge = 25;
 
-    const query = users.provideScope({ searchName, minAge }).where((u) => u.name === searchName && u.age >= minAge);
+    const query = users
+      .provideScope({ searchName, minAge })
+      .where((u) => u.name === searchName && u.age >= minAge)
+      .select((u) => u.name);
 
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE [u].[name] = 'Bob' AND [u].[age] >= 25`;
 
@@ -52,12 +55,13 @@ WHERE [u].[name] = 'Bob' AND [u].[age] >= 25`;
     const specificTitle = "Specific Post";
 
     // Usa any() não-terminal
-    const query = users.provideScope({ posts, specificTitle }).where(
-      (u) => posts.where((p) => p.authorId === u.id).any((p) => p.title == specificTitle) // **** USA any() ****
-    );
+    const query = users
+      .provideScope({ posts, specificTitle })
+      .where((u) => posts.where((p) => p.authorId === u.id).any((p) => p.title == specificTitle))
+      .select((u) => u.name);
 
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
@@ -71,10 +75,13 @@ WHERE EXISTS (
 
   it("Teste Scope 3: should handle scalar value with includes translated to LIKE", () => {
     const searchTerm = "usuario1";
-    const query = users.provideScope({ searchTerm }).where((u) => u.name.includes(searchTerm));
+    const query = users
+      .provideScope({ searchTerm })
+      .where((u) => u.name.includes(searchTerm))
+      .select((u) => u.name);
 
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE [u].[name] LIKE '%usuario1%'`;
 
@@ -84,10 +91,13 @@ WHERE [u].[name] LIKE '%usuario1%'`;
 
   it("Teste Scope 4: should handle includes with special LIKE characters", () => {
     const searchTerm = "user%";
-    const query = users.provideScope({ searchTerm }).where((u) => u.name.includes(searchTerm));
+    const query = users
+      .provideScope({ searchTerm })
+      .where((u) => u.name.includes(searchTerm))
+      .select((u) => u.name);
 
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE [u].[name] LIKE '%user[%]%'`;
 
@@ -97,10 +107,13 @@ WHERE [u].[name] LIKE '%user[%]%'`;
 
   it("Teste Scope 5: should handle includes with underscore", () => {
     const searchTerm = "user_1";
-    const query = users.provideScope({ searchTerm }).where((u) => u.name.includes(searchTerm));
+    const query = users
+      .provideScope({ searchTerm })
+      .where((u) => u.name.includes(searchTerm))
+      .select((u) => u.name);
 
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE [u].[name] LIKE '%user[_]1%'`;
 

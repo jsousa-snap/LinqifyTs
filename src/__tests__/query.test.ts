@@ -74,9 +74,9 @@ FROM [Users] AS [u]
   });
 
   it("Teste 2: should handle simple where", () => {
-    const oldUsersQuery = users.where((u) => u.age > 30);
+    const oldUsersQuery = users.where((u) => u.age > 30).select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE [u].[age] > 30
     `;
@@ -85,9 +85,9 @@ WHERE [u].[age] > 30
   });
 
   it("Teste 3: should handle where with string equality", () => {
-    const aliceQuery = users.where((u) => u.name == "Alice");
+    const aliceQuery = users.where((u) => u.name == "Alice").select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE [u].[name] = 'Alice'
     `;
@@ -128,9 +128,9 @@ WHERE [u].[age] >= 65
   });
 
   it("Teste 7: should handle where with logical AND", () => {
-    const specificUserQuery = users.where((u) => u.age > 20 && u.name == "Bob");
+    const specificUserQuery = users.where((u) => u.age > 20 && u.name == "Bob").select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE [u].[age] > 20 AND [u].[name] = 'Bob'
     `;

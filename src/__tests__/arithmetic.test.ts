@@ -75,49 +75,50 @@ FROM [Products] AS [p]`;
   });
 
   it("Teste Arit 5: should handle addition in where", () => {
-    const query = products.where((p) => p.stock + 10 > 50);
+    const query = products.where((p) => p.stock + 10 > 50).select((p) => p.name);
     const expectedSql = `
-SELECT [p].*
+SELECT [p].[name]
 FROM [Products] AS [p]
 WHERE [p].[stock] + 10 > 50`;
     expect(normalizeSql(query.toQueryString())).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Arit 6: should handle multiplication in where", () => {
-    const query = orders.where((o) => o.quantity * 10.0 <= 100.0);
+    const query = orders.where((o) => o.quantity * 10.0 <= 100.0).select((o) => o.quantity);
     const expectedSql = `
-SELECT [o].*
+SELECT [o].[quantity]
 FROM [Orders] AS [o]
 WHERE [o].[quantity] * 10 <= 100`;
     expect(normalizeSql(query.toQueryString())).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Arit 7: should handle combined arithmetic and logical operators in where", () => {
-    const query = products.where((p) => (p.price * 1.05 > 200.0 && p.stock > 0) || p.category == "SALE");
+    const query = products
+      .where((p) => (p.price * 1.05 > 200.0 && p.stock > 0) || p.category == "SALE")
+      .select((p) => p.name);
     // Precedência: * > && > ||
     const expectedSql = `
-SELECT [p].*
+SELECT [p].[name]
 FROM [Products] AS [p]
 WHERE [p].[price] * 1.05 > 200 AND [p].[stock] > 0 OR [p].[category] = 'SALE'`;
     expect(normalizeSql(query.toQueryString())).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Arit 8: should handle arithmetic with constants on both sides", () => {
-    const query = products.where((p) => 10 * p.stock > p.price / 2);
+    const query = products.where((p) => 10 * p.stock > p.price / 2).select((p) => p.name);
     const expectedSql = `
-SELECT [p].*
+SELECT [p].[name]
 FROM [Products] AS [p]
 WHERE 10 * [p].[stock] > [p].[price] / 2`;
     expect(normalizeSql(query.toQueryString())).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Arit 9: should handle combined arithmetic and logical operators in where", () => {
-    const query = products.where(
-      (p) => (p.category == "SALE" || p.category == "SS") && p.price * 1.05 > 200.0 && p.stock > 0
-    );
-    // Precedência: * > && > ||
+    const query = products
+      .where((p) => (p.category == "SALE" || p.category == "SS") && p.price * 1.05 > 200.0 && p.stock > 0)
+      .select((p) => p.name);
     const expectedSql = `
-SELECT [p].*
+SELECT [p].[name]
 FROM [Products] AS [p]
 WHERE ([p].[category] = 'SALE' OR [p].[category] = 'SS') AND [p].[price] * 1.05 > 200 AND [p].[stock] > 0`;
 

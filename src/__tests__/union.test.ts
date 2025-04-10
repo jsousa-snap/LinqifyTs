@@ -44,18 +44,18 @@ describe("Queryable Union/Concat Tests", () => {
 
   // Testes com aliases corrigidos
   it("Teste Union 1: Simple Union", () => {
-    const query = set1.union(set2);
+    const query = set1.select((s) => s.id).union(set2.select((s) => s.id));
     // set1 -> i, set2 -> i1, union -> un
     const expectedOuterSql = `
 SELECT [u].*
 FROM (
         (
-            SELECT [i].*
+            SELECT [i].[id]
             FROM [Items1] AS [i]
         )
         UNION
         (
-            SELECT [i1].*
+            SELECT [i1].[id]
             FROM [Items2] AS [i1]
         )
     ) AS [u]
@@ -65,18 +65,28 @@ FROM (
   });
 
   it("Teste Union 2: Simple Concat (UNION ALL)", () => {
-    const query = set1.concat(set2);
+    const query = set1
+      .select((s) => ({
+        id: s.id,
+        value: s.value,
+      }))
+      .concat(
+        set2.select((s) => ({
+          id: s.id,
+          value: s.value,
+        }))
+      );
 
     const expectedOuterSql = `
 SELECT [c].*
 FROM (
         (
-            SELECT [i].*
+            SELECT [i].[id], [i].[value]
             FROM [Items1] AS [i]
         )
         UNION ALL
         (
-            SELECT [i1].*
+            SELECT [i1].[id], [i1].[value]
             FROM [Items2] AS [i1]
         )
     ) AS [c]
@@ -87,20 +97,21 @@ FROM (
 
   it("Teste Union 3: Union with Where clauses", () => {
     const query = set1
-      .where((item) => item.category === "A") // Alias interno 'i'
-      .union(set2.where((item) => item.id > 10)); // Alias interno 'i1'
+      .where((item) => item.category === "A")
+      .select((s) => s.category)
+      .union(set2.where((item) => item.id > 10).select((s) => s.category)); // Alias interno 'i1'
     // union -> un
     const expectedOuterSql = `
 SELECT [u].*
 FROM (
         (
-            SELECT [i].*
+            SELECT [i].[category]
             FROM [Items1] AS [i]
             WHERE [i].[category] = 'A'
         )
         UNION
         (
-            SELECT [i1].*
+            SELECT [i1].[category]
             FROM [Items2] AS [i1]
             WHERE [i1].[id] > 10
         )
@@ -135,22 +146,23 @@ FROM (
 
   it("Teste Union 5: Union followed by Where", () => {
     const query = set1
-      .union(set2) // union -> un
-      .where((combined) => combined.value.includes("test")); // Referencia 'un'
+      .select((i) => ({ itemId: i.id, itemValue: i.value }))
+      .union(set2.select((i) => ({ itemId: i.id, itemValue: i.value }))) // union -> un
+      .where((combined) => combined.itemValue.includes("test")); // Referencia 'un'
     const expectedSql = `
 SELECT [u].*
 FROM (
         (
-            SELECT [i].*
+            SELECT [i].[id] AS [itemId], [i].[value] AS [itemValue]
             FROM [Items1] AS [i]
         )
         UNION
         (
-            SELECT [i1].*
+            SELECT [i1].[id] AS [itemId], [i1].[value] AS [itemValue]
             FROM [Items2] AS [i1]
         )
     ) AS [u]
-WHERE [u].[value] LIKE '%test%'`;
+WHERE [u].[itemValue] LIKE '%test%'`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -158,22 +170,23 @@ WHERE [u].[value] LIKE '%test%'`;
 
   it("Teste Union 6: Concat followed by OrderBy", () => {
     const query = set1
-      .concat(set2) // union -> un
-      .orderBy((combined) => combined.id); // Referencia 'un'
+      .select((i) => ({ itemId: i.id, itemValue: i.value }))
+      .concat(set2.select((i) => ({ itemId: i.id, itemValue: i.value }))) // union -> un
+      .orderBy((combined) => combined.itemId); // Referencia 'un'
     const expectedSql = `
 SELECT [c].*
 FROM (
         (
-            SELECT [i].*
+            SELECT [i].[id] AS [itemId], [i].[value] AS [itemValue]
             FROM [Items1] AS [i]
         )
         UNION ALL
         (
-            SELECT [i1].*
+            SELECT [i1].[id] AS [itemId], [i1].[value] AS [itemValue]
             FROM [Items2] AS [i1]
         )
     ) AS [c]
-ORDER BY [c].[id] ASC`;
+ORDER BY [c].[itemId] ASC`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -202,22 +215,25 @@ FROM (
   });
 
   it("Teste Union 8: Union of three sets (Flattened)", () => {
-    const query = set1.union(set2).union(set3);
+    const query = set1
+      .select((s) => s.id)
+      .union(set2.select((s) => s.id))
+      .union(set3.select((s) => s.id));
     const expectedSql = `
 SELECT [u].*
 FROM (
         (
-            SELECT [i].*
+            SELECT [i].[id]
             FROM [Items1] AS [i]
         )
         UNION
         (
-            SELECT [i1].*
+            SELECT [i1].[id]
             FROM [Items2] AS [i1]
         )
         UNION
         (
-            SELECT [i2].*
+            SELECT [i2].[id]
             FROM [Items3] AS [i2]
         )
     ) AS [u]`;
@@ -257,19 +273,20 @@ FROM (
 
   it("Teste Union 10: Concat followed by Take", () => {
     const query = set1
-      .concat(set2) // union -> un
-      .orderBy((c) => c.id) // referencia un
+      .select((s) => ({ id: s.id }))
+      .concat(set2.select((s) => ({ id: s.id }))) // union -> un
+      .orderBy((result) => result.id) // referencia un
       .take(10);
     const expectedSql = `
 SELECT [c].*
 FROM (
         (
-            SELECT [i].*
+            SELECT [i].[id]
             FROM [Items1] AS [i]
         )
         UNION ALL
         (
-            SELECT [i1].*
+            SELECT [i1].[id]
             FROM [Items2] AS [i1]
         )
     ) AS [c]
@@ -281,19 +298,19 @@ OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY`;
   });
 
   it("Teste Union 11: Union of (set1 UNION set2) and (set3 UNION set1) (Flattened)", () => {
-    const union12 = set1.union(set2); // union interna -> un (fontes i, i1)
-    const union31 = set3.union(set1); // union interna -> un1 (fontes i2, i3)
+    const union12 = set1.select((s) => s.id).union(set2.select((s) => s.id)); // union interna -> un (fontes i, i1)
+    const union31 = set3.select((s) => s.id).union(set1.select((s) => s.id)); // union interna -> un1 (fontes i2, i3)
     const query = union12.union(union31); // union externa -> un2 (fontes i, i1, un1)
     const expectedSql = `
 SELECT [u].*
 FROM (
         (
-            SELECT [i].*
+            SELECT [i].[id]
             FROM [Items1] AS [i]
         )
         UNION
         (
-            SELECT [i1].*
+            SELECT [i1].[id]
             FROM [Items2] AS [i1]
         )
         UNION
@@ -301,12 +318,12 @@ FROM (
             SELECT [u1].*
             FROM (
                     (
-                        SELECT [i2].*
+                        SELECT [i2].[id]
                         FROM [Items3] AS [i2]
                     )
                     UNION
                     (
-                        SELECT [i3].*
+                        SELECT [i3].[id]
                         FROM [Items1] AS [i3]
                     )
                 ) AS [u1]

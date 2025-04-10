@@ -29,9 +29,12 @@ describe("Queryable Paging Tests (Skip/Take)", () => {
   });
 
   it("Teste Paging 1: should handle simple take", () => {
-    const query = users.orderBy((u) => u.id).take(10);
+    const query = users
+      .orderBy((u) => u.id)
+      .take(10)
+      .select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[id] ASC
 OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY`;
@@ -41,9 +44,12 @@ OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY`;
   });
 
   it("Teste Paging 2: should handle simple skip", () => {
-    const query = users.orderBy((u) => u.id).skip(5);
+    const query = users
+      .orderBy((u) => u.id)
+      .skip(5)
+      .select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[id] ASC
 OFFSET 5 ROWS`;
@@ -56,9 +62,10 @@ OFFSET 5 ROWS`;
     const query = users
       .orderBy((u) => u.name)
       .skip(10)
-      .take(5);
+      .take(5)
+      .select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[name] ASC
 OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY`;
@@ -71,9 +78,10 @@ OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY`;
     const query = users
       .orderBy((u) => u.age)
       .take(10)
-      .skip(5);
+      .skip(5)
+      .select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[age] ASC
 OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY`;
@@ -87,9 +95,10 @@ OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY`;
       .where((u) => u.age > 18)
       .orderByDescending((u) => u.email)
       .skip(2)
-      .take(4);
+      .take(4)
+      .select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE [u].[age] > 18
 ORDER BY [u].[email] DESC
@@ -119,10 +128,11 @@ OFFSET 0 ROWS FETCH NEXT 3 ROWS ONLY`;
     const querySkip0 = users
       .orderBy((u) => u.id)
       .skip(0)
-      .take(5);
+      .take(5)
+      .select((u) => u.name);
 
     const expectedSqlSkip0 = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[id] ASC
 OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY`;
@@ -134,9 +144,10 @@ OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY`;
     const queryTake0 = users
       .orderBy((u) => u.id)
       .skip(10)
-      .take(0);
+      .take(0)
+      .select((u) => u.name);
     const expectedSqlTake0 = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[id] ASC
 OFFSET 10 ROWS FETCH NEXT 0 ROWS ONLY`;
@@ -146,10 +157,13 @@ OFFSET 10 ROWS FETCH NEXT 0 ROWS ONLY`;
   });
 
   it("Teste Paging 8: should require ORDER BY for OFFSET/FETCH in SQL Server", () => {
-    const query = users.skip(5).take(10);
+    const query = users
+      .skip(5)
+      .take(10)
+      .select((u) => u.name);
     const warnSpy = jest.spyOn(console, "warn").mockImplementation();
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY (SELECT NULL)
 OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY

@@ -88,10 +88,13 @@ EXISTS (
 
   // Teste 4 não chama any() terminalmente
   it("Teste Any 4: should generate correct SQL for non-terminal any() inside where()", () => {
-    const query = users.provideScope({ posts }).where((u) => posts.where((p) => p.authorId === u.id).any()); // any() não-terminal
+    const query = users
+      .provideScope({ posts })
+      .where((u) => posts.where((p) => p.authorId === u.id).any())
+      .select((u) => u.name); // any() não-terminal
 
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1
@@ -105,12 +108,13 @@ WHERE EXISTS (
 
   // Teste 5 não chama any() terminalmente
   it("Teste Any 5: should generate correct SQL for non-terminal any(predicate) inside where()", () => {
-    const query = users.provideScope({ posts }).where(
-      (u) => posts.where((p) => p.authorId === u.id).any((p) => p.title == "Specific Post") // any() não-terminal
-    );
+    const query = users
+      .provideScope({ posts })
+      .where((u) => posts.where((p) => p.authorId === u.id).any((p) => p.title == "Specific Post"))
+      .select((u) => u.name);
 
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 WHERE EXISTS (
         SELECT 1

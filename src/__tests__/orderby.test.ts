@@ -22,9 +22,9 @@ describe("Queryable OrderBy/ThenBy Tests", () => {
   });
 
   it("Teste OrderBy 1: should generate correct SQL for orderBy", () => {
-    const query = users.orderBy((u) => u.age);
+    const query = users.orderBy((u) => u.age).select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[age] ASC
     `;
@@ -33,9 +33,9 @@ ORDER BY [u].[age] ASC
   });
 
   it("Teste OrderBy 2: should generate correct SQL for orderByDescending", () => {
-    const query = users.orderByDescending((u) => u.name);
+    const query = users.orderByDescending((u) => u.name).select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[name] DESC
     `;
@@ -44,9 +44,12 @@ ORDER BY [u].[name] DESC
   });
 
   it("Teste OrderBy 3: should generate correct SQL for orderBy and thenBy", () => {
-    const query = users.orderBy((u) => u.age).thenBy((u) => u.name);
+    const query = users
+      .orderBy((u) => u.age)
+      .thenBy((u) => u.name)
+      .select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[age] ASC, [u].[name] ASC
     `;
@@ -55,9 +58,12 @@ ORDER BY [u].[age] ASC, [u].[name] ASC
   });
 
   it("Teste OrderBy 4: should generate correct SQL for orderByDescending and thenByDescending", () => {
-    const query = users.orderByDescending((u) => u.age).thenByDescending((u) => u.name);
+    const query = users
+      .orderByDescending((u) => u.age)
+      .thenByDescending((u) => u.name)
+      .select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[age] DESC, [u].[name] DESC
     `;
@@ -69,9 +75,10 @@ ORDER BY [u].[age] DESC, [u].[name] DESC
     const query = users
       .orderBy((u) => u.age)
       .thenByDescending((u) => u.name)
-      .thenBy((u) => u.id);
+      .thenBy((u) => u.id)
+      .select((u) => u.name);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[name]
 FROM [Users] AS [u]
 ORDER BY [u].[age] ASC, [u].[name] DESC, [u].[id] ASC
     `;
@@ -80,9 +87,12 @@ ORDER BY [u].[age] ASC, [u].[name] DESC, [u].[id] ASC
   });
 
   it("Teste OrderBy 6: should generate correct SQL for orderBy after where", () => {
-    const query = users.where((u) => u.email.includes("@")).orderBy((u) => u.id);
+    const query = users
+      .where((u) => u.email.includes("@"))
+      .select((u) => ({ id: u.id }))
+      .orderBy((u) => u.id);
     const expectedSql = `
-SELECT [u].*
+SELECT [u].[id]
 FROM [Users] AS [u]
 WHERE [u].[email] LIKE '%@%'
 ORDER BY [u].[id] ASC
