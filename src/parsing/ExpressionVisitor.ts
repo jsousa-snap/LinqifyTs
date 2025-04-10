@@ -79,7 +79,6 @@ interface ConditionalExpressionNode extends AstNode {
   consequent: AstNode;
   alternate: AstNode;
 }
-// --- End AST Node Interfaces ---
 
 /**
  * Visita uma árvore de sintaxe abstrata (AST) gerada pelo Acorn
@@ -432,4 +431,3 @@ export class ExpressionVisitor {
     }
   }
 }
-// --- END OF FILE src/parsing/ExpressionVisitor.ts ---

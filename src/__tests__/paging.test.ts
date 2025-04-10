@@ -386,5 +386,3 @@ ORDER BY [u].[name] ASC`;
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
-
-// --- END OF FILE src/__tests__/paging.test.ts ---

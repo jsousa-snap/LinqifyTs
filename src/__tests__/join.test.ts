@@ -344,4 +344,3 @@ LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
     expect(normalizeSql(actualSql)).toContain("[p].[title] AS [PostTitle]");
   });
 });
-// --- END OF FILE src/__tests__/join.test.ts ---

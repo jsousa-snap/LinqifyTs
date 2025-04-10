@@ -237,4 +237,3 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     expect(generatedJson).toEqual(expectedJson);
   });
 });
-// --- END OF FILE src/__tests__/metadata.test.ts ---

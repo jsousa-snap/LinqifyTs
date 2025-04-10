@@ -161,4 +161,3 @@ GROUP BY 1
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
-// --- END OF FILE src/__tests__/groupBy.test.ts ---

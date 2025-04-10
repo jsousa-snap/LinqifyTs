@@ -385,4 +385,3 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
-// --- END OF FILE src/__tests__/union.test.ts ---

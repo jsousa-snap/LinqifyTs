@@ -242,5 +242,3 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
-
-// --- END OF FILE src/__tests__/query.test.ts ---

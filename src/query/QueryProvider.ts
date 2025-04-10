@@ -146,4 +146,3 @@ export class QueryProvider implements IQueryProvider {
     }
   }
 }
-// --- END OF FILE src/query/QueryProvider.ts ---

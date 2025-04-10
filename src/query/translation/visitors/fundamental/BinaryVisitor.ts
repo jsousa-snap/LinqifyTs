@@ -1,5 +1,3 @@
-// src/query/translation/visitors/fundamental/BinaryVisitor.ts
-
 import { BinaryExpression as LinqBinaryExpression, OperatorType as LinqOperatorType } from "../../../../expressions";
 import { SqlBinaryExpression, SqlConstantExpression, ColumnExpression } from "../../../../sql-expressions";
 import { OperatorType as SqlOperatorType } from "../../../generation/utils/sqlUtils";

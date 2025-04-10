@@ -118,4 +118,3 @@ ORDER BY [u].[age] ASC
     expect(normalizeSql(actualSqlSimple)).toEqual(normalizeSql(expectedSqlSimple));
   });
 });
-// --- END OF FILE src/__tests__/orderby.test.ts ---

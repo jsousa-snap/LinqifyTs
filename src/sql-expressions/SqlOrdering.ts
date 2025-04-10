@@ -12,5 +12,3 @@ export interface SqlOrdering {
   /** A direção da ordenação (ASC ou DESC). */
   direction: SortDirection;
 }
-
-// --- END OF FILE src/sql-expressions/SqlOrdering.ts ---

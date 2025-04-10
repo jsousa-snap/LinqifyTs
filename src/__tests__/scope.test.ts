@@ -108,4 +108,3 @@ WHERE [u].[name] LIKE '%user[_]1%'`;
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
-// --- END OF FILE src/__tests__/scope.test.ts ---
