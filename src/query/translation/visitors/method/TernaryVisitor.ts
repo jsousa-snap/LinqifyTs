@@ -28,7 +28,6 @@ export class TernaryVisitor extends BaseExpressionVisitor<LinqMethodCallExpressi
     const alternateLinq = expression.args[2]; // O resultado se falso (ELSE)
 
     // Visita as três partes da expressão ternária, passando o contexto
-    // <<< CORREÇÃO: Passa this.context >>>
     const testSql = this.visitSubexpression(testLinq, this.context);
     const consequentSql = this.visitSubexpression(consequentLinq, this.context);
     const alternateSql = this.visitSubexpression(alternateLinq, this.context);

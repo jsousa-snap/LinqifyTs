@@ -9,9 +9,9 @@ import { SqlExpression, SelectExpression, ProjectionExpression } from "../../../
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
-import { WhereVisitor } from "./WhereVisitor"; // <<< Reutiliza WhereVisitor
-import { TakeVisitor } from "./TakeVisitor"; // <<< Reutiliza TakeVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
+import { WhereVisitor } from "./WhereVisitor";
+import { TakeVisitor } from "./TakeVisitor";
 
 /**
  * Traduz chamadas de método LINQ como `first`, `firstOrDefault`, `single`, `singleOrDefault` (e Async).
@@ -38,7 +38,6 @@ export class FirstSingleVisitor extends MethodVisitor<LinqMethodCallExpression, 
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource // Necessário se houver predicado
   ): SelectExpression {
     const methodName = expression.methodName.replace(/Async$/, ""); // Remove Async suffix
@@ -129,16 +128,16 @@ export class FirstSingleVisitor extends MethodVisitor<LinqMethodCallExpression, 
 
     // Retorna a SelectExpression final modificada com predicado (se houver), limit, e alias marcados
     return new SelectExpression(
-      finalSelectAlias, // Alias indicando a operação (first, single)
-      finalProjections, // <<< Projeções (potencialmente marcadas com _result)
-      selectAfterTake.from, // FROM (inalterado)
-      selectAfterTake.predicate, // WHERE (inclui predicado do método, se houver)
-      selectAfterTake.having, // HAVING (inalterado)
-      selectAfterTake.joins, // Joins (inalterado)
-      selectAfterTake.orderBy, // OrderBy (essencial para First/FirstOrDefault ser determinístico)
-      selectAfterTake.offset, // Offset (pode ter vindo de um Skip anterior)
-      selectAfterTake.limit, // <<< LIMIT (definido como 1 ou 2 pelo TakeVisitor)
-      selectAfterTake.groupBy // GroupBy (inalterado)
+      finalSelectAlias,
+      finalProjections,
+      selectAfterTake.from,
+      selectAfterTake.predicate,
+      selectAfterTake.having,
+      selectAfterTake.joins,
+      selectAfterTake.orderBy,
+      selectAfterTake.offset,
+      selectAfterTake.limit,
+      selectAfterTake.groupBy
     );
   }
 }

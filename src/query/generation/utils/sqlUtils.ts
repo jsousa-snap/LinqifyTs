@@ -39,7 +39,7 @@ export function mapOperatorToSql(op: OperatorType): string {
     case OperatorType.Equal:
       return "=";
     case OperatorType.NotEqual:
-      return "<>"; // <<< CORRIGIDO de != para <>
+      return "<>";
     case OperatorType.GreaterThan:
       return ">";
     case OperatorType.GreaterThanOrEqual:

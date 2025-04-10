@@ -22,10 +22,8 @@ describe("Queryable IN Operator (Array.includes) Tests", () => {
   });
 
   it("Teste IN 1: should translate array.includes(column) with numbers", () => {
-    const categoryIds = [1, 3, 5]; // Array local
-    const query = products
-      .provideScope({ categoryIds }) // <<< Passa o array para o escopo
-      .where((p) => categoryIds.includes(p.id)); // <<< Lambda usa a variável do escopo
+    const categoryIds = [1, 3, 5];
+    const query = products.provideScope({ categoryIds }).where((p) => categoryIds.includes(p.id));
 
     const expectedSql = `
 SELECT [p].*
@@ -37,10 +35,8 @@ WHERE [p].[id] IN (1, 3, 5)
   });
 
   it("Teste IN 2: should translate array.includes(column) with strings", () => {
-    const targetCategories = ["Electronics", "Books"]; // Array local
-    const query = products
-      .provideScope({ targetCategories }) // <<< Passa o array para o escopo
-      .where((p) => targetCategories.includes(p.category)); // <<< Lambda usa a variável do escopo
+    const targetCategories = ["Electronics", "Books"];
+    const query = products.provideScope({ targetCategories }).where((p) => targetCategories.includes(p.category));
 
     const expectedSql = `
 SELECT [p].*
@@ -52,10 +48,8 @@ WHERE [p].[category] IN ('Electronics', 'Books')
   });
 
   it("Teste IN 3: should translate array.includes() combined with other conditions (AND)", () => {
-    const ids = [10, 20]; // Array local
-    const query = products
-      .provideScope({ ids }) // <<< Passa o array para o escopo
-      .where((p) => ids.includes(p.id) && p.price > 50); // <<< Lambda usa a variável do escopo
+    const ids = [10, 20];
+    const query = products.provideScope({ ids }).where((p) => ids.includes(p.id) && p.price > 50);
 
     const expectedSql = `
 SELECT [p].*
@@ -67,10 +61,8 @@ WHERE [p].[id] IN (10, 20) AND [p].[price] > 50
   });
 
   it("Teste IN 4: should translate array.includes() combined with other conditions (OR)", () => {
-    const names = ["Laptop", "Mouse"]; // Array local
-    const query = products
-      .provideScope({ names }) // <<< Passa o array para o escopo
-      .where((p) => p.price < 10 || names.includes(p.name)); // <<< Lambda usa a variável do escopo
+    const names = ["Laptop", "Mouse"];
+    const query = products.provideScope({ names }).where((p) => p.price < 10 || names.includes(p.name));
 
     const expectedSql = `
 SELECT [p].*
@@ -82,25 +74,21 @@ WHERE [p].[price] < 10 OR [p].[name] IN ('Laptop', 'Mouse')
   });
 
   it("Teste IN 5: should throw error during translation for empty array", () => {
-    const emptyIds: number[] = []; // Array local vazio
-    // O erro deve ocorrer ao tentar traduzir (criar SqlInExpression), não ao gerar SQL.
+    const emptyIds: number[] = [];
     expect(() => {
       products
-        .provideScope({ emptyIds }) // <<< Passa o array vazio para o escopo
-        .where((p) => emptyIds.includes(p.id)) // <<< Lambda usa a variável do escopo
-        .toQueryString(); // Tentativa de tradução/geração
+        .provideScope({ emptyIds })
+        .where((p) => emptyIds.includes(p.id))
+        .toQueryString();
     }).toThrow(
       "Query Processing Failed: Erro de Tradução: O array fornecido para 'includes' (SQL IN) não pode estar vazio."
-    ); // Verifica a mensagem de erro do construtor SqlInExpression
+    );
   });
 
   // Teste de Regressão: Garantir que string.includes ainda funciona (não usa array externo)
   it("Teste IN 6: Regression - string.includes() should still generate LIKE", () => {
     const searchTerm = "pro";
-    const query = products
-      .provideScope({ searchTerm })
-      // Não precisa de provideScope aqui, pois searchTerm não é usado na lambda
-      .where((p) => p.name.includes(searchTerm)); // <<< Usa string.includes diretamente
+    const query = products.provideScope({ searchTerm }).where((p) => p.name.includes(searchTerm));
     const expectedSql = `
 SELECT [p].*
 FROM [Products] AS [p]
@@ -114,9 +102,7 @@ WHERE [p].[name] LIKE '%pro%'
   // mas agora está consistente com os outros.
   it("Teste IN 7: should translate array.includes() with array from provideScope", () => {
     const categoryIds = [2, 4];
-    const query = products
-      .provideScope({ categoryIds }) // <<< Passa o array via escopo
-      .where((p) => categoryIds.includes(p.id)); // <<< Lambda usa a variável do escopo
+    const query = products.provideScope({ categoryIds }).where((p) => categoryIds.includes(p.id));
 
     const expectedSql = `
 SELECT [p].*

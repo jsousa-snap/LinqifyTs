@@ -17,7 +17,7 @@ import {
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator"; // Para gerar alias do join e da fonte interna
 import { VisitFn } from "../../../generation/types"; // Para construtor da base
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 import { OperatorType } from "../../../generation/utils/sqlUtils"; // Para condição de join (=)
 
 /**
@@ -63,7 +63,6 @@ export class JoinVisitor extends MethodVisitor<LinqMethodCallExpression, SelectE
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForOuterLambda: SqlDataSource
   ): SelectExpression {
     // Validações
@@ -93,7 +92,6 @@ export class JoinVisitor extends MethodVisitor<LinqMethodCallExpression, SelectE
 
     // --- 1. Visita a fonte interna ---
     // Usa `visitSubexpression` (visit normal) para traduzir a fonte interna.
-    // <<< CORREÇÃO: Passa this.context >>>
     const innerSqlSourceBase = this.visitSubexpression(innerSourceLinqExpr, this.context);
     if (!innerSqlSourceBase || !(innerSqlSourceBase instanceof TableExpressionBase)) {
       // A fonte interna deve ser traduzida para algo que possa estar em um JOIN (Tabela, Subconsulta, União)
@@ -115,12 +113,10 @@ export class JoinVisitor extends MethodVisitor<LinqMethodCallExpression, SelectE
     const innerParam = innerKeyLambdaExpr.parameters[0]; // Parâmetro da lambda da chave interna (ex: p)
 
     // Contexto para a chave externa: mapeia 'outerParam' para 'sourceForOuterLambda'
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const outerKeyContext = this.context.createChildContext([outerParam], [sourceForOuterLambda]);
     const outerKeySql = this.visitInContext(outerKeyLambdaExpr.body, outerKeyContext);
 
     // Contexto para a chave interna: mapeia 'innerParam' para a fonte interna 'innerAliasedSource'
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const innerKeyContext = this.context.createChildContext([innerParam], [innerAliasedSource]);
     const innerKeySql = this.visitInContext(innerKeyLambdaExpr.body, innerKeyContext);
 
@@ -143,7 +139,6 @@ export class JoinVisitor extends MethodVisitor<LinqMethodCallExpression, SelectE
     const resultInnerParam = resultLambdaExpr.parameters[1]; // Parâmetro para o elemento interno na projeção (ex: p)
 
     // Contexto para a lambda de resultado: mapeia os parâmetros para as fontes externa e interna
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const resultContext = this.context.createChildContext(
       [resultOuterParam, resultInnerParam],
       [sourceForOuterLambda, innerAliasedSource] // Mapeia u -> fonte externa, p -> fonte interna
@@ -161,16 +156,16 @@ export class JoinVisitor extends MethodVisitor<LinqMethodCallExpression, SelectE
 
     // Retorna uma *nova* SelectExpression com o join e as novas projeções.
     return new SelectExpression(
-      joinAlias, // <<< Novo alias para o resultado do join
-      resultProjections, // <<< Novas projeções do resultado
-      currentSelect.from, // Mantém FROM original
-      currentSelect.predicate, // Mantém WHERE original
-      currentSelect.having, // Mantém HAVING original
+      joinAlias,
+      resultProjections,
+      currentSelect.from,
+      currentSelect.predicate,
+      currentSelect.having,
       newJoins,
-      currentSelect.orderBy, // Preserva OrderBy (embora possa precisar ser reavaliado)
-      currentSelect.offset, // Preserva Offset
-      currentSelect.limit, // Preserva Limit
-      currentSelect.groupBy // Preserva GroupBy
+      currentSelect.orderBy,
+      currentSelect.offset,
+      currentSelect.limit,
+      currentSelect.groupBy
     );
   }
 }

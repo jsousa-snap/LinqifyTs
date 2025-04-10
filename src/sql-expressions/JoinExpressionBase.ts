@@ -68,7 +68,7 @@ export abstract class JoinExpressionBase extends SqlExpression {
   toMetadata(): JoinExpressionBaseMetadata {
     return {
       $type: this.type,
-      table: this.table.toMetadata() as TableExpressionBaseMetadata, // <<< Usa metadados base
+      table: this.table.toMetadata() as TableExpressionBaseMetadata,
       joinPredicate: this.joinPredicate.toMetadata(),
     };
   }

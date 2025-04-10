@@ -28,7 +28,6 @@ export class LambdaParser {
       const ast = acorn.parse(lambdaString, { ecmaVersion: 2020 }) as any;
       let arrowFunctionNode: ArrowFunctionExpressionNode | null = null;
 
-      // Encontrar ArrowFunctionExpressionNode (lógica inalterada)
       if (ast.body[0]?.type === "ExpressionStatement" && ast.body[0].expression?.type === "ArrowFunctionExpression") {
         arrowFunctionNode = ast.body[0].expression;
       } else if (ast.body[0]?.type === "ArrowFunctionExpression") {
@@ -38,7 +37,6 @@ export class LambdaParser {
         throw new Error("Could not find ArrowFunctionExpression.");
       }
 
-      // Extrair parâmetros DESTA lambda
       const parameters: ParameterExpression[] = [];
       const currentParameterMap = new Map<string, ParameterExpression>();
       for (const paramNode of arrowFunctionNode.params) {

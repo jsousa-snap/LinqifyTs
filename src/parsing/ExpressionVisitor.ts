@@ -264,7 +264,7 @@ export class ExpressionVisitor {
       // Trata shorthand properties (ex: { x }) como { x: x }.
       const valueExpression = prop.shorthand
         ? this.visitIdentifier(prop.key as IdentifierNode)
-        : this.visit(prop.value); // <<< AQUI ESTAVA O ERRO: Visitava prop.value que é ConditionalExpression
+        : this.visit(prop.value);
       properties.set(propertyName, valueExpression);
     }
     return new NewObjectExpression(properties);

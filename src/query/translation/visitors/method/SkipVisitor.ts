@@ -16,7 +16,7 @@ import {
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 
 /**
  * Traduz uma chamada de método LINQ `skip(count)` para definir a cláusula OFFSET
@@ -101,16 +101,16 @@ export class SkipVisitor extends MethodVisitor<LinqMethodCallExpression, SelectE
     }
 
     return new SelectExpression(
-      currentSelect.alias, // Mantém alias
-      currentSelect.projection, // Mantém projeções
-      currentSelect.from, // Mantém FROM
-      currentSelect.predicate, // Mantém WHERE
-      currentSelect.having, // Mantém HAVING
-      currentSelect.joins, // Mantém Joins
-      currentSelect.orderBy, // Mantém OrderBy ( essencial para Skip )
-      offsetSql, // <<< Define OFFSET
-      currentSelect.limit, // Mantém Limit
-      currentSelect.groupBy // Mantém GroupBy
+      currentSelect.alias,
+      currentSelect.projection,
+      currentSelect.from,
+      currentSelect.predicate,
+      currentSelect.having,
+      currentSelect.joins,
+      currentSelect.orderBy,
+      offsetSql,
+      currentSelect.limit,
+      currentSelect.groupBy
     );
   }
 }

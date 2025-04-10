@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/query/translation/QueryExpressionVisitor.ts
 
 import {
   Expression as LinqExpression,
@@ -32,7 +31,6 @@ import {
   TableExpressionBase,
   SqlCaseExpression,
   SqlInExpression,
-  // SqlDataSource -- Importado de TranslationContext
 } from "../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "./TranslationContext"; // Import correto
 import { AliasGenerator } from "../generation/AliasGenerator";
@@ -52,7 +50,7 @@ import { ScopeVisitor } from "./visitors/fundamental/ScopeVisitor";
 // --- Import Method Visitors ---
 import { WhereVisitor } from "./visitors/method/WhereVisitor";
 import { SelectVisitor } from "./visitors/method/SelectVisitor";
-import { IncludesVisitor } from "./visitors/method/IncludesVisitor"; // <<< Visitor unificado
+import { IncludesVisitor } from "./visitors/method/IncludesVisitor";
 import { InstanceMethodVisitor } from "./visitors/method/InstanceMethodVisitor";
 import { TernaryVisitor } from "./visitors/method/TernaryVisitor";
 import { AnyVisitor } from "./visitors/method/AnyVisitor";
@@ -156,49 +154,40 @@ export class QueryExpressionVisitor {
 
     switch (expression.type) {
       case LinqExpressionType.Constant: {
-        // <<< Adiciona Chaves
         visitor = new ConstantVisitor(context, this.aliasGenerator, this.boundVisit);
         return visitor.translate(expression as LinqConstantExpression);
-      } // <<< Fecha Chaves
+      }
       case LinqExpressionType.Literal: {
-        // <<< Adiciona Chaves
         visitor = new LiteralVisitor(context, this.aliasGenerator, this.boundVisit);
         return visitor.translate(expression as LinqLiteralExpression);
-      } // <<< Fecha Chaves
+      }
       case LinqExpressionType.Parameter: {
-        // <<< Adiciona Chaves
         visitor = new ParameterVisitor(context, this.aliasGenerator, this.boundVisit);
         return visitor.translate(expression as LinqParameterExpression);
-      } // <<< Fecha Chaves
+      }
       case LinqExpressionType.MemberAccess: {
-        // <<< Adiciona Chaves
         visitor = new MemberVisitor(context, this.aliasGenerator, this.boundVisit);
         return visitor.translate(expression as LinqMemberExpression);
-      } // <<< Fecha Chaves
+      }
       case LinqExpressionType.Binary: {
-        // <<< Adiciona Chaves
         visitor = new BinaryVisitor(context, this.aliasGenerator, this.boundVisit);
         return visitor.translate(expression as LinqBinaryExpression);
-      } // <<< Fecha Chaves
+      }
       case LinqExpressionType.Scope: {
-        // <<< Adiciona Chaves
         visitor = new ScopeVisitor(context, this.aliasGenerator, this.boundVisit);
         return visitor.translate(expression as ScopeExpression);
-      } // <<< Fecha Chaves
+      }
       case LinqExpressionType.Call: {
-        // <<< Adiciona Chaves
-        // Passa o contexto atual para visitMethodCall
         return this.visitMethodCall(expression as LinqMethodCallExpression, context);
-      } // <<< Fecha Chaves
+      }
       case LinqExpressionType.Lambda:
         throw new Error("Erro Interno: LambdaExpression não pode ser visitada diretamente.");
       case LinqExpressionType.NewObject:
         throw new Error("Erro Interno: NewObjectExpression não pode ser visitada diretamente.");
       default: {
-        // <<< Adiciona Chaves
         const exhaustiveCheck: never = expression.type;
         throw new Error(`Tipo de expressão LINQ não suportado: ${exhaustiveCheck}`);
-      } // <<< Fecha Chaves
+      }
     }
   }
 
@@ -206,16 +195,12 @@ export class QueryExpressionVisitor {
   private visitMethodCall(callExpr: LinqMethodCallExpression, context: TranslationContext): SqlExpression {
     const methodName = callExpr.methodName;
 
-    // Passa o 'context' recebido para os construtores dos visitors
-
     // --- Métodos que usam BaseExpressionVisitor + translate ---
     switch (methodName) {
       case "includes": {
-        // <<< Adiciona Chaves
-        // Usa o novo IncludesVisitor unificado
         const includesVisitor = new IncludesVisitor(context, this.aliasGenerator, this.boundVisit);
         return includesVisitor.translate(callExpr);
-      } // <<< Fecha Chaves
+      }
       case "toUpperCase":
       case "toLowerCase":
       case "trim":
@@ -228,17 +213,14 @@ export class QueryExpressionVisitor {
       case "getHours":
       case "getMinutes":
       case "getSeconds": {
-        // <<< Adiciona Chaves
         const instanceVisitor = new InstanceMethodVisitor(context, this.aliasGenerator, this.boundVisit);
         return instanceVisitor.translate(callExpr);
-      } // <<< Fecha Chaves
+      }
       case "__internal_ternary__": {
-        // <<< Adiciona Chaves
         const ternaryVisitor = new TernaryVisitor(context, this.aliasGenerator, this.boundVisit);
         return ternaryVisitor.translate(callExpr);
-      } // <<< Fecha Chaves
+      }
       case "any": {
-        // <<< Adiciona Chaves
         const anyVisitor = new AnyVisitor(
           context,
           this.aliasGenerator,
@@ -247,10 +229,9 @@ export class QueryExpressionVisitor {
           this.boundVisitInContext
         );
         return anyVisitor.translate(callExpr);
-      } // <<< Fecha Chaves
+      }
       case "union":
       case "concat": {
-        // <<< Adiciona Chaves
         const unionVisitor = new UnionConcatVisitor(
           context,
           this.aliasGenerator,
@@ -258,7 +239,7 @@ export class QueryExpressionVisitor {
           this.boundCreateDefaultSelect
         );
         return unionVisitor.translate(callExpr);
-      } // <<< Fecha Chaves
+      }
     }
 
     // --- Métodos de Extensão que usam MethodVisitor + apply ---
@@ -288,7 +269,6 @@ export class QueryExpressionVisitor {
 
     switch (methodName) {
       case "where": {
-        // <<< Adiciona Chaves
         const isSourceGroupBy =
           callExpr.source.type === LinqExpressionType.Call &&
           (callExpr.source as LinqMethodCallExpression).methodName === "groupBy";
@@ -309,9 +289,8 @@ export class QueryExpressionVisitor {
           );
           return whereVisitor.apply(callExpr, currentSelect, sourceForLambda);
         }
-      } // <<< Fecha Chaves
+      }
       case "select": {
-        // <<< Adiciona Chaves
         const selectVisitor = new SelectVisitor(
           context,
           this.aliasGenerator,
@@ -320,9 +299,8 @@ export class QueryExpressionVisitor {
           this.boundCreateProjections
         );
         return selectVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "join": {
-        // <<< Adiciona Chaves
         const joinVisitor = new JoinVisitor(
           context,
           this.aliasGenerator,
@@ -331,9 +309,8 @@ export class QueryExpressionVisitor {
           this.boundCreateProjections
         );
         return joinVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "leftJoin": {
-        // <<< Adiciona Chaves
         const leftJoinVisitor = new LeftJoinVisitor(
           context,
           this.aliasGenerator,
@@ -342,10 +319,9 @@ export class QueryExpressionVisitor {
           this.boundCreateProjections
         );
         return leftJoinVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "orderBy":
       case "orderByDescending": {
-        // <<< Adiciona Chaves
         const orderByVisitor = new OrderByVisitor(
           context,
           this.aliasGenerator,
@@ -353,10 +329,9 @@ export class QueryExpressionVisitor {
           this.boundVisitInContext
         );
         return orderByVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "thenBy":
       case "thenByDescending": {
-        // <<< Adiciona Chaves
         const thenByVisitor = new ThenByVisitor(
           context,
           this.aliasGenerator,
@@ -364,58 +339,49 @@ export class QueryExpressionVisitor {
           this.boundVisitInContext
         );
         return thenByVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "skip": {
-        // <<< Adiciona Chaves
         const skipVisitor = new SkipVisitor(context, this.aliasGenerator, this.boundVisit, this.boundVisitInContext);
         return skipVisitor.apply(callExpr, currentSelect, sourceForLambda); // sourceForLambda não usado por skip
-      } // <<< Fecha Chaves
+      }
       case "take": {
-        // <<< Adiciona Chaves
         const takeVisitor = new TakeVisitor(context, this.aliasGenerator, this.boundVisit, this.boundVisitInContext);
         return takeVisitor.apply(callExpr, currentSelect, sourceForLambda); // sourceForLambda não usado por take
-      } // <<< Fecha Chaves
+      }
       case "count":
       case "countAsync": {
-        // <<< Adiciona Chaves
         const countVisitor = new CountVisitor(context, this.aliasGenerator, this.boundVisit, this.boundVisitInContext);
         return countVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "avg":
       case "avgAsync": {
-        // <<< Adiciona Chaves
         const avgVisitor = new AvgVisitor(context, this.aliasGenerator, this.boundVisit, this.boundVisitInContext);
         return avgVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "sum":
       case "sumAsync": {
-        // <<< Adiciona Chaves
         const sumVisitor = new SumVisitor(context, this.aliasGenerator, this.boundVisit, this.boundVisitInContext);
         return sumVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "min":
       case "minAsync": {
-        // <<< Adiciona Chaves
         const minVisitor = new MinVisitor(context, this.aliasGenerator, this.boundVisit, this.boundVisitInContext);
         return minVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "max":
       case "maxAsync": {
-        // <<< Adiciona Chaves
         const maxVisitor = new MaxVisitor(context, this.aliasGenerator, this.boundVisit, this.boundVisitInContext);
         return maxVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "groupBy": {
-        // <<< Adiciona Chaves
-        // GroupBy precisa do orquestrador (this) para createProjections
         const groupByVisitor = new GroupByVisitor(
           context,
           this.aliasGenerator,
           this.boundVisit,
           this.boundVisitInContext
-        ); // Passa 'this'
-        return groupByVisitor.apply(callExpr, currentSelect, sourceForLambda); // Chama apply com 'this' extra
-      } // <<< Fecha Chaves
+        );
+        return groupByVisitor.apply(callExpr, currentSelect, sourceForLambda);
+      }
       case "first":
       case "firstAsync":
       case "firstOrDefault":
@@ -424,7 +390,6 @@ export class QueryExpressionVisitor {
       case "singleAsync":
       case "singleOrDefault":
       case "singleOrDefaultAsync": {
-        // <<< Adiciona Chaves
         const firstSingleVisitor = new FirstSingleVisitor(
           context,
           this.aliasGenerator,
@@ -432,10 +397,9 @@ export class QueryExpressionVisitor {
           this.boundVisitInContext
         );
         return firstSingleVisitor.apply(callExpr, currentSelect, sourceForLambda);
-      } // <<< Fecha Chaves
+      }
       case "toList":
       case "toListAsync": {
-        // <<< Adiciona Chaves
         const toListVisitor = new ToListVisitor(
           context,
           this.aliasGenerator,
@@ -443,33 +407,20 @@ export class QueryExpressionVisitor {
           this.boundVisitInContext
         );
         return toListVisitor.apply(callExpr, currentSelect, sourceForLambda); // sourceForLambda não usado por toList
-      } // <<< Fecha Chaves
+      }
       default: {
-        // <<< Adiciona Chaves
         throw new Error(`Método de extensão LINQ não suportado: ${methodName}`);
-      } // <<< Fecha Chaves
+      }
     }
   }
 
   /** Implementação interna para visitar em contexto aninhado. */
   private visitInContextInternal(expression: LinqExpression, context: TranslationContext): SqlExpression | null {
-    // Não precisamos modificar this.context aqui, pois passamos o contexto aninhado
-    // diretamente para a chamada this.visit
-    try {
-      // Chama o visit principal passando o contexto aninhado explicitamente
-      return this.visit(expression, context);
-    } finally {
-      // Não precisa restaurar this.context, pois ele não foi modificado
-      // this.context = originalContext; // Desnecessário
-    }
+    return this.visit(expression, context);
   }
 
   /** Cria projeções SQL a partir do corpo de uma lambda. */
   public createProjections(body: LinqExpression, context: TranslationContext): ProjectionExpression[] {
-    // (A lógica interna desta função permanece a mesma das versões anteriores)
-    // ... (código completo de createProjections omitido por brevidade, mas deve estar aqui) ...
-
-    // Colando o código novamente para garantir completude:
     const projections: ProjectionExpression[] = [];
     // Usa a função vinculada que opera no contexto correto
     const visit = (expr: LinqExpression) => this.boundVisitInContext(expr, context);
@@ -580,4 +531,4 @@ export class QueryExpressionVisitor {
     if (projections.length === 0) throw new Error("Criação de projeção resultou em lista vazia.");
     return projections;
   }
-} // Fim da classe QueryExpressionVisitor
+}

@@ -16,7 +16,7 @@ import {
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 import { OperatorType } from "../../../generation/utils/sqlUtils";
 
 /**
@@ -61,7 +61,6 @@ export class LeftJoinVisitor extends MethodVisitor<LinqMethodCallExpression, Sel
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForOuterLambda: SqlDataSource
   ): SelectExpression {
     // Validações (idênticas a join, mas verifica nome 'leftJoin')
@@ -119,7 +118,6 @@ export class LeftJoinVisitor extends MethodVisitor<LinqMethodCallExpression, Sel
     // --- 4. Criação das projeções do resultado (idêntico a join) ---
     const resultOuterParam = resultLambdaExpr.parameters[0];
     const resultInnerParam = resultLambdaExpr.parameters[1];
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const resultContext = this.context.createChildContext(
       [resultOuterParam, resultInnerParam],
       [sourceForOuterLambda, innerAliasedSource]
@@ -138,7 +136,7 @@ export class LeftJoinVisitor extends MethodVisitor<LinqMethodCallExpression, Sel
       currentSelect.from,
       currentSelect.predicate,
       currentSelect.having,
-      newJoins, // <<< Contém o LeftJoinExpression
+      newJoins,
       currentSelect.orderBy,
       currentSelect.offset,
       currentSelect.limit,

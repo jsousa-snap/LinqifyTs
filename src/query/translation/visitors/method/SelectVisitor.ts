@@ -56,7 +56,6 @@ export class SelectVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource
   ): SelectExpression {
     // Validações

@@ -8,7 +8,7 @@ import { SqlExpression, SelectExpression, SqlBinaryExpression } from "../../../.
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 import { OperatorType } from "../../../generation/utils/sqlUtils"; // Para combinar predicados com AND
 
 /**

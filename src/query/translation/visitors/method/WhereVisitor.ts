@@ -30,7 +30,6 @@ export class WhereVisitor extends MethodVisitor<LinqMethodCallExpression, Select
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource
   ): SelectExpression {
     if (expression.methodName !== "where") {

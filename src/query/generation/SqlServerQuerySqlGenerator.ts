@@ -297,7 +297,7 @@ export class SqlServerQuerySqlGenerator {
       projection.expression.type === SqlExpressionType.ScalarSubqueryAsJson ||
       projection.expression.type === SqlExpressionType.ScalarSubquery ||
       projection.expression.type === SqlExpressionType.Case ||
-      projection.expression.type === SqlExpressionType.In // <<< IN também pode precisar de alias
+      projection.expression.type === SqlExpressionType.In
     ) {
       needsAlias = !!projection.alias;
     }
@@ -349,7 +349,7 @@ export class SqlServerQuerySqlGenerator {
     if (isNullComparison && sqlOperator && operandForNullCheck) {
       const wrapOperand =
         operandForNullCheck.type === SqlExpressionType.Binary ||
-        operandForNullCheck.type === SqlExpressionType.In || // <<< IN também precisa de parênteses
+        operandForNullCheck.type === SqlExpressionType.In ||
         operandForNullCheck.type === SqlExpressionType.Case;
       if (wrapOperand) this.builder.append("(");
       this.Visit(operandForNullCheck);
@@ -360,7 +360,7 @@ export class SqlServerQuerySqlGenerator {
 
       const wrapLeft =
         (binary.left.type === SqlExpressionType.Binary ||
-          binary.left.type === SqlExpressionType.In || // <<< IN pode precisar de parênteses
+          binary.left.type === SqlExpressionType.In ||
           binary.left.type === SqlExpressionType.Case) &&
         getOperatorPrecedence(
           binary.left.type === SqlExpressionType.Binary
@@ -370,7 +370,7 @@ export class SqlServerQuerySqlGenerator {
 
       const wrapRight =
         (binary.right.type === SqlExpressionType.Binary ||
-          binary.right.type === SqlExpressionType.In || // <<< IN pode precisar de parênteses
+          binary.right.type === SqlExpressionType.In ||
           binary.right.type === SqlExpressionType.Case) &&
         getOperatorPrecedence(
           binary.right.type === SqlExpressionType.Binary

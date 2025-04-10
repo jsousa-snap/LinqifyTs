@@ -8,7 +8,7 @@ import { SqlExpression, SelectExpression, SqlOrdering, SortDirection } from "../
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 
 /**
  * Traduz chamadas `thenBy` e `thenByDescending` para adicionar um critério
@@ -45,7 +45,6 @@ export class ThenByVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource
   ): SelectExpression {
     const methodName = expression.methodName;

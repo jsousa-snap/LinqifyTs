@@ -20,6 +20,7 @@ interface User {
   email: string;
   age: number;
   country: string;
+  departmentId?: number | null;
 }
 interface Post {
   postId: number;
@@ -32,12 +33,34 @@ interface DataItem {
   category: string;
 }
 
+interface Profile {
+  profileId: number;
+  userId: number;
+  bio: string;
+  website?: string;
+}
+interface PostCategory {
+  postId: number;
+  categoryId: number;
+}
+interface Department {
+  deptId: number;
+  deptName: string;
+}
+
+function removeSpaces(str: string) {
+  return str.replace(/\s+/g, "");
+}
+
 describe("SQL Expression Metadata Generation Tests (Async)", () => {
   let dbContext: DbContext;
   let users: IQueryable<User>;
   let posts: IQueryable<Post>;
   let items1: IQueryable<DataItem>;
   let items2: IQueryable<DataItem>;
+  let profiles: IQueryable<Profile>;
+  let postCategories: IQueryable<PostCategory>;
+  let departments: IQueryable<Department>;
   let visitor: QueryExpressionVisitor;
 
   beforeEach(() => {
@@ -46,6 +69,9 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     posts = dbContext.set<Post>("Posts");
     items1 = dbContext.set<DataItem>("Items1");
     items2 = dbContext.set<DataItem>("Items2");
+    profiles = dbContext.set<Profile>("Profiles");
+    postCategories = dbContext.set<PostCategory>("PostCategories");
+    departments = dbContext.set<Department>("Departments");
     visitor = new QueryExpressionVisitor();
     jest.spyOn(console, "warn").mockImplementation();
   });
@@ -64,7 +90,6 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     const query = users.where((u) => u.age > 30 && u.name == "Alice").select((u) => u.email);
     const metadata = getMetadata(query.expression); // Passa a expressão
     expect(metadata.$type).toBe(SqlExpressionType.Select);
-    // ... (outros asserts inalterados)
   });
 
   it("Teste Metadata 2: Inner Join", () => {
@@ -76,14 +101,12 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     );
     const metadata = getMetadata(query.expression); // Passa a expressão
     expect(metadata.$type).toBe(SqlExpressionType.Select);
-    // ... (outros asserts inalterados)
   });
 
   it("Teste Metadata 3: Union", () => {
     const query = items1.select((i) => ({ Val: i.value })).union(items2.select((i) => ({ Val: i.value })));
     const metadata = getMetadata(query.expression); // Passa a expressão
     expect(metadata.$type).toBe(SqlExpressionType.Select);
-    // ... (outros asserts inalterados)
   });
 
   it("Teste Metadata 4: Subquery Projection (FOR JSON)", () => {
@@ -96,7 +119,6 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     }));
     const metadata = getMetadata(query.expression); // Passa a expressão
     expect(metadata.$type).toBe(SqlExpressionType.Select);
-    // ... (outros asserts inalterados)
   });
 
   it("Teste Metadata 5: Aggregation (COUNT)", async () => {
@@ -115,7 +137,7 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     const metadata = getMetadata(countLinqExpr); // Passa a expressão do count
 
     expect(metadata.$type).toBe(SqlExpressionType.Select);
-    // ... (outros asserts inalterados)
+
     const selectMeta = metadata as SelectExpressionMetadata;
     expect(selectMeta.projection).toHaveLength(1);
     expect(selectMeta.projection[0].alias).toBe("count_result");
@@ -136,7 +158,6 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
       .take(5);
     const metadata = getMetadata(query.expression); // Passa a expressão
     expect(metadata.$type).toBe(SqlExpressionType.Select);
-    // ... (outros asserts inalterados)
   });
 
   it("Teste Metadata 7: GroupBy", () => {
@@ -150,7 +171,7 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
 
     const metadata = getMetadata(query.expression); // Passa a expressão
     expect(metadata.$type).toBe(SqlExpressionType.Select);
-    // ... (outros asserts inalterados)
+
     const selectMeta = metadata as SelectExpressionMetadata;
     expect(selectMeta.groupBy).toHaveLength(1);
     expect((selectMeta.groupBy[0] as ColumnExpressionMetadata).name).toBe("country");
@@ -235,5 +256,338 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
 }`;
 
     expect(generatedJson).toEqual(expectedJson);
+  });
+
+  it("Teste 9: Query join with subquery with join", () => {
+    const query = users
+      .provideScope({ posts, postCategories, profiles })
+      .join(
+        departments,
+        (user) => user.departmentId,
+        (department) => department.deptId,
+        (user, department) => ({
+          user,
+          department,
+        })
+      )
+      .select((result) => ({
+        UserName: result.user.name,
+        Department: result.department.deptName,
+        ProfileInfo: profiles
+          .where((profile) => profile.userId === result.user.id)
+          .select((profile) => ({
+            Id: profile.profileId,
+            Bio: profile.bio,
+            Website: profile.website,
+          }))
+          .firstOrDefault(),
+        Posts: posts
+          .join(
+            postCategories,
+            (post) => post.postId,
+            (category) => category.postId,
+            (post, category) => ({
+              post,
+              category,
+            })
+          )
+          .where((postResult) => postResult.post.authorId === result.user.id)
+          .select((postResult) => ({
+            Id: postResult.post.postId,
+            PostTitle: postResult.post.title,
+            PostCategoryId: postResult.category.categoryId,
+          })),
+      }));
+
+    const metadata = getMetadata(query.expression); // Passa a expressão
+    const generatedJson = JSON.stringify(metadata, null, 4);
+
+    const expectedJson = `{
+    "$type": "Select",
+    "alias": "s2",
+    "projection": [
+        {
+            "$type": "Projection",
+            "expression": {
+                "$type": "Column",
+                "name": "name",
+                "table": {
+                    "$type": "Table",
+                    "alias": "u",
+                    "name": "Users"
+                }
+            },
+            "alias": "UserName"
+        },
+        {
+            "$type": "Projection",
+            "expression": {
+                "$type": "Column",
+                "name": "deptName",
+                "table": {
+                    "$type": "Table",
+                    "alias": "d",
+                    "name": "Departments"
+                }
+            },
+            "alias": "Department"
+        },
+        {
+            "$type": "Projection",
+            "expression": {
+                "$type": "ScalarSubqueryAsJson",
+                "selectExpression": {
+                    "$type": "Select",
+                    "alias": "f",
+                    "projection": [
+                            {
+                            "$type": "Projection",
+                            "expression": {
+                                "$type": "Column",
+                                "name": "profileId",
+                                "table": {
+                                    "$type": "Table",
+                                    "alias": "p",
+                                    "name": "Profiles"
+                                }
+                            },
+                            "alias": "Id"
+                        },
+                        {
+                            "$type": "Projection",
+                            "expression": {
+                                "$type": "Column",
+                                "name": "bio",
+                                "table": {
+                                    "$type": "Table",
+                                    "alias": "p",
+                                    "name": "Profiles"
+                                }
+                            },
+                            "alias": "Bio"
+                        },
+                        {
+                            "$type": "Projection",
+                            "expression": {
+                                "$type": "Column",
+                                "name": "website",
+                                "table": {
+                                    "$type": "Table",
+                                    "alias": "p",
+                                    "name": "Profiles"
+                                }
+                            },
+                            "alias": "Website"
+                        }
+                    ],
+                    "from": {
+                        "$type": "Table",
+                        "alias": "p",
+                        "name": "Profiles"
+                    },
+                    "predicate": {
+                        "$type": "Binary",
+                        "left": {
+                            "$type": "Column",
+                            "name": "userId",
+                            "table": {
+                                "$type": "Table",
+                                "alias": "p",
+                                "name": "Profiles"
+                            }
+                        },
+                        "operator": "==",
+                        "right": {
+                            "$type": "Column",
+                            "name": "id",
+                            "table": {
+                                "$type": "Table",
+                                "alias": "u",
+                                "name": "Users"
+                            }
+                        }
+                    },
+                    "having": null,
+                    "joins": [],
+                    "orderBy": [],
+                    "offset": null,
+                    "limit": {
+                        "$type": "Constant",
+                        "value": 1
+                    },
+                    "groupBy": []
+                },
+                "mode": "PATH",
+                "includeNullValues": true,
+                "withoutArrayWrapper": true
+            },
+            "alias": "ProfileInfo"
+        },
+        {
+            "$type": "Projection",
+            "expression": {
+                "$type": "ScalarSubqueryAsJson",
+                "selectExpression": {
+                    "$type": "Select",
+                    "alias": "s1",
+                    "projection": [
+                            {
+                            "$type": "Projection",
+                            "expression": {
+                                "$type": "Column",
+                                "name": "postId",
+                                "table": {
+                                    "$type": "Table",
+                                    "alias": "p1",
+                                    "name": "Posts"
+                                }
+                            },
+                            "alias": "Id"
+                        },
+                        {
+                            "$type": "Projection",
+                            "expression": {
+                                "$type": "Column",
+                                "name": "title",
+                                "table": {
+                                    "$type": "Table",
+                                    "alias": "p1",
+                                    "name": "Posts"
+                                }
+                            },
+                            "alias": "PostTitle"
+                        },
+                        {
+                            "$type": "Projection",
+                            "expression": {
+                                "$type": "Column",
+                                "name": "categoryId",
+                                "table": {
+                                    "$type": "Table",
+                                    "alias": "p2",
+                                    "name": "PostCategories"
+                                }
+                            },
+                            "alias": "PostCategoryId"
+                        }
+                    ],
+                    "from": {
+                        "$type": "Table",
+                        "alias": "p1",
+                        "name": "Posts"
+                    },
+                    "predicate": {
+                        "$type": "Binary",
+                        "left": {
+                            "$type": "Column",
+                            "name": "authorId",
+                            "table": {
+                                "$type": "Table",
+                                "alias": "p1",
+                                "name": "Posts"
+                            }
+                        },
+                        "operator": "==",
+                        "right": {
+                            "$type": "Column",
+                            "name": "id",
+                            "table": {
+                                "$type": "Table",
+                                "alias": "u",
+                                "name": "Users"
+                            }
+                        }
+                    },
+                    "having": null,
+                    "joins": [
+                            {
+                            "$type": "InnerJoin",
+                            "table": {
+                                "$type": "Table",
+                                "alias": "p2",
+                                "name": "PostCategories"
+                            },
+                            "joinPredicate": {
+                                "$type": "Binary",
+                                "left": {
+                                    "$type": "Column",
+                                    "name": "postId",
+                                    "table": {
+                                        "$type": "Table",
+                                        "alias": "p1",
+                                        "name": "Posts"
+                                    }
+                                },
+                                "operator": "==",
+                                "right": {
+                                    "$type": "Column",
+                                    "name": "postId",
+                                    "table": {
+                                        "$type": "Table",
+                                        "alias": "p2",
+                                        "name": "PostCategories"
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "orderBy": [],
+                    "offset": null,
+                    "limit": null,
+                    "groupBy": []
+                },
+                "mode": "PATH",
+                "includeNullValues": true,
+                "withoutArrayWrapper": false
+            },
+            "alias": "Posts"
+        }
+    ],
+    "from": {
+        "$type": "Table",
+        "alias": "u",
+        "name": "Users"
+    },
+    "predicate": null,
+    "having": null,
+    "joins": [
+            {
+            "$type": "InnerJoin",
+            "table": {
+                "$type": "Table",
+                "alias": "d",
+                "name": "Departments"
+            },
+            "joinPredicate": {
+                "$type": "Binary",
+                "left": {
+                    "$type": "Column",
+                    "name": "departmentId",
+                    "table": {
+                        "$type": "Table",
+                        "alias": "u",
+                        "name": "Users"
+                    }
+                },
+                "operator": "==",
+                "right": {
+                    "$type": "Column",
+                    "name": "deptId",
+                    "table": {
+                        "$type": "Table",
+                        "alias": "d",
+                        "name": "Departments"
+                    }
+                }
+            }
+        }
+    ],
+    "orderBy": [],
+    "offset": null,
+    "limit": null,
+    "groupBy": []
+}`;
+
+    expect(removeSpaces(generatedJson)).toEqual(removeSpaces(expectedJson));
   });
 });

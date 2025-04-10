@@ -1,19 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { DbContext } from "../core";
+import "../query/QueryableExtensions";
+import { IQueryable } from "../interfaces";
+import { normalizeSql } from "./utils/testUtils";
 
-// Assumindo que DbContext e QueryableExtensions estão em locais acessíveis
-// Ajuste os caminhos conforme a estrutura do seu projeto
-import { DbContext } from "../core"; // Ex: './core/DbContext' ou similar
-import "../query/QueryableExtensions"; // Importa para aplicar os métodos no protótipo
-import { IQueryable } from "../interfaces"; // Se necessário para tipagem
-import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
-
-// --- Interfaces/Classes de Entidade (Copie ou importe-as) ---
 interface User {
   id: number;
   name: string;
   email: string;
   age: number;
-  departmentId?: number | null; // <<< Deixamos aqui caso outros testes usem
+  departmentId?: number | null;
 }
 interface Post {
   postId: number;
@@ -34,12 +29,10 @@ interface PostCategory {
   postId: number;
   categoryId: number;
 }
-// *** NOVA INTERFACE PARA TESTE LEFT JOIN ***
 interface Department {
   deptId: number;
   deptName: string;
 }
-// --- Fim Entidades ---
 
 describe("Queryable Extensions Tests (EF Core Formatting)", () => {
   let dbContext: DbContext;
@@ -48,7 +41,7 @@ describe("Queryable Extensions Tests (EF Core Formatting)", () => {
   let profiles: IQueryable<Profile>;
   let categories: IQueryable<Category>;
   let postCategories: IQueryable<PostCategory>;
-  let departments: IQueryable<Department>; // <<< NOVO DbSet
+  let departments: IQueryable<Department>;
 
   // Setup antes de cada teste no bloco 'describe'
   beforeEach(() => {
@@ -58,7 +51,7 @@ describe("Queryable Extensions Tests (EF Core Formatting)", () => {
     profiles = dbContext.set<Profile>("Profiles");
     categories = dbContext.set<Category>("Categories");
     postCategories = dbContext.set<PostCategory>("PostCategories");
-    departments = dbContext.set<Department>("Departments"); // <<< Inicializa DbSet
+    departments = dbContext.set<Department>("Departments");
 
     // Mock console.warn para evitar poluir a saída do teste
     jest.spyOn(console, "warn").mockImplementation();
@@ -163,7 +156,6 @@ WHERE [u].[age] > 20 AND [u].[name] = 'Bob'
           })),
       }));
 
-    // **EXPECTED SQL COM ALIAS CORRIGIDOS**
     const expectedSql = `
 SELECT [u].[name] AS [nome], JSON_QUERY(COALESCE((
     SELECT [p].[title], JSON_QUERY(COALESCE((
@@ -239,6 +231,69 @@ SELECT [u].[name]
 FROM [Users] AS [u]
     `;
     const actualSql = nameQuery.toQueryString();
+    expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
+  });
+
+  it("Teste 13: should handle query join with subquery with join", () => {
+    const query = users
+      .provideScope({ posts, postCategories, profiles })
+      .join(
+        departments,
+        (user) => user.departmentId,
+        (department) => department.deptId,
+        (user, department) => ({
+          user,
+          department,
+        })
+      )
+      .select((result) => ({
+        UserName: result.user.name,
+        Department: result.department.deptName,
+        ProfileInfo: profiles
+          .where((profile) => profile.userId === result.user.id)
+          .select((profile) => ({
+            Id: profile.profileId,
+            Bio: profile.bio,
+            Website: profile.website,
+          }))
+          .firstOrDefault(),
+        Posts: posts
+          .join(
+            postCategories,
+            (post) => post.postId,
+            (category) => category.postId,
+            (post, category) => ({
+              post,
+              category,
+            })
+          )
+          .where((postResult) => postResult.post.authorId === result.user.id)
+          .select((postResult) => ({
+            Id: postResult.post.postId,
+            PostTitle: postResult.post.title,
+            PostCategoryId: postResult.category.categoryId,
+          })),
+      }));
+
+    const expectedSql = `
+SELECT [u].[name] AS [UserName], [d].[deptName] AS [Department], (
+    SELECT [p].[profileId] AS [Id], [p].[bio] AS [Bio], [p].[website] AS [Website]
+    FROM [Profiles] AS [p]
+    WHERE [p].[userId] = [u].[id]
+    ORDER BY (SELECT NULL)
+    OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
+    FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+) AS [ProfileInfo], JSON_QUERY(COALESCE((
+    SELECT [p1].[postId] AS [Id], [p1].[title] AS [PostTitle], [p2].[categoryId] AS [PostCategoryId]
+    FROM [Posts] AS [p1]
+    INNER JOIN [PostCategories] AS [p2] ON [p1].[postId] = [p2].[postId]
+    WHERE [p1].[authorId] = [u].[id]
+    FOR JSON PATH, INCLUDE_NULL_VALUES
+), '[]')) AS [Posts]
+FROM [Users] AS [u]
+INNER JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
+    `;
+    const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });

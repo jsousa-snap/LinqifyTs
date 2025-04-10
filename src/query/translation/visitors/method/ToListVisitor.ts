@@ -8,7 +8,7 @@ import { SelectExpression, ProjectionExpression, SqlExpression } from "../../../
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 
 /**
  * Traduz chamadas de método LINQ `ToList` ou `ToListAsync`.

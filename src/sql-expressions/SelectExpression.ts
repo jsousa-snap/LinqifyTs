@@ -41,7 +41,7 @@ export class SelectExpression extends TableExpressionBase {
     public readonly limit: SqlConstantExpression | null = null,
     public readonly groupBy: ReadonlyArray<SqlExpression> = []
   ) {
-    super(alias); // <<< Passa o alias para a classe base
+    super(alias);
     if (!projection || projection.length === 0) throw new Error("Select must have at least one projection.");
     if (!from) throw new Error("Select must have a FROM source.");
     if (!joins) throw new Error("Joins array cannot be null.");

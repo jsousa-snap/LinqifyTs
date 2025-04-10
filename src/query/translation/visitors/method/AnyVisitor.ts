@@ -126,7 +126,7 @@ export class AnyVisitor extends BaseExpressionVisitor<LinqMethodCallExpression, 
         selectForExists.alias,
         selectForExists.projection,
         selectForExists.from,
-        newPredicate, // <<< Predicado atualizado
+        newPredicate,
         selectForExists.having,
         selectForExists.joins,
         selectForExists.orderBy,

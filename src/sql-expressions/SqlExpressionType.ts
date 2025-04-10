@@ -17,7 +17,7 @@ export enum SqlExpressionType {
   Like = "Like", // Representa uma operação SQL LIKE.
   FunctionCall = "FunctionCall", // Representa uma chamada de função SQL (ex: COUNT, MAX, UPPER).
   Case = "Case", // Representa uma expressão CASE WHEN.
-  In = "In", // <<< NOVO: Representa uma operação IN (value IN (list)).
+  In = "In",
 
   // Joins
   InnerJoin = "InnerJoin", // Representa uma operação INNER JOIN.

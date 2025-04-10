@@ -12,7 +12,6 @@ import {
 } from "../../../../sql-expressions";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-// <<< CORREÇÃO DEFINITIVA: Importar SqlDataSource e TranslationContext do local correto >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { BaseExpressionVisitor } from "./BaseExpressionVisitor";
 import type { QueryExpressionVisitor } from "../../QueryExpressionVisitor";
@@ -79,7 +78,7 @@ export abstract class MethodVisitor<
   abstract apply(
     expression: TMethod,
     currentSelect: SelectExpression,
-    sourceForLambda: SqlDataSource, // <<< Tipo SqlDataSource vindo de TranslationContext
+    sourceForLambda: SqlDataSource,
     ...otherArgs: any[]
   ): TResult;
 

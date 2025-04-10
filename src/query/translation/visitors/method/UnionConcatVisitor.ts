@@ -59,7 +59,7 @@ export class UnionConcatVisitor extends BaseExpressionVisitor<LinqMethodCallExpr
     const secondLinqExpr = expression.args[0]; // A segunda fonte (argumento)
 
     // Visita as duas fontes da união
-    // <<< CORREÇÃO: Passa this.context >>>
+    //  CORREÇÃO: Passa this.context >>>
     const firstVisited = this.visitSubexpression(firstLinqExpr, this.context);
     const secondVisited = this.visitSubexpression(secondLinqExpr, this.context);
 

@@ -1,7 +1,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
-import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
+import { normalizeSql } from "./utils/testUtils";
 // --- Interfaces ---
 // Usaremos uma interface simples para os testes de Union/Concat
 interface DataItem {

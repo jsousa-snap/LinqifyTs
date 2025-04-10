@@ -13,7 +13,7 @@ import {
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 
 /**
  * Traduz uma chamada de método LINQ `avg(selector)`
@@ -50,7 +50,6 @@ export class AvgVisitor extends MethodVisitor<LinqMethodCallExpression, SelectEx
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource
   ): SelectExpression {
     const methodName = expression.methodName.replace(/Async$/, ""); // Remove Async

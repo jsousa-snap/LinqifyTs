@@ -1,7 +1,7 @@
 import { DbContext } from "../core";
-import { IQueryable } from "../interfaces"; // Import IOrderedQueryable
-import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
-import "../query/QueryableExtensions"; // Apply extensions
+import { IQueryable } from "../interfaces";
+import { normalizeSql } from "./utils/testUtils";
+import "../query/QueryableExtensions";
 
 // --- Interfaces ---
 interface User {

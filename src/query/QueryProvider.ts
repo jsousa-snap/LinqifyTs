@@ -129,7 +129,6 @@ export class QueryProvider implements IQueryProvider {
     }
   }
 
-  // getQueryText (Inalterado)
   getQueryText(expression: LinqExpression): string {
     try {
       const translator = new QueryExpressionVisitor();

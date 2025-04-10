@@ -15,7 +15,7 @@ import {
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 import { OperatorType } from "../../../generation/utils/sqlUtils"; // Para combinar predicados
 
 /**
@@ -53,8 +53,7 @@ export class CountVisitor extends MethodVisitor<LinqMethodCallExpression, Select
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
-    sourceForLambda: SqlDataSource // Necessário apenas se houver predicado
+    sourceForLambda: SqlDataSource
   ): SelectExpression {
     const methodName = expression.methodName.replace(/Async$/, ""); // Remove Async suffix
     // Validação
@@ -76,7 +75,6 @@ export class CountVisitor extends MethodVisitor<LinqMethodCallExpression, Select
       const param = lambda.parameters[0];
 
       // Cria contexto filho e visita o predicado
-      // <<< Usa SqlDataSource importado de TranslationContext >>>
       const predicateContext = this.context.createChildContext([param], [sourceForLambda]);
       const predicateSql = this.visitInContext(lambda.body, predicateContext); // Usa this.visitInContext
 

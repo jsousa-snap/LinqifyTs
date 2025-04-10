@@ -46,7 +46,6 @@ export class SqlScalarSubqueryAsJsonExpression extends SqlExpression {
   }
 
   toString(): string {
-    // ... (inalterado) ...
     const options: string[] = [];
     if (this.mode) options.push(`MODE=${this.mode}`);
     if (this.includeNullValues) options.push(`INCLUDE_NULL`);

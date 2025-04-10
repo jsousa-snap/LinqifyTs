@@ -19,7 +19,7 @@ export interface CompositeUnionExpressionMetadata extends TableExpressionBaseMet
  * @extends {TableExpressionBase}
  */
 export class CompositeUnionExpression extends TableExpressionBase {
-  public override readonly type = SqlExpressionType.Union; // <<< Define o tipo
+  public override readonly type = SqlExpressionType.Union;
   public readonly sources: ReadonlyArray<SelectExpression>;
   public readonly distinct: boolean;
 

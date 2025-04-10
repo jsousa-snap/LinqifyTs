@@ -8,7 +8,7 @@ import { SqlExpression, SelectExpression, SqlOrdering, SortDirection } from "../
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 
 /**
  * Traduz chamadas `orderBy` e `orderByDescending` para definir a cláusula ORDER BY
@@ -46,7 +46,6 @@ export class OrderByVisitor extends MethodVisitor<LinqMethodCallExpression, Sele
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource
   ): SelectExpression {
     const methodName = expression.methodName;
@@ -83,16 +82,16 @@ export class OrderByVisitor extends MethodVisitor<LinqMethodCallExpression, Sele
     // Retorna uma *nova* instância de SelectExpression com a cláusula ORDER BY substituída.
     // OrderBy não muda a forma (projeções, joins, etc.). Reutiliza o alias.
     return new SelectExpression(
-      currentSelect.alias, // Mantém alias
-      currentSelect.projection, // Mantém projeções
-      currentSelect.from, // Mantém FROM
-      currentSelect.predicate, // Mantém WHERE
-      currentSelect.having, // Mantém HAVING
-      currentSelect.joins, // Mantém Joins
-      [newOrdering], // <<< Define/Substitui ORDER BY
-      currentSelect.offset, // Mantém Offset (pode ser invalidado semanticamente, mas sintaticamente ok)
-      currentSelect.limit, // Mantém Limit
-      currentSelect.groupBy // Mantém GroupBy
+      currentSelect.alias,
+      currentSelect.projection,
+      currentSelect.from,
+      currentSelect.predicate,
+      currentSelect.having,
+      currentSelect.joins,
+      [newOrdering],
+      currentSelect.offset,
+      currentSelect.limit,
+      currentSelect.groupBy
     );
   }
 }

@@ -5,7 +5,7 @@ import { SqlExpressionType } from "./SqlExpressionType";
 
 export interface InnerJoinExpressionMetadata extends JoinExpressionBaseMetadata {
   $type: SqlExpressionType.InnerJoin;
-  table: TableExpressionBaseMetadata; // <<< Usa metadados base
+  table: TableExpressionBaseMetadata;
 }
 
 /**

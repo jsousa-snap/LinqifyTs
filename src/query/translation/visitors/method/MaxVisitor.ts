@@ -13,7 +13,7 @@ import {
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 
 /**
  * Traduz uma chamada de método LINQ `max(selector)`
@@ -36,7 +36,6 @@ export class MaxVisitor extends MethodVisitor<LinqMethodCallExpression, SelectEx
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource
   ): SelectExpression {
     const methodName = expression.methodName.replace(/Async$/, ""); // Remove Async
@@ -54,7 +53,6 @@ export class MaxVisitor extends MethodVisitor<LinqMethodCallExpression, SelectEx
     const param = lambda.parameters[0];
 
     // Cria contexto filho e visita o seletor
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const selectorContext = this.context.createChildContext([param], [sourceForLambda]);
     const valueToAggregateSql = this.visitInContext(lambda.body, selectorContext); // Usa this.visitInContext
 
@@ -65,26 +63,22 @@ export class MaxVisitor extends MethodVisitor<LinqMethodCallExpression, SelectEx
     // Cria a função SQL MAX
     const maxFunction = new SqlFunctionCallExpression("MAX", [valueToAggregateSql]);
     // Define a projeção
-    const maxProjection = new ProjectionExpression(
-      maxFunction,
-      "max_result" // <<< CORRIGIDO: Alias padrão (removido 'C' extra)
-    );
+    const maxProjection = new ProjectionExpression(maxFunction, "max_result");
 
     // MAX é uma agregação terminal.
     const aggregationAlias = this.aliasGenerator.generateAlias("max");
 
-    // Cria a SelectExpression final - <<< CÓDIGO CORRIGIDO >>>
     return new SelectExpression(
-      aggregationAlias, // Alias da Select
-      [maxProjection], // Projeção: SELECT MAX(...) AS [max_result]
-      currentSelect.from, // Mantém FROM
-      currentSelect.predicate, // Mantém WHERE
-      null, // HAVING
-      currentSelect.joins, // Mantém Joins
-      [], // ORDER BY removido
-      null, // OFFSET removido
-      null, // LIMIT removido
-      [] // GROUP BY removido
+      aggregationAlias,
+      [maxProjection],
+      currentSelect.from,
+      currentSelect.predicate,
+      null,
+      currentSelect.joins,
+      [],
+      null,
+      null,
+      []
     );
   }
 }

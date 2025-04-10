@@ -1,9 +1,8 @@
 import { DbContext } from "../core";
-import "../query/QueryableExtensions"; // Importa para aplicar os métodos no protótipo
-import { IQueryable } from "../interfaces"; // Se necessário para tipagem
-import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
+import "../query/QueryableExtensions";
+import { IQueryable } from "../interfaces";
+import { normalizeSql } from "./utils/testUtils";
 
-// --- Interfaces/Classes de Entidade (Copie ou importe-as) ---
 interface User {
   id: number;
   name: string;
@@ -29,7 +28,6 @@ describe("Queryable Paging Tests (Skip/Take)", () => {
     posts = dbContext.set<Post>("Posts");
   });
 
-  // **** Testes 1 a 12 (Inalterados) ****
   it("Teste Paging 1: should handle simple take", () => {
     const query = users.orderBy((u) => u.id).take(10);
     const expectedSql = `
@@ -182,7 +180,6 @@ OFFSET 5 ROWS FETCH NEXT 10 ROWS ONLY
     expect(() => users.take(3.14)).toThrow("non-negative integer");
   });
 
-  // **** Teste Paging 13 (Inalterado - take(2) => COM COALESCE) ****
   it("Teste Paging 13: should handle skip/take inside subquery projection", () => {
     const query = users
       .provideScope({ posts })
@@ -213,7 +210,6 @@ ORDER BY [u].[name] ASC`;
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // **** Teste Paging 14 (Inalterado - sem take() => COM COALESCE) ****
   it("Teste Paging 14: should handle skip/take outside query with subquery projection", () => {
     const query = users
       .provideScope({ posts })

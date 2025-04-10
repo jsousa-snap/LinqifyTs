@@ -8,11 +8,10 @@ import {
   Expression as LinqExpression,
 } from "../../../../expressions";
 import { SelectExpression, SqlConstantExpression, SqlExpression } from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { MethodVisitor } from "../base/MethodVisitor";
 
 /**
  * Traduz uma chamada de método LINQ `take(count)` para definir a cláusula LIMIT (ou FETCH/TOP)
@@ -85,16 +84,16 @@ export class TakeVisitor extends MethodVisitor<LinqMethodCallExpression, SelectE
     // Retorna uma *nova* instância de SelectExpression com o LIMIT definido.
     // Take não muda a forma da query (projeções, joins, etc.). Reutiliza alias.
     return new SelectExpression(
-      currentSelect.alias, // Mantém alias
-      currentSelect.projection, // Mantém projeções
-      currentSelect.from, // Mantém FROM
-      currentSelect.predicate, // Mantém WHERE
-      currentSelect.having, // Mantém HAVING
-      currentSelect.joins, // Mantém Joins
-      currentSelect.orderBy, // Mantém OrderBy (pode ser relevante para Take)
-      currentSelect.offset, // Mantém Offset
-      limitSql, // <<< Define LIMIT
-      currentSelect.groupBy // Mantém GroupBy
+      currentSelect.alias,
+      currentSelect.projection,
+      currentSelect.from,
+      currentSelect.predicate,
+      currentSelect.having,
+      currentSelect.joins,
+      currentSelect.orderBy,
+      currentSelect.offset,
+      limitSql,
+      currentSelect.groupBy
     );
   }
 }

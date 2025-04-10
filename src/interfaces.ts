@@ -139,7 +139,7 @@ export interface IQueryable<T> {
     inner: IQueryable<TInnerJoin>,
     outerKeySelector: (outer: T) => TKeyJoin,
     innerKeySelector: (inner: TInnerJoin) => TKeyJoin,
-    resultSelector: (outer: T, inner: TInnerJoin | null) => TResultJoin // <<< INNER PODE SER NULL
+    resultSelector: (outer: T, inner: TInnerJoin | null) => TResultJoin
   ): IQueryable<TResultJoin>;
 
   /**
