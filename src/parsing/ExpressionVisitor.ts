@@ -1,22 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // --- START OF FILE src/parsing/ExpressionVisitor.ts ---
 
 /* src/parsing/ExpressionVisitor.ts */
 // --- START OF FILE src/parsing/ExpressionVisitor.ts ---
 
-import * as acorn from "acorn";
 import {
   Expression,
   ParameterExpression,
   MemberExpression,
-  ConstantExpression,
   LambdaExpression,
   MethodCallExpression,
   BinaryExpression,
   LiteralExpression,
   NewObjectExpression,
-  OperatorType, // <<< Importar OperatorType
-  ExpressionType,
-  ScopeExpression,
+  OperatorType,
 } from "../expressions";
 
 // --- AST Node Interfaces (adiciona ConditionalExpression) ---
@@ -98,9 +95,7 @@ interface ConditionalExpressionNode extends AstNode {
  */
 export class ExpressionVisitor {
   // Pilha de mapas de parâmetros. Cada entrada representa um nível de lambda.
-  private readonly parameterMapsStack: ReadonlyArray<
-    ReadonlyMap<string, ParameterExpression>
-  >;
+  private readonly parameterMapsStack: ReadonlyArray<ReadonlyMap<string, ParameterExpression>>;
   // Mapa de parâmetros/variáveis fornecidos externamente via provideScope.
   private readonly scopeParameters?: ReadonlyMap<string, Expression>;
 
@@ -115,9 +110,7 @@ export class ExpressionVisitor {
     scopeParameters?: ReadonlyMap<string, Expression>
   ) {
     if (!parameterMapsStack || parameterMapsStack.length === 0) {
-      throw new Error(
-        "ExpressionVisitor requires at least one parameter map in the stack."
-      );
+      throw new Error("ExpressionVisitor requires at least one parameter map in the stack.");
     }
     this.parameterMapsStack = parameterMapsStack;
     this.scopeParameters = scopeParameters;
@@ -149,9 +142,7 @@ export class ExpressionVisitor {
         return this.visitCallExpression(node as CallExpressionNode);
       // **** NOVO CASO: ConditionalExpression ****
       case "ConditionalExpression":
-        return this.visitConditionalExpression(
-          node as ConditionalExpressionNode
-        );
+        return this.visitConditionalExpression(node as ConditionalExpressionNode);
       case "ExpressionStatement":
         // Se o nó for uma ExpressionStatement, visita a expressão interna.
         return this.visit((node as ExpressionStatementNode).expression);
@@ -190,13 +181,8 @@ export class ExpressionVisitor {
       " Current Lambda Param Stack:",
       this.parameterMapsStack.map((m) => Array.from(m.keys()))
     );
-    console.error(
-      " Provided Scope Params:",
-      Array.from(this.scopeParameters?.keys() ?? [])
-    );
-    throw new Error(
-      `Unknown identifier: '${name}'. Not a lambda parameter or scope variable.`
-    );
+    console.error(" Provided Scope Params:", Array.from(this.scopeParameters?.keys() ?? []));
+    throw new Error(`Unknown identifier: '${name}'. Not a lambda parameter or scope variable.`);
   }
 
   /**
@@ -268,18 +254,13 @@ export class ExpressionVisitor {
     for (const prop of node.properties) {
       // Suporta apenas propriedades simples { key: value }
       if (prop.kind !== "init" || prop.method || prop.computed) {
-        throw new Error(
-          `Unsupported property kind in ObjectExpression: ${prop.kind}`
-        );
+        throw new Error(`Unsupported property kind in ObjectExpression: ${prop.kind}`);
       }
       let propertyName: string;
       // Obtém o nome da propriedade (pode ser identificador ou literal string)
       if (prop.key.type === "Identifier") {
         propertyName = (prop.key as IdentifierNode).name;
-      } else if (
-        prop.key.type === "Literal" &&
-        typeof (prop.key as LiteralNode).value === "string"
-      ) {
+      } else if (prop.key.type === "Literal" && typeof (prop.key as LiteralNode).value === "string") {
         propertyName = (prop.key as LiteralNode).value;
       } else {
         throw new Error(`Unsupported property key type: ${prop.key.type}`);
@@ -315,9 +296,7 @@ export class ExpressionVisitor {
           }') are not currently supported in LINQ expressions.`
         );
       }
-      throw new Error(
-        `Unsupported CallExpression callee type: ${callee.type}. Expected MemberExpression.`
-      );
+      throw new Error(`Unsupported CallExpression callee type: ${callee.type}. Expected MemberExpression.`);
     }
     const memberCallee = callee as MemberExpressionNode;
     const sourceExpr = this.visit(memberCallee.object); // Visita o objeto fonte da chamada
@@ -346,10 +325,7 @@ export class ExpressionVisitor {
           innerParamsMap, // Adiciona o mapa da lambda interna
         ];
         // Cria um visitor interno com a nova pilha e o escopo externo
-        const innerVisitor = new ExpressionVisitor(
-          newParameterMapsStack,
-          this.scopeParameters
-        );
+        const innerVisitor = new ExpressionVisitor(newParameterMapsStack, this.scopeParameters);
         // Visita o corpo da lambda interna
         const bodyExpr = innerVisitor.visit(arrowFuncNode.body);
         // Retorna a LambdaExpression LINQ
@@ -382,9 +358,7 @@ export class ExpressionVisitor {
     const consequentExpr = this.visit(node.consequent);
     const alternateExpr = this.visit(node.alternate);
 
-    console.warn(
-      `Parsing ConditionalExpression (ternary operator). Translation to SQL CASE WHEN will happen later.`
-    );
+    console.warn(`Parsing ConditionalExpression (ternary operator). Translation to SQL CASE WHEN will happen later.`);
 
     // Usamos uma MethodCallExpression como placeholder na árvore LINQ
     // O QueryExpressionVisitor (tradutor) identificará isso e criará o SqlCaseExpression.
@@ -455,9 +429,10 @@ export class ExpressionVisitor {
         return OperatorType.Or;
       // O default não é estritamente necessário devido ao tipo de 'op',
       // mas é bom para robustez caso o tipo mude.
-      default:
+      default: {
         const exhaustiveCheck: never = op; // Garante que todos os casos sejam tratados
         throw new Error(`Unsupported logical operator: ${exhaustiveCheck}`);
+      }
     }
   }
 }

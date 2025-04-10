@@ -124,10 +124,7 @@ export class SqlServerQuerySqlGenerator {
   /**
    * Método dispatcher principal que chama o método Visit específico.
    */
-  protected Visit(
-    expression: SqlExpression | null,
-    isSubquerySource: boolean = false
-  ): void {
+  protected Visit(expression: SqlExpression | null, isSubquerySource: boolean = false): void {
     if (!expression) {
       this.builder.append("NULL");
       return;
@@ -141,10 +138,7 @@ export class SqlServerQuerySqlGenerator {
         this.VisitTable(expression as TableExpression, isSubquerySource);
         break;
       case SqlExpressionType.Union:
-        this.VisitUnion(
-          expression as CompositeUnionExpression,
-          isSubquerySource
-        );
+        this.VisitUnion(expression as CompositeUnionExpression, isSubquerySource);
         break;
       case SqlExpressionType.Column:
         this.VisitColumn(expression as ColumnExpression);
@@ -169,9 +163,7 @@ export class SqlServerQuerySqlGenerator {
         this.VisitScalarSubquery(expression as SqlScalarSubqueryExpression);
         break;
       case SqlExpressionType.ScalarSubqueryAsJson:
-        this.VisitScalarSubqueryAsJson(
-          expression as SqlScalarSubqueryAsJsonExpression
-        );
+        this.VisitScalarSubqueryAsJson(expression as SqlScalarSubqueryAsJsonExpression);
         break;
       case SqlExpressionType.Like:
         this.VisitLike(expression as SqlLikeExpression);
@@ -182,24 +174,17 @@ export class SqlServerQuerySqlGenerator {
       case SqlExpressionType.Projection:
       case SqlExpressionType.InnerJoin:
       case SqlExpressionType.LeftJoin:
-        throw new Error(
-          `Cannot directly visit SqlExpressionType: ${expression.type}`
-        );
+        throw new Error(`Cannot directly visit SqlExpressionType: ${expression.type}`);
       default:
         const exCheck: never = expression.type;
-        throw new Error(
-          `Unsupported SqlExpressionType in generator dispatcher: ${exCheck}`
-        );
+        throw new Error(`Unsupported SqlExpressionType in generator dispatcher: ${exCheck}`);
     }
   }
 
   // VisitSelect, VisitProjection, VisitTable, VisitColumn, VisitConstant, VisitBinary, VisitFunctionCall, VisitCase, VisitScalarSubquery, VisitScalarSubqueryAsJson, VisitLike, VisitExists, VisitJoin, VisitInnerJoin, VisitLeftJoin, VisitUnion
   // (Lógica existente inalterada)
   // ... (cole aqui os métodos Visit* existentes e inalterados) ...
-  protected VisitSelect(
-    expression: SelectExpression,
-    isSubquerySource: boolean
-  ): void {
+  protected VisitSelect(expression: SelectExpression, isSubquerySource: boolean): void {
     const isSub = isSubquerySource;
 
     if (isSub) {
@@ -210,9 +195,7 @@ export class SqlServerQuerySqlGenerator {
 
     this.builder.append("SELECT ");
     if (expression.projection.length === 0) {
-      console.warn(
-        "Warning: SELECT expression has no projections. Generating SELECT 1."
-      );
+      console.warn("Warning: SELECT expression has no projections. Generating SELECT 1.");
       this.builder.append("1");
     } else {
       expression.projection.forEach((p, i) => {
@@ -301,10 +284,7 @@ export class SqlServerQuerySqlGenerator {
 
     let needsAlias = true;
     if (projection.expression instanceof ColumnExpression) {
-      if (
-        projection.alias === projection.expression.name ||
-        projection.expression.name === "*"
-      ) {
+      if (projection.alias === projection.expression.name || projection.expression.name === "*") {
         needsAlias = false;
       }
     } else if (projection.expression.type === SqlExpressionType.Constant) {
@@ -334,15 +314,10 @@ export class SqlServerQuerySqlGenerator {
       this.builder.append(` AS ${escapeIdentifier(projection.alias)}`);
     }
   }
-  protected VisitTable(
-    table: TableExpression,
-    isSubquerySource: boolean
-  ): void {
+  protected VisitTable(table: TableExpression, isSubquerySource: boolean): void {
     this.builder.append(escapeIdentifier(table.name));
     if (!table.alias) {
-      throw new Error(
-        `Internal Error: Table '${table.name}' must have an alias.`
-      );
+      throw new Error(`Internal Error: Table '${table.name}' must have an alias.`);
     }
     this.builder.append(` AS ${escapeIdentifier(table.alias)}`);
   }
@@ -352,9 +327,7 @@ export class SqlServerQuerySqlGenerator {
         `Internal Translation Error: Alias missing for table '${column.table.name}' when accessing column '${column.name}'.`
       );
     }
-    this.builder.append(
-      `${escapeIdentifier(column.table.alias)}.${escapeIdentifier(column.name)}`
-    );
+    this.builder.append(`${escapeIdentifier(column.table.alias)}.${escapeIdentifier(column.name)}`);
   }
   protected VisitConstant(constant: SqlConstantExpression): void {
     this.builder.append(generateSqlLiteral(constant.value));
@@ -365,24 +338,20 @@ export class SqlServerQuerySqlGenerator {
     let operandForNullCheck: SqlExpression | null = null;
 
     const leftIsNull =
-      binary.left.type === SqlExpressionType.Constant &&
-      (binary.left as SqlConstantExpression).value === null;
+      binary.left.type === SqlExpressionType.Constant && (binary.left as SqlConstantExpression).value === null;
     const rightIsNull =
-      binary.right.type === SqlExpressionType.Constant &&
-      (binary.right as SqlConstantExpression).value === null;
+      binary.right.type === SqlExpressionType.Constant && (binary.right as SqlConstantExpression).value === null;
 
     if (leftIsNull && !rightIsNull) {
       isNullComparison = true;
       operandForNullCheck = binary.right;
       if (binary.operator === OperatorType.Equal) sqlOperator = "IS NULL";
-      else if (binary.operator === OperatorType.NotEqual)
-        sqlOperator = "IS NOT NULL";
+      else if (binary.operator === OperatorType.NotEqual) sqlOperator = "IS NOT NULL";
     } else if (rightIsNull && !leftIsNull) {
       isNullComparison = true;
       operandForNullCheck = binary.left;
       if (binary.operator === OperatorType.Equal) sqlOperator = "IS NULL";
-      else if (binary.operator === OperatorType.NotEqual)
-        sqlOperator = "IS NOT NULL";
+      else if (binary.operator === OperatorType.NotEqual) sqlOperator = "IS NOT NULL";
     }
 
     if (isNullComparison && sqlOperator && operandForNullCheck) {
@@ -455,9 +424,7 @@ export class SqlServerQuerySqlGenerator {
     this.builder.append(" ON ");
     this.Visit(join.joinPredicate);
   }
-  protected VisitScalarSubqueryAsJson(
-    expression: SqlScalarSubqueryAsJsonExpression
-  ): void {
+  protected VisitScalarSubqueryAsJson(expression: SqlScalarSubqueryAsJsonExpression): void {
     const needsCoalesceWrapper = !expression.withoutArrayWrapper;
 
     if (needsCoalesceWrapper) {
@@ -487,8 +454,7 @@ export class SqlServerQuerySqlGenerator {
     this.builder.dedent().appendLine().append(")");
   }
   protected VisitLike(expression: SqlLikeExpression): void {
-    const wrapSource =
-      expression.sourceExpression.type === SqlExpressionType.Binary;
+    const wrapSource = expression.sourceExpression.type === SqlExpressionType.Binary;
     if (wrapSource) this.builder.append("(");
     this.Visit(expression.sourceExpression);
     if (wrapSource) this.builder.append(")");
@@ -502,10 +468,7 @@ export class SqlServerQuerySqlGenerator {
     if (functionNameUpper === "DATEPART" && expression.args.length === 2) {
       const datePartArg = expression.args[0];
       const dateSourceArg = expression.args[1];
-      if (
-        datePartArg instanceof SqlConstantExpression &&
-        typeof datePartArg.value === "string"
-      ) {
+      if (datePartArg instanceof SqlConstantExpression && typeof datePartArg.value === "string") {
         this.builder.append(expression.functionName);
         this.builder.append("(");
         this.builder.append(datePartArg.value);
@@ -553,10 +516,7 @@ export class SqlServerQuerySqlGenerator {
     this.builder.dedent();
     this.builder.appendLine().append(")");
   }
-  protected VisitUnion(
-    expression: CompositeUnionExpression,
-    isSubquerySource: boolean
-  ): void {
+  protected VisitUnion(expression: CompositeUnionExpression, isSubquerySource: boolean): void {
     const isSub = isSubquerySource;
 
     if (isSub) {

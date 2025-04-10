@@ -9,7 +9,7 @@ import { Expression } from "./expressions";
  * Pode ser uma função construtora (classe) ou um objeto genérico.
  * @typedef {Function | Object} ElementType
  */
-export type ElementType = Function | Object;
+export type ElementType = Function | object;
 
 // Tipos genéricos usados nas assinaturas de métodos IQueryable.
 // São placeholders para tipos específicos usados em cada chamada.
@@ -92,9 +92,7 @@ export interface IQueryable<T> {
    * @returns {IQueryable<TResultSelect>} Um IQueryable cujos elementos são o resultado da invocação da função de transformação em cada elemento da origem.
    * @memberof IQueryable
    */
-  select<TResultSelect>(
-    selector: (entity: T) => TResultSelect
-  ): IQueryable<TResultSelect>;
+  select<TResultSelect>(selector: (entity: T) => TResultSelect): IQueryable<TResultSelect>;
 
   /**
    * Filtra uma sequência de valores com base em um predicado.
@@ -175,19 +173,11 @@ export interface IQueryable<T> {
   sum(selector: (entity: T) => number): number | null; // Síncrono
   sumAsync(selector: (entity: T) => number): Promise<number | null>; // Assíncrono
 
-  min<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): TResult | null; // Síncrono
-  minAsync<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): Promise<TResult | null>; // Assíncrono
+  min<TResult extends number | string | Date>(selector: (entity: T) => TResult): TResult | null; // Síncrono
+  minAsync<TResult extends number | string | Date>(selector: (entity: T) => TResult): Promise<TResult | null>; // Assíncrono
 
-  max<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): TResult | null; // Síncrono
-  maxAsync<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): Promise<TResult | null>; // Assíncrono
+  max<TResult extends number | string | Date>(selector: (entity: T) => TResult): TResult | null; // Síncrono
+  maxAsync<TResult extends number | string | Date>(selector: (entity: T) => TResult): Promise<TResult | null>; // Assíncrono
 
   first(): T; // Síncrono
   first(predicate?: (entity: T) => boolean): T; // Síncrono
@@ -230,9 +220,7 @@ export interface IQueryable<T> {
    * @returns {IOrderedQueryable<T>} Um IOrderedQueryable cujos elementos são classificados em ordem decrescente de acordo com uma chave.
    * @memberof IQueryable
    */
-  orderByDescending<TKey>(
-    keySelector: (entity: T) => TKey
-  ): IOrderedQueryable<T>;
+  orderByDescending<TKey>(keySelector: (entity: T) => TKey): IOrderedQueryable<T>;
 
   /**
    * Ignora um número especificado de elementos em uma sequência e retorna os elementos restantes.
@@ -321,9 +309,7 @@ export interface IOrderedQueryable<T> extends IQueryable<T> {
    * @returns {IOrderedQueryable<T>} Um IOrderedQueryable cujos elementos são classificados em ordem decrescente de acordo com uma chave.
    * @memberof IOrderedQueryable
    */
-  thenByDescending<TKey>(
-    keySelector: (entity: T) => TKey
-  ): IOrderedQueryable<T>;
+  thenByDescending<TKey>(keySelector: (entity: T) => TKey): IOrderedQueryable<T>;
 }
 
 /**
@@ -344,10 +330,7 @@ export interface IQueryProvider {
    * @returns {IQueryable<TElement>} Um IQueryable que pode avaliar a consulta representada pela árvore de expressão especificada.
    * @memberof IQueryProvider
    */
-  createQuery<TElement>(
-    expression: Expression,
-    elementType: ElementType
-  ): IQueryable<TElement>;
+  createQuery<TElement>(expression: Expression, elementType: ElementType): IQueryable<TElement>;
 
   /**
    * Executa (assincronamente ou sincronicamente para 'any') a consulta representada
@@ -358,9 +341,7 @@ export interface IQueryProvider {
    * @returns {Promise<TResultExecute> | TResultExecute} O valor/coleção resultante ou uma Promise para ele.
    * @memberof IQueryProvider
    */
-  execute<TResultExecute>(
-    expression: Expression
-  ): Promise<TResultExecute> | TResultExecute; // Pode ser sync (any) ou async
+  execute<TResultExecute>(expression: Expression): Promise<TResultExecute> | TResultExecute; // Pode ser sync (any) ou async
 
   /**
    * Obtém a representação textual (ex: SQL) da consulta representada pela árvore de expressão.

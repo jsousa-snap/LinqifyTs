@@ -1,10 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* src/query/generation/utils/sqlUtils.ts */
 // --- START OF FILE src/query/generation/utils/sqlUtils.ts ---
 
-import {
-  OperatorType as LinqOperatorType, // Renomeia para evitar conflito interno
-  ConstantExpression,
-} from "../../../expressions";
+import { ConstantExpression } from "../../../expressions";
 
 // IMPORTANTE: Usar o enum importado diretamente
 import { OperatorType } from "../../../expressions/BinaryExpression"; // Caminho direto para o enum
@@ -25,13 +23,10 @@ export { OperatorType };
 export function generateSqlLiteral(value: any): string {
   if (value === null || typeof value === "undefined") return "NULL";
   if (typeof value === "string") return `'${value.replace(/'/g, "''")}'`; // Escapa apóstrofos
-  if (typeof value === "number" && Number.isFinite(value))
-    return value.toString();
+  if (typeof value === "number" && Number.isFinite(value)) return value.toString();
   if (typeof value === "boolean") return value ? "1" : "0"; // Converte boolean para 1 ou 0
   if (value instanceof Date) return `'${value.toISOString()}'`; // Formato ISO 8601 para datas
-  throw new Error(
-    `Unsupported literal type for SQL generation: ${typeof value}`
-  );
+  throw new Error(`Unsupported literal type for SQL generation: ${typeof value}`);
 }
 
 /**
@@ -70,12 +65,13 @@ export function mapOperatorToSql(op: OperatorType): string {
       return "*";
     case OperatorType.Divide:
       return "/";
+    case OperatorType.Modulo:
+      return "%";
     // ** FIM: Aritméticos **
-    default:
+    default: {
       const exhaustiveCheck: never = op;
-      throw new Error(
-        `Unsupported operator type encountered in SQL generation: ${exhaustiveCheck}`
-      );
+      throw new Error(`Unsupported operator type encountered in SQL generation: ${exhaustiveCheck}`);
+    }
   }
 }
 
@@ -140,9 +136,7 @@ export function escapeIdentifier(name: string): string {
  * @param {ConstantExpression} tableConstantExpr A expressão constante da tabela.
  * @returns {(string | null)} O nome da tabela ou null se a expressão não for válida.
  */
-export function getTableName(
-  tableConstantExpr: ConstantExpression
-): string | null {
+export function getTableName(tableConstantExpr: ConstantExpression): string | null {
   if (tableConstantExpr.value?.type === "Table") {
     return tableConstantExpr.value.name;
   }

@@ -5,11 +5,7 @@
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions";
-import {
-  MethodCallExpression,
-  LambdaExpression,
-  Expression,
-} from "../expressions";
+import { MethodCallExpression, LambdaExpression, Expression } from "../expressions";
 import { LambdaParser } from "../parsing";
 import { normalizeSql } from "./utils/testUtils";
 
@@ -65,9 +61,7 @@ EXISTS (
   it("Teste Any 2: should generate correct SQL for terminal any(predicate)", () => {
     const predicate = (u: User) => u.age > 90;
     const lambda = lambdaParser.parse(predicate);
-    const anyCallExpr = new MethodCallExpression("any", users.expression, [
-      lambda,
-    ]);
+    const anyCallExpr = new MethodCallExpression("any", users.expression, [lambda]);
     const expectedSql = `
 EXISTS (
     SELECT 1
@@ -84,11 +78,7 @@ EXISTS (
   // **** TESTE SINCRONO ****
   it("Teste Any 3: should generate correct SQL for terminal any() after where()", () => {
     const filteredUsers = users.where((u) => u.name === "Alice");
-    const anyCallExpr = new MethodCallExpression(
-      "any",
-      filteredUsers.expression,
-      []
-    );
+    const anyCallExpr = new MethodCallExpression("any", filteredUsers.expression, []);
     const expectedSql = `
 EXISTS (
     SELECT 1
@@ -104,9 +94,7 @@ EXISTS (
 
   // Teste 4 não chama any() terminalmente
   it("Teste Any 4: should generate correct SQL for non-terminal any() inside where()", () => {
-    const query = users
-      .provideScope({ posts })
-      .where((u) => posts.where((p) => p.authorId === u.id).any()); // any() não-terminal
+    const query = users.provideScope({ posts }).where((u) => posts.where((p) => p.authorId === u.id).any()); // any() não-terminal
 
     const expectedSql = `
 SELECT [u].*
@@ -124,10 +112,7 @@ WHERE EXISTS (
   // Teste 5 não chama any() terminalmente
   it("Teste Any 5: should generate correct SQL for non-terminal any(predicate) inside where()", () => {
     const query = users.provideScope({ posts }).where(
-      (u) =>
-        posts
-          .where((p) => p.authorId === u.id)
-          .any((p) => p.title == "Specific Post") // any() não-terminal
+      (u) => posts.where((p) => p.authorId === u.id).any((p) => p.title == "Specific Post") // any() não-terminal
     );
 
     const expectedSql = `

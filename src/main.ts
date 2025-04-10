@@ -102,16 +102,12 @@ function others() {
   console.log("SQL:", dtoQuery.toQueryString());
 
   console.log("\n--- Teste 5: Where e Select Combinados ---");
-  const youngUserNamesQuery = users
-    .where((u) => u.age < 25)
-    .select((u) => u.name);
+  const youngUserNamesQuery = users.where((u) => u.age < 25).select((u) => u.name);
   console.log("Expression:", youngUserNamesQuery.expression.toString());
   console.log("SQL:", youngUserNamesQuery.toQueryString());
 
   console.log("\n--- Teste 6: Where e Select com Projeção ---");
-  const seniorDtoQuery = users
-    .where((u) => u.age >= 65)
-    .select((u) => ({ Name: u.name, Contact: u.email }));
+  const seniorDtoQuery = users.where((u) => u.age >= 65).select((u) => ({ Name: u.name, Contact: u.email }));
   console.log("Expression:", seniorDtoQuery.expression.toString());
   console.log("SQL:", seniorDtoQuery.toQueryString());
 
@@ -147,9 +143,7 @@ function others() {
   console.log("Expression:", specificUserPostsQuery.expression.toString());
   console.log("SQL:", specificUserPostsQuery.toQueryString());
 
-  console.log(
-    "\n--- Teste 10: Multi-Join (Users -> Posts -> PostCategories -> Categories) ---"
-  );
+  console.log("\n--- Teste 10: Multi-Join (Users -> Posts -> PostCategories -> Categories) ---");
   const userAndCategoryNames = users
     .join(
       posts,
@@ -165,8 +159,7 @@ function others() {
     )
     .join(
       categories,
-      (uppc: { user: User; post: Post; postCategory: PostCategory }) =>
-        uppc.postCategory.categoryId,
+      (uppc: { user: User; post: Post; postCategory: PostCategory }) => uppc.postCategory.categoryId,
       (cat: Category) => cat.categoryId,
       (uppc, cat) => ({ UserName: uppc.user.name, CategoryName: cat.name })
     );
@@ -209,29 +202,20 @@ function others() {
       (pc: PostCategory) => pc.postId,
       (up, pc) => ({ user: up.user, post: up.post, postCategory: pc })
     )
-    .where(
-      (uppc: { user: User; post: Post; postCategory: PostCategory }) =>
-        uppc.post.title != null
-    )
+    .where((uppc: { user: User; post: Post; postCategory: PostCategory }) => uppc.post.title != null)
     .join(
       categories,
-      (uppc: { user: User; post: Post; postCategory: PostCategory }) =>
-        uppc.postCategory.categoryId,
+      (uppc: { user: User; post: Post; postCategory: PostCategory }) => uppc.postCategory.categoryId,
       (cat: Category) => cat.categoryId,
       (uppc, cat) => ({ UserName: uppc.user.name, CategoryName: cat.name })
     )
-    .where(
-      (result: { UserName: string; CategoryName: string }) =>
-        result.CategoryName == "Tech"
-    );
+    .where((result: { UserName: string; CategoryName: string }) => result.CategoryName == "Tech");
   console.log("Expression:", userAndTechCategoryNames.expression.toString());
   console.log("SQL:", userAndTechCategoryNames.toQueryString());
 
   console.log("\n--- Teste 12: Join com Select e Where Intercalados ---");
   try {
-    const filteredProfiles = profiles.where(
-      (pr: Profile) => pr.website != null
-    );
+    const filteredProfiles = profiles.where((pr: Profile) => pr.website != null);
 
     const userProfileEmail = users
       .where((u: User) => u.age > 18)

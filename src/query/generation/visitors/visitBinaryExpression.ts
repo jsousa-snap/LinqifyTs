@@ -1,10 +1,6 @@
 // --- START OF FILE src/query/generation/visitors/visitBinaryExpression.ts ---
 
-import {
-  BinaryExpression,
-  ExpressionType,
-  MemberExpression,
-} from "../../../expressions";
+import { BinaryExpression, ExpressionType, MemberExpression } from "../../../expressions";
 import { QueryBuilderContext } from "../QueryBuilderContext";
 import { VisitFn, SqlResult } from "../types";
 import { generateSqlLiteral, mapOperatorToSql } from "../utils/sqlUtils";
@@ -27,13 +23,7 @@ export function visitBinaryExpression(
       return generateSqlLiteral((originalExpr as LiteralExpression).value);
     if (originalExpr?.type === ExpressionType.Constant) {
       const cVal = (originalExpr as ConstantExpression).value;
-      if (
-        !(
-          cVal &&
-          typeof cVal === "object" &&
-          (cVal.type === "Table" || cVal.type === "External")
-        )
-      ) {
+      if (!(cVal && typeof cVal === "object" && (cVal.type === "Table" || cVal.type === "External"))) {
         return generateSqlLiteral(cVal);
       }
     }
@@ -63,22 +53,8 @@ export function visitBinaryExpression(
     return { sql: finalSql };
   } else {
     console.error("Binary Op Details:");
-    console.error(
-      " Left Expr:",
-      expression.left.toString(),
-      "-> Result:",
-      leftResult,
-      "-> SQL:",
-      leftSql
-    );
-    console.error(
-      " Right Expr:",
-      expression.right.toString(),
-      "-> Result:",
-      rightResult,
-      "-> SQL:",
-      rightSql
-    );
+    console.error(" Left Expr:", expression.left.toString(), "-> Result:", leftResult, "-> SQL:", leftSql);
+    console.error(" Right Expr:", expression.right.toString(), "-> Result:", rightResult, "-> SQL:", rightSql);
     console.error(" Operator:", opSql);
     throw new Error(
       `Failed to generate SQL for one or both operands of the binary expression: ${expression.toString()}.`
@@ -87,10 +63,6 @@ export function visitBinaryExpression(
 }
 
 // Importações necessárias para tipos usados no getSql
-import {
-  LiteralExpression,
-  ConstantExpression,
-  Expression,
-} from "../../../expressions";
+import { LiteralExpression, ConstantExpression, Expression } from "../../../expressions";
 
 // --- END OF FILE src/query/generation/visitors/visitBinaryExpression.ts ---

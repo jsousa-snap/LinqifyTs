@@ -76,7 +76,7 @@ FROM (
     const query = set1.concat(set2);
 
     const expectedOuterSql = `
-SELECT [u].*
+SELECT [c].*
 FROM (
         (
             SELECT [i].*
@@ -87,7 +87,7 @@ FROM (
             SELECT [i1].*
             FROM [Items2] AS [i1]
         )
-    ) AS [u]
+    ) AS [c]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedOuterSql));
@@ -124,7 +124,7 @@ FROM (
       .concat(set2.select((i) => ({ itemId: i.id, itemValue: i.value }))); // Alias interno 'i1'
     // union -> un
     const expectedOuterSql = `
-SELECT [u].*
+SELECT [c].*
 FROM (
         (
             SELECT [i].[id] AS [itemId], [i].[value] AS [itemValue]
@@ -135,7 +135,7 @@ FROM (
             SELECT [i1].[id] AS [itemId], [i1].[value] AS [itemValue]
             FROM [Items2] AS [i1]
         )
-    ) AS [u]`;
+    ) AS [c]`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedOuterSql));
@@ -169,7 +169,7 @@ WHERE [u].[value] LIKE '%test%'`;
       .concat(set2) // union -> un
       .orderBy((combined) => combined.id); // Referencia 'un'
     const expectedSql = `
-SELECT [u].*
+SELECT [c].*
 FROM (
         (
             SELECT [i].*
@@ -180,8 +180,8 @@ FROM (
             SELECT [i1].*
             FROM [Items2] AS [i1]
         )
-    ) AS [u]
-ORDER BY [u].[id] ASC`;
+    ) AS [c]
+ORDER BY [c].[id] ASC`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -212,7 +212,7 @@ FROM (
   it("Teste Union 8: Union of three sets (Flattened)", () => {
     const query = set1.union(set2).union(set3);
     const expectedSql = `
-SELECT [u1].*
+SELECT [u].*
 FROM (
         (
             SELECT [i].*
@@ -228,7 +228,7 @@ FROM (
             SELECT [i2].*
             FROM [Items3] AS [i2]
         )
-    ) AS [u1]`;
+    ) AS [u]`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
@@ -269,7 +269,7 @@ FROM (
       .orderBy((c) => c.id) // referencia un
       .take(10);
     const expectedSql = `
-SELECT [u].*
+SELECT [c].*
 FROM (
         (
             SELECT [i].*
@@ -280,8 +280,8 @@ FROM (
             SELECT [i1].*
             FROM [Items2] AS [i1]
         )
-    ) AS [u]
-ORDER BY [u].[id] ASC
+    ) AS [c]
+ORDER BY [c].[id] ASC
 OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY`;
 
     const actualSql = query.toQueryString();
@@ -293,7 +293,7 @@ OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY`;
     const union31 = set3.union(set1); // union interna -> un1 (fontes i2, i3)
     const query = union12.union(union31); // union externa -> un2 (fontes i, i1, un1)
     const expectedSql = `
-SELECT [u2].*
+SELECT [u].*
 FROM (
         (
             SELECT [i].*
@@ -319,19 +319,15 @@ FROM (
                     )
                 ) AS [u1]
         )
-    ) AS [u2]`;
+    ) AS [u]`;
 
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Union 12: Union inside Subquery Projection", () => {
-    const proj1 = set1
-      .where((i) => i.category == "A")
-      .select((i) => ({ itemValue: i.value }));
-    const proj2 = set2
-      .where((i) => i.category == "A")
-      .select((i) => ({ itemValue: i.value }));
+    const proj1 = set1.where((i) => i.category == "A").select((i) => ({ itemValue: i.value }));
+    const proj2 = set2.where((i) => i.category == "A").select((i) => ({ itemValue: i.value }));
     const query = users.provideScope({ proj1, proj2 }).select((user) => ({
       // parâmetro user -> alias u
       UserName: user.name,
@@ -361,12 +357,8 @@ FROM [Users] AS [u]`;
   });
 
   it("Teste Union 13: Union inside Subquery Projection limit 1", () => {
-    const proj1 = set1
-      .where((i) => i.category == "A")
-      .select((i) => ({ itemValue: i.value }));
-    const proj2 = set2
-      .where((i) => i.category == "A")
-      .select((i) => ({ itemValue: i.value }));
+    const proj1 = set1.where((i) => i.category == "A").select((i) => ({ itemValue: i.value }));
+    const proj2 = set2.where((i) => i.category == "A").select((i) => ({ itemValue: i.value }));
     const query = users.provideScope({ proj1, proj2 }).select((user) => ({
       // user -> u
       UserName: user.name,

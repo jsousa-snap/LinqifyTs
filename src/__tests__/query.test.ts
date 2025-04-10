@@ -141,9 +141,7 @@ FROM [Users] AS [u]
   });
 
   it("Teste 5: should handle combined where and select", () => {
-    const youngUserNamesQuery = users
-      .where((u) => u.age < 25)
-      .select((u) => u.name);
+    const youngUserNamesQuery = users.where((u) => u.age < 25).select((u) => u.name);
     const expectedSql = `
 SELECT [u].[name]
 FROM [Users] AS [u]
@@ -154,9 +152,7 @@ WHERE [u].[age] < 25
   });
 
   it("Teste 6: should handle where and select with projection", () => {
-    const seniorDtoQuery = users
-      .where((u) => u.age >= 65)
-      .select((u) => ({ Name: u.name, Contact: u.email }));
+    const seniorDtoQuery = users.where((u) => u.age >= 65).select((u) => ({ Name: u.name, Contact: u.email }));
     const expectedSql = `
 SELECT [u].[name] AS [Name], [u].[email] AS [Contact]
 FROM [Users] AS [u]
@@ -233,11 +229,7 @@ WHERE [u].[age] < 25
       .where((u) => u.age < 25)
       .select((u) =>
         // Operadores ternários aninhados
-        u.name.startsWith("a")
-          ? "Começa com A"
-          : u.name.startsWith("b")
-          ? "Começa com B"
-          : "Não começa com A ou B"
+        u.name.startsWith("a") ? "Começa com A" : u.name.startsWith("b") ? "Começa com B" : "Não começa com A ou B"
       );
     const expectedSql = `
 SELECT CASE WHEN [u].[name] LIKE 'a%' THEN 'Começa com A' ELSE CASE WHEN [u].[name] LIKE 'b%' THEN 'Começa com B' ELSE 'Não começa com A ou B' END END AS [expr0]
@@ -256,8 +248,8 @@ WHERE [u].[age] < 25
         category: u.name.startsWith("a") // Usando 'category' como alias
           ? "Começa com A"
           : u.name.startsWith("b")
-          ? "Começa com B"
-          : "Não começa com A ou B",
+            ? "Começa com B"
+            : "Não começa com A ou B",
       }));
     const expectedSql = `
 SELECT CASE WHEN [u].[name] LIKE 'a%' THEN 'Começa com A' ELSE CASE WHEN [u].[name] LIKE 'b%' THEN 'Começa com B' ELSE 'Não começa com A ou B' END END AS [category]

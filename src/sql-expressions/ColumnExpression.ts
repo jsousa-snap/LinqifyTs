@@ -25,9 +25,7 @@ export class ColumnExpression extends SqlExpression {
   }
 
   toString(): string {
-    return `${escapeIdentifier(this.table.alias)}.${escapeIdentifier(
-      this.name
-    )}`;
+    return `${escapeIdentifier(this.table.alias)}.${escapeIdentifier(this.name)}`;
   }
 
   // *** IMPLEMENTAR toMetadata() ***

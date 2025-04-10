@@ -59,9 +59,7 @@ ORDER BY [u].[age] ASC, [u].[name] ASC
   });
 
   it("Teste OrderBy 4: should generate correct SQL for orderByDescending and thenByDescending", () => {
-    const query = users
-      .orderByDescending((u) => u.age)
-      .thenByDescending((u) => u.name);
+    const query = users.orderByDescending((u) => u.age).thenByDescending((u) => u.name);
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
@@ -86,9 +84,7 @@ ORDER BY [u].[age] ASC, [u].[name] DESC, [u].[id] ASC
   });
 
   it("Teste OrderBy 6: should generate correct SQL for orderBy after where", () => {
-    const query = users
-      .where((u) => u.email.includes("@"))
-      .orderBy((u) => u.id);
+    const query = users.where((u) => u.email.includes("@")).orderBy((u) => u.id);
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
@@ -123,9 +119,7 @@ ORDER BY [u].[age] ASC
     `;
 
     const actualSqlSimple = querySimple.toQueryString();
-    expect(normalizeSql(actualSqlSimple)).toEqual(
-      normalizeSql(expectedSqlSimple)
-    );
+    expect(normalizeSql(actualSqlSimple)).toEqual(normalizeSql(expectedSqlSimple));
   });
 });
 // --- END OF FILE src/__tests__/orderby.test.ts ---

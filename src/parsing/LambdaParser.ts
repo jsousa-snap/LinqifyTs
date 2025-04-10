@@ -1,12 +1,7 @@
 // --- START OF FILE src/parsing/LambdaParser.ts ---
 
 import * as acorn from "acorn";
-import {
-  Expression,
-  ParameterExpression,
-  LambdaExpression,
-  ConstantExpression,
-} from "../expressions";
+import { Expression, ParameterExpression, LambdaExpression, ConstantExpression } from "../expressions";
 import { ExpressionVisitor } from "./ExpressionVisitor";
 
 // --- AST Interfaces (inalteradas) ---
@@ -33,9 +28,7 @@ export class LambdaParser {
   // ** CORREÇÃO: Aceita pilha inicial de parâmetros (geralmente vazia no início) **
   parse(
     lambda: Function,
-    initialParameterMapsStack: ReadonlyArray<
-      ReadonlyMap<string, ParameterExpression>
-    > = [], // Opcional, padrão vazio
+    initialParameterMapsStack: ReadonlyArray<ReadonlyMap<string, ParameterExpression>> = [], // Opcional, padrão vazio
     scopeMap?: ReadonlyMap<string, Expression> // Escopo do provideScope
   ): LambdaExpression {
     const lambdaString = lambda.toString();
@@ -44,10 +37,7 @@ export class LambdaParser {
       let arrowFunctionNode: ArrowFunctionExpressionNode | null = null;
 
       // Encontrar ArrowFunctionExpressionNode (lógica inalterada)
-      if (
-        ast.body[0]?.type === "ExpressionStatement" &&
-        ast.body[0].expression?.type === "ArrowFunctionExpression"
-      ) {
+      if (ast.body[0]?.type === "ExpressionStatement" && ast.body[0].expression?.type === "ArrowFunctionExpression") {
         arrowFunctionNode = ast.body[0].expression;
       } else if (ast.body[0]?.type === "ArrowFunctionExpression") {
         arrowFunctionNode = ast.body[0];
@@ -71,16 +61,10 @@ export class LambdaParser {
 
       // ** CORREÇÃO: Cria a pilha para o visitor **
       // Combina a pilha inicial recebida com o mapa de parâmetros desta lambda
-      const visitorParameterMapsStack = [
-        ...initialParameterMapsStack,
-        currentParameterMap,
-      ];
+      const visitorParameterMapsStack = [...initialParameterMapsStack, currentParameterMap];
 
       // Cria o visitor passando a pilha completa e o scopeMap (provideScope)
-      const visitor = new ExpressionVisitor(
-        visitorParameterMapsStack,
-        scopeMap
-      );
+      const visitor = new ExpressionVisitor(visitorParameterMapsStack, scopeMap);
       const bodyExpression = visitor.visit(arrowFunctionNode.body); // Visita o corpo da lambda
 
       return new LambdaExpression(bodyExpression, parameters);

@@ -286,12 +286,8 @@ LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
     // Nota: A tradução exata do operador ternário para CASE WHEN pode variar.
     // Vamos verificar as partes principais
     const actualSql = query.toQueryString();
-    expect(normalizeSql(actualSql)).toContain(
-      "SELECT [u].[name] AS [UserName]"
-    );
-    expect(normalizeSql(actualSql)).toContain(
-      "LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]"
-    );
+    expect(normalizeSql(actualSql)).toContain("SELECT [u].[name] AS [UserName]");
+    expect(normalizeSql(actualSql)).toContain("LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]");
     // A verificação da projeção exata do CASE WHEN é omitida por simplicidade,
     // pois depende da implementação detalhada do visitor para condicionais.
     // Se necessário, um teste mais específico para o CASE WHEN seria criado.
@@ -324,9 +320,7 @@ LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
     `;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toContain(normalizeSql(expectedBaseSql));
-    expect(normalizeSql(actualSql)).toContain(
-      "SELECT [u].[name] AS [UserName]"
-    );
+    expect(normalizeSql(actualSql)).toContain("SELECT [u].[name] AS [UserName]");
   });
 
   it("Teste LEFT Join 3: Inner Join followed by Left Join", () => {
@@ -354,12 +348,8 @@ INNER JOIN [Posts] AS [p] ON [u].[id] = [p].[authorId]
 LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
     `;
     const actualSql = query.toQueryString();
-    expect(normalizeSql(actualSql)).toContain(
-      normalizeSql(expectedSqlStructure)
-    );
-    expect(normalizeSql(actualSql)).toContain(
-      "SELECT [u].[name] AS [UserName]"
-    );
+    expect(normalizeSql(actualSql)).toContain(normalizeSql(expectedSqlStructure));
+    expect(normalizeSql(actualSql)).toContain("SELECT [u].[name] AS [UserName]");
     expect(normalizeSql(actualSql)).toContain("[p].[title] AS [PostTitle]");
   });
 });

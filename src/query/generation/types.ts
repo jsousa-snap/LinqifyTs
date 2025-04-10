@@ -1,9 +1,19 @@
 // --- START OF FILE src/query/generation/types.ts ---
 
 import { Expression, ParameterExpression } from "../../expressions";
+import { SqlExpression } from "../../sql-expressions";
+import { TranslationContext } from "../translation";
 
-// Define o tipo da função de visita principal para permitir chamadas recursivas
-export type VisitFn = (expression: Expression, context: any) => any; // Usar 'any' para o contexto simplifica a passagem inicial
+/**
+ * Representa a função principal de visita usada pelo orquestrador.
+ * @param expression A expressão LINQ a ser visitada.
+ * @param context O contexto de tradução atual a ser usado para esta visita.
+ * @returns A expressão SQL resultante ou null.
+ */
+export type VisitFn = (
+  expression: Expression | null, // Permitir null como entrada
+  context: TranslationContext // <<< Adicionar contexto como parâmetro obrigatório
+) => SqlExpression | null;
 
 // Informações sobre uma fonte de dados (tabela base ou resultado de operação)
 export interface SourceInfo {

@@ -55,9 +55,7 @@ WHERE UPPER([u].[name]) = 'ALICE'`;
   });
 
   it("Teste Func 2: should translate string.toLowerCase()", () => {
-    const query = users.where(
-      (u) => u.email.toLowerCase() === "bob@example.com"
-    );
+    const query = users.where((u) => u.email.toLowerCase() === "bob@example.com");
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
@@ -145,9 +143,7 @@ SELECT [u].*
 FROM [Users] AS [u]
 WHERE [u].[name] LIKE 'A[%]%'`; // Correto
     const actualSqlStartsWith = queryStartsWith.toQueryString();
-    expect(normalizeSql(actualSqlStartsWith)).toEqual(
-      normalizeSql(expectedStartsWith)
-    );
+    expect(normalizeSql(actualSqlStartsWith)).toEqual(normalizeSql(expectedStartsWith));
 
     const queryEndsWith = users.where((u) => u.name.endsWith("_"));
     const expectedEndsWith = `
@@ -155,9 +151,7 @@ SELECT [u].*
 FROM [Users] AS [u]
 WHERE [u].[name] LIKE '%[_]'`; // Correto
     const actualSqlEndsWith = queryEndsWith.toQueryString();
-    expect(normalizeSql(actualSqlEndsWith)).toEqual(
-      normalizeSql(expectedEndsWith)
-    );
+    expect(normalizeSql(actualSqlEndsWith)).toEqual(normalizeSql(expectedEndsWith));
 
     const queryIncludes = users.where((u) => u.name.includes("["));
     const expectedIncludes = `
@@ -165,9 +159,7 @@ SELECT [u].*
 FROM [Users] AS [u]
 WHERE [u].[name] LIKE '%[[]%'`; // Correto
     const actualSqlIncludes = queryIncludes.toQueryString();
-    expect(normalizeSql(actualSqlIncludes)).toEqual(
-      normalizeSql(expectedIncludes)
-    );
+    expect(normalizeSql(actualSqlIncludes)).toEqual(normalizeSql(expectedIncludes));
   });
 
   // --- Date Functions ---
@@ -259,17 +251,13 @@ WHERE YEAR([u].[lastLogin]) = 2024`;
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
     // Testando com verificação explícita de não nulo
-    const queryNotNull = users.where(
-      (u) => u.lastLogin != null && u.lastLogin.getFullYear() === 2024
-    );
+    const queryNotNull = users.where((u) => u.lastLogin != null && u.lastLogin.getFullYear() === 2024);
     const expectedNotNull = `
 SELECT [u].*
 FROM [Users] AS [u]
 WHERE [u].[lastLogin] IS NOT NULL AND YEAR([u].[lastLogin]) = 2024`;
     const actualSqlNotNull = queryNotNull.toQueryString();
-    expect(normalizeSql(actualSqlNotNull)).toEqual(
-      normalizeSql(expectedNotNull)
-    );
+    expect(normalizeSql(actualSqlNotNull)).toEqual(normalizeSql(expectedNotNull));
   });
 
   it("Teste Func 19: should handle nullable string property access", () => {
@@ -281,26 +269,20 @@ WHERE UPPER([p].[category]) = 'TECH'`;
     const actualSql = query.toQueryString();
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
-    const queryNotNull = products.where(
-      (p) => p.category != null && p.category.startsWith("Ele")
-    );
+    const queryNotNull = products.where((p) => p.category != null && p.category.startsWith("Ele"));
     const expectedNotNull = `
 SELECT [p].*
 FROM [Products] AS [p]
 WHERE [p].[category] IS NOT NULL AND [p].[category] LIKE 'Ele%'`;
     const actualSqlNotNull = queryNotNull.toQueryString();
-    expect(normalizeSql(actualSqlNotNull)).toEqual(
-      normalizeSql(expectedNotNull)
-    );
+    expect(normalizeSql(actualSqlNotNull)).toEqual(normalizeSql(expectedNotNull));
   });
 
   // --- Combinações ---
   it("Teste Func 20: should translate combined string and date functions", () => {
     // Usando getMonth() que gera (MONTH(...) - 1)
     const query = users.where(
-      (u) =>
-        u.email.toLowerCase().endsWith("@test.com") &&
-        u.registrationDate.getMonth() === 10 // Novembro (JS=10)
+      (u) => u.email.toLowerCase().endsWith("@test.com") && u.registrationDate.getMonth() === 10 // Novembro (JS=10)
     );
     const expectedSql = `
 SELECT [u].*

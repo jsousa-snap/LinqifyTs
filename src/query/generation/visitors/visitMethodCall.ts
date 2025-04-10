@@ -14,11 +14,7 @@ import {
 } from "../../../expressions";
 import { QueryBuilderContext } from "../QueryBuilderContext";
 import { VisitFn, SourceInfo, SelectClause, SqlResult } from "../types";
-import {
-  escapeIdentifier,
-  getTableName,
-  generateSqlLiteral,
-} from "../utils/sqlUtils";
+import { escapeIdentifier, getTableName, generateSqlLiteral } from "../utils/sqlUtils";
 import { QueryGenerator } from "../../QueryGenerator";
 
 // Helper processProjection (Inalterado desde a última correção)
@@ -36,17 +32,13 @@ function processProjection(
 
   if (projectionBody.type === ExpressionType.Parameter) {
     const paramExpr = projectionBody as ParameterExpression;
-    const paramIndex = projectionParams.findIndex(
-      (p) => p === paramExpr || p.name === paramExpr.name
-    );
+    const paramIndex = projectionParams.findIndex((p) => p === paramExpr || p.name === paramExpr.name);
     if (paramIndex !== -1) {
       const sourceInfo = paramSourceInfos[paramIndex];
       selectClauses.push({ sql: `${escapeIdentifier(sourceInfo.alias)}.*` });
       providesAll = sourceInfo.providesAllColumns ?? sourceInfo.isBaseTable;
     } else {
-      throw new Error(
-        `Could not find source info for identity projection parameter '${paramExpr.name}'`
-      );
+      throw new Error(`Could not find source info for identity projection parameter '${paramExpr.name}'`);
     }
     return { selectClauses, providesAll };
   }
@@ -54,19 +46,14 @@ function processProjection(
   if (projectionBody.type === ExpressionType.NewObject) {
     providesAll = false;
     const newObjectExpr = projectionBody as NewObjectExpression;
-    for (const [
-      propName,
-      propValueExpr,
-    ] of newObjectExpr.properties.entries()) {
+    for (const [propName, propValueExpr] of newObjectExpr.properties.entries()) {
       if (propValueExpr.type === ExpressionType.Parameter) {
         const param = propValueExpr as ParameterExpression;
         const sourceIdx = projectionParams.findIndex((p) => p === param);
         if (sourceIdx !== -1) {
           const paramSource = paramSourceInfos[sourceIdx];
           selectClauses.push({
-            sql: `${escapeIdentifier(
-              paramSource.alias
-            )}.*` /* Sem alias aqui */,
+            sql: `${escapeIdentifier(paramSource.alias)}.*` /* Sem alias aqui */,
           });
         } else {
           throw new Error(
@@ -82,17 +69,11 @@ function processProjection(
         if (subquerySqlResult?.sql) {
           selectClauses.push({ sql: subquerySqlResult.sql, alias: propName });
         } else {
-          throw new Error(
-            `visitSubquery failed to return SQL for property '${propName}'.`
-          );
+          throw new Error(`visitSubquery failed to return SQL for property '${propName}'.`);
         }
       } else if (propValueExpr.type === ExpressionType.MemberAccess) {
         const valueResult = visitFn(propValueExpr, context);
-        if (
-          valueResult &&
-          typeof valueResult === "object" &&
-          "sql" in valueResult
-        ) {
+        if (valueResult && typeof valueResult === "object" && "sql" in valueResult) {
           selectClauses.push({
             sql: (valueResult as SqlResult).sql,
             alias: propName,
@@ -105,23 +86,17 @@ function processProjection(
         ) {
           const sourceInfoResult = valueResult as SourceInfo;
           selectClauses.push({
-            sql: `${escapeIdentifier(
-              sourceInfoResult.alias
-            )}.*` /* Sem alias aqui */,
+            sql: `${escapeIdentifier(sourceInfoResult.alias)}.*` /* Sem alias aqui */,
           });
         } else {
-          console.error(
-            "processProjection MemberAccess visit failed:",
-            valueResult
-          );
+          console.error("processProjection MemberAccess visit failed:", valueResult);
           throw new Error(
             `Could not resolve member access property '${propName}' to SQL value or Source. Expression: ${propValueExpr.toString()}`
           );
         }
       } else if (
         propValueExpr.type === ExpressionType.Literal ||
-        (propValueExpr.type === ExpressionType.Constant &&
-          !(propValueExpr as ConstantExpression).value?.type)
+        (propValueExpr.type === ExpressionType.Constant && !(propValueExpr as ConstantExpression).value?.type)
       ) {
         const literalSql = generateSqlLiteral(
           propValueExpr.type === ExpressionType.Literal
@@ -131,11 +106,7 @@ function processProjection(
         selectClauses.push({ sql: literalSql, alias: propName });
       } else {
         const valueResult = visitFn(propValueExpr, context);
-        if (
-          valueResult &&
-          typeof valueResult === "object" &&
-          "sql" in valueResult
-        ) {
+        if (valueResult && typeof valueResult === "object" && "sql" in valueResult) {
           selectClauses.push({
             sql: (valueResult as SqlResult).sql,
             alias: propName,
@@ -157,20 +128,13 @@ function processProjection(
   }
 
   const projectionVisitResult = visitFn(projectionBody, context);
-  if (
-    projectionVisitResult &&
-    typeof projectionVisitResult === "object" &&
-    "sql" in projectionVisitResult
-  ) {
+  if (projectionVisitResult && typeof projectionVisitResult === "object" && "sql" in projectionVisitResult) {
     selectClauses.push({ sql: (projectionVisitResult as SqlResult).sql });
   } else if (projectionBody.type === ExpressionType.Literal) {
     selectClauses.push({
       sql: generateSqlLiteral((projectionBody as LiteralExpression).value),
     });
-  } else if (
-    projectionBody.type === ExpressionType.Constant &&
-    !(projectionBody as ConstantExpression).value?.type
-  ) {
+  } else if (projectionBody.type === ExpressionType.Constant && !(projectionBody as ConstantExpression).value?.type) {
     selectClauses.push({
       sql: generateSqlLiteral((projectionBody as ConstantExpression).value),
     });
@@ -184,8 +148,7 @@ function processProjection(
       sql: `${escapeIdentifier((projectionVisitResult as SourceInfo).alias)}.*`,
     });
     providesAll =
-      (projectionVisitResult as SourceInfo).providesAllColumns ??
-      (projectionVisitResult as SourceInfo).isBaseTable;
+      (projectionVisitResult as SourceInfo).providesAllColumns ?? (projectionVisitResult as SourceInfo).isBaseTable;
   } else {
     console.error("Projection visit result:", projectionVisitResult);
     console.error("Original projection body:", projectionBody.toString());
@@ -195,9 +158,7 @@ function processProjection(
   }
 
   if (selectClauses.length === 0) {
-    throw new Error(
-      "Internal processing of projection resulted in zero SELECT clauses."
-    );
+    throw new Error("Internal processing of projection resulted in zero SELECT clauses.");
   }
   return { selectClauses, providesAll };
 }
@@ -210,9 +171,7 @@ export function visitMethodCall(
 ): SourceInfo {
   const methodName = expression.methodName;
   if (!expression.source) {
-    throw new Error(
-      `Method call '${methodName}' requires a source expression.`
-    );
+    throw new Error(`Method call '${methodName}' requires a source expression.`);
   }
 
   let sourceVisitResult = visitFn(expression.source, context);
@@ -228,37 +187,23 @@ export function visitMethodCall(
       "isBaseTable" in sourceVisitResult
     )
   ) {
-    throw new Error(
-      `Visiting the source expression for '${methodName}' did not yield a valid SourceInfo.`
-    );
+    throw new Error(`Visiting the source expression for '${methodName}' did not yield a valid SourceInfo.`);
   }
-  let sourceInfo = sourceVisitResult as SourceInfo;
+  const sourceInfo = sourceVisitResult as SourceInfo;
 
   switch (methodName) {
     case "where": {
       // ... (código do where inalterado) ...
-      if (
-        expression.args.length !== 1 ||
-        expression.args[0].type !== ExpressionType.Lambda
-      )
+      if (expression.args.length !== 1 || expression.args[0].type !== ExpressionType.Lambda)
         throw new Error("Invalid 'where' args.");
       const lambda = expression.args[0] as LambdaExpression;
-      if (lambda.parameters.length !== 1)
-        throw new Error("'where' lambda needs 1 parameter.");
+      if (lambda.parameters.length !== 1) throw new Error("'where' lambda needs 1 parameter.");
       const p = lambda.parameters[0];
       context.registerParameter(p, sourceInfo);
       const predicateResult = visitFn(lambda.body, context);
       context.unregisterParameter(p);
-      if (
-        !(
-          predicateResult &&
-          typeof predicateResult === "object" &&
-          "sql" in predicateResult
-        )
-      )
-        throw new Error(
-          `Failed SQL for 'where' predicate: ${lambda.body.toString()}`
-        );
+      if (!(predicateResult && typeof predicateResult === "object" && "sql" in predicateResult))
+        throw new Error(`Failed SQL for 'where' predicate: ${lambda.body.toString()}`);
       context.whereClauses.push((predicateResult as SqlResult).sql);
 
       const whereSourceInfo: SourceInfo = {
@@ -277,14 +222,10 @@ export function visitMethodCall(
 
     case "select": {
       // ... (código do select inalterado) ...
-      if (
-        expression.args.length !== 1 ||
-        expression.args[0].type !== ExpressionType.Lambda
-      )
+      if (expression.args.length !== 1 || expression.args[0].type !== ExpressionType.Lambda)
         throw new Error("Invalid 'select' args.");
       const lambda = expression.args[0] as LambdaExpression;
-      if (lambda.parameters.length !== 1)
-        throw new Error("'select' lambda needs 1 parameter.");
+      if (lambda.parameters.length !== 1) throw new Error("'select' lambda needs 1 parameter.");
       const p = lambda.parameters[0];
 
       context.registerParameter(p, sourceInfo);
@@ -374,10 +315,7 @@ export function visitMethodCall(
       const visited = new Set<Expression>();
       while (expr && !visited.has(expr)) {
         visited.add(expr);
-        if (
-          expr.type === ExpressionType.Constant &&
-          (expr as ConstantExpression).value?.type === "Table"
-        ) {
+        if (expr.type === ExpressionType.Constant && (expr as ConstantExpression).value?.type === "Table") {
           baseTableExpression = expr as ConstantExpression;
           break;
         } else if (expr.type === ExpressionType.Call) {
@@ -394,37 +332,23 @@ export function visitMethodCall(
         // Se encontramos uma tabela base (direta ou via 'where'), usamos o nome da tabela.
         // A condição 'where' já foi adicionada ao context.whereClauses principal.
         const tableName = getTableName(baseTableExpression);
-        if (!tableName)
-          throw new Error(
-            `Could not get table name from traced base expression for ${innerInfo.alias}`
-          );
+        if (!tableName) throw new Error(`Could not get table name from traced base expression for ${innerInfo.alias}`);
         innerTableSqlSource = escapeIdentifier(tableName);
-        console.log(
-          `JOIN inner source resolved to base table: ${tableName} (alias: ${innerInfo.alias})`
-        );
+        console.log(`JOIN inner source resolved to base table: ${tableName} (alias: ${innerInfo.alias})`);
       } else if (!innerInfo.isBaseTable && innerInfo.expression) {
         // Se innerInfo foi criado por select/join (é virtual e não tem base table direta)
         // precisamos gerar uma subquery.
-        console.log(
-          `--- Generating Subquery for INNER JOIN source: ${innerInfo.alias} ---`
-        );
+        console.log(`--- Generating Subquery for INNER JOIN source: ${innerInfo.alias} ---`);
         const subQueryGenerator = new QueryGenerator();
         // Gera o SQL para a expressão que criou innerInfo (ex: o 'select' anterior)
         const subQuerySql = subQueryGenerator.generate(innerInfo.expression);
-        if (!subQuerySql)
-          throw new Error(
-            `Failed to generate subquery SQL for inner join source: ${innerInfo.alias}`
-          );
+        if (!subQuerySql) throw new Error(`Failed to generate subquery SQL for inner join source: ${innerInfo.alias}`);
         innerTableSqlSource = `(${subQuerySql})`; // Envolve em parênteses
-        console.log(
-          `--- Finished Subquery for INNER JOIN source: ${innerInfo.alias} ---`
-        );
+        console.log(`--- Finished Subquery for INNER JOIN source: ${innerInfo.alias} ---`);
       } else {
         // Não conseguiu determinar a fonte
         console.error("Unhandled inner join source type:", innerInfo);
-        throw new Error(
-          `Cannot determine SQL source for inner join table/subquery: ${innerInfo.alias}`
-        );
+        throw new Error(`Cannot determine SQL source for inner join table/subquery: ${innerInfo.alias}`);
       }
       // --- *** FIM DA CORREÇÃO *** ---
 

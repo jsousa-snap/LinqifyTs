@@ -8,11 +8,7 @@ import {
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../expressions";
-import {
-  SqlExpression,
-  SelectExpression,
-  SqlBinaryExpression,
-} from "../../../sql-expressions";
+import { SqlExpression, SelectExpression, SqlBinaryExpression } from "../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../TranslationContext";
 import { OperatorType } from "../../generation/utils/sqlUtils"; // <<< Precisa importar OperatorType
 
@@ -30,30 +26,19 @@ export function visitWhereCall(
   currentSelect: SelectExpression,
   sourceForOuterLambda: SqlDataSource,
   context: TranslationContext,
-  visitInContext: (
-    expression: LinqExpression,
-    context: TranslationContext
-  ) => SqlExpression | null
+  visitInContext: (expression: LinqExpression, context: TranslationContext) => SqlExpression | null
 ): SelectExpression {
-  if (
-    expression.args.length !== 1 ||
-    expression.args[0].type !== LinqExpressionType.Lambda
-  ) {
+  if (expression.args.length !== 1 || expression.args[0].type !== LinqExpressionType.Lambda) {
     throw new Error("Invalid arguments for 'where' method call.");
   }
   const lambda = expression.args[0] as LinqLambdaExpression;
   const param = lambda.parameters[0];
-  const predicateContext = context.createChildContext(
-    [param],
-    [sourceForOuterLambda]
-  );
+  const predicateContext = context.createChildContext([param], [sourceForOuterLambda]);
   const predicateSql = visitInContext(lambda.body, predicateContext);
 
   // *** CORREÇÃO: Throw error se predicateSql for null ***
   if (!predicateSql) {
-    throw new Error(
-      `Could not translate 'where' predicate: ${lambda.body.toString()}`
-    );
+    throw new Error(`Could not translate 'where' predicate: ${lambda.body.toString()}`);
   }
 
   const newPredicate = currentSelect.predicate

@@ -7,10 +7,7 @@ import { SqlExpressionType } from "./SqlExpressionType";
 
 export interface TableExpressionBaseMetadata extends SqlExpressionMetadata {
   // *** CORREÇÃO: Adicionar Select ao tipo base ***
-  $type:
-    | SqlExpressionType.Table
-    | SqlExpressionType.Union
-    | SqlExpressionType.Select;
+  $type: SqlExpressionType.Table | SqlExpressionType.Union | SqlExpressionType.Select;
   alias: string;
 }
 
@@ -37,10 +34,7 @@ export abstract class TableExpressionBase extends SqlExpression {
   }
 
   // *** CORREÇÃO: Adicionar Select ao tipo abstrato ***
-  abstract override readonly type:
-    | SqlExpressionType.Table
-    | SqlExpressionType.Union
-    | SqlExpressionType.Select; // <<< ADICIONADO Select
+  abstract override readonly type: SqlExpressionType.Table | SqlExpressionType.Union | SqlExpressionType.Select; // <<< ADICIONADO Select
 
   abstract override toString(): string;
 

@@ -146,9 +146,7 @@ ORDER BY [u].[id] ASC
 OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY`;
 
     const actualSqlSkip0 = querySkip0.toQueryString();
-    expect(normalizeSql(actualSqlSkip0)).toEqual(
-      normalizeSql(expectedSqlSkip0)
-    );
+    expect(normalizeSql(actualSqlSkip0)).toEqual(normalizeSql(expectedSqlSkip0));
 
     // Caso Take 0
     const queryTake0 = users
@@ -162,9 +160,7 @@ ORDER BY [u].[id] ASC
 OFFSET 10 ROWS FETCH NEXT 0 ROWS ONLY`;
 
     const actualSqlTake0 = queryTake0.toQueryString();
-    expect(normalizeSql(actualSqlTake0)).toEqual(
-      normalizeSql(expectedSqlTake0)
-    );
+    expect(normalizeSql(actualSqlTake0)).toEqual(normalizeSql(expectedSqlTake0));
   });
 
   it("Teste Paging 8: should require ORDER BY for OFFSET/FETCH in SQL Server", () => {
@@ -239,9 +235,7 @@ ORDER BY [u].[name] ASC`;
       .provideScope({ posts })
       .select((u) => ({
         UserName: u.name,
-        AllPostTitles: posts
-          .where((p) => p.authorId === u.id)
-          .select((p) => p.title),
+        AllPostTitles: posts.where((p) => p.authorId === u.id).select((p) => p.title),
       }))
       .orderBy((uDto) => uDto.UserName)
       .skip(5)

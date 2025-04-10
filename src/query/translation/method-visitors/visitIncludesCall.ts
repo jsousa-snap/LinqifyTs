@@ -7,11 +7,7 @@ import {
   ConstantExpression as LinqConstantExpression,
   MemberExpression as LinqMemberExpression,
 } from "../../../expressions";
-import {
-  SqlExpression,
-  SqlConstantExpression,
-  SqlLikeExpression,
-} from "../../../sql-expressions";
+import { SqlExpression, SqlConstantExpression, SqlLikeExpression } from "../../../sql-expressions";
 import { TranslationContext } from "../TranslationContext";
 
 /**
@@ -27,25 +23,18 @@ export function visitIncludesCall(
   visit: (expression: LinqExpression | null) => SqlExpression | null
 ): SqlLikeExpression {
   if (!expression.source || expression.args.length !== 1) {
-    throw new Error(
-      "Invalid 'includes' method call. Requires a source and one argument."
-    );
+    throw new Error("Invalid 'includes' method call. Requires a source and one argument.");
   }
 
   const sourceSql = visit(expression.source);
   if (!sourceSql) {
-    throw new Error(
-      `Could not translate the source expression for 'includes': ${expression.source.toString()}`
-    );
+    throw new Error(`Could not translate the source expression for 'includes': ${expression.source.toString()}`);
   }
 
   const argumentSql = visit(expression.args[0]);
   let literalValueToEscape: string;
 
-  if (
-    argumentSql instanceof SqlConstantExpression &&
-    typeof argumentSql.value === "string"
-  ) {
+  if (argumentSql instanceof SqlConstantExpression && typeof argumentSql.value === "string") {
     literalValueToEscape = argumentSql.value;
   } else {
     throw new Error(

@@ -6,8 +6,7 @@ import { SelectExpression, SelectExpressionMetadata } from "./SelectExpression";
 import { SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
 
 // Nova interface de metadados para SqlScalarSubqueryAsJsonExpression
-export interface SqlScalarSubqueryAsJsonExpressionMetadata
-  extends SqlExpressionMetadata {
+export interface SqlScalarSubqueryAsJsonExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.ScalarSubqueryAsJson;
   selectExpression: SelectExpressionMetadata; // Metadados da SelectExpression interna
   mode: JsonMode;
@@ -38,9 +37,7 @@ export class SqlScalarSubqueryAsJsonExpression extends SqlExpression {
   ) {
     super();
     if (!selectExpression) {
-      throw new Error(
-        "SelectExpression cannot be null for SqlScalarSubqueryAsJsonExpression."
-      );
+      throw new Error("SelectExpression cannot be null for SqlScalarSubqueryAsJsonExpression.");
     }
     this.selectExpression = selectExpression;
     this.mode = mode;

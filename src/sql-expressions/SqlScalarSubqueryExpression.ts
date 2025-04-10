@@ -5,8 +5,7 @@ import { SelectExpression, SelectExpressionMetadata } from "./SelectExpression";
 import { SqlExpressionType } from "./SqlExpressionType";
 
 // Nova interface de metadados para SqlScalarSubqueryExpression
-export interface SqlScalarSubqueryExpressionMetadata
-  extends SqlExpressionMetadata {
+export interface SqlScalarSubqueryExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.ScalarSubquery;
   selectExpression: SelectExpressionMetadata; // Metadados da SelectExpression interna
 }
@@ -19,9 +18,7 @@ export class SqlScalarSubqueryExpression extends SqlExpression {
   constructor(selectExpression: SelectExpression) {
     super();
     if (!selectExpression) {
-      throw new Error(
-        "SelectExpression cannot be null for SqlScalarSubqueryExpression."
-      );
+      throw new Error("SelectExpression cannot be null for SqlScalarSubqueryExpression.");
     }
     this.selectExpression = selectExpression;
   }

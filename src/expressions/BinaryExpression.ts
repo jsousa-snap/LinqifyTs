@@ -22,6 +22,7 @@ export enum OperatorType {
   Subtract = "-",
   Multiply = "*",
   Divide = "/",
+  Modulo = "%",
   // ** FIM: Aritméticos **
 }
 
@@ -64,9 +65,7 @@ export class BinaryExpression extends Expression {
    */
   toString(): string {
     // Formata a string como "(left op right)"
-    return `(${this.left.toString()} ${
-      this.operator
-    } ${this.right.toString()})`;
+    return `(${this.left.toString()} ${this.operator} ${this.right.toString()})`;
   }
 }
 // --- END OF FILE src/expressions/BinaryExpression.ts ---

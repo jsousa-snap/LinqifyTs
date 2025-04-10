@@ -2,23 +2,16 @@
 
 // --- START OF FILE src/sql-expressions/InnerJoinExpression.ts ---
 
-import {
-  JoinExpressionBase,
-  JoinExpressionBaseMetadata,
-} from "./JoinExpressionBase"; // Importar JoinExpressionBaseMetadata
+import { JoinExpressionBase, JoinExpressionBaseMetadata } from "./JoinExpressionBase"; // Importar JoinExpressionBaseMetadata
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
 // *** CORREÇÃO: Importar TableExpressionBase ***
-import {
-  TableExpressionBase,
-  TableExpressionBaseMetadata,
-} from "./TableExpressionBase"; // Importar TableExpressionBase
+import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase"; // Importar TableExpressionBase
 import { SqlExpressionType } from "./SqlExpressionType";
 import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
 
 // Nova interface de metadados para InnerJoinExpression (opcional, só para type safety extra)
 // *** CORREÇÃO: Usar TableExpressionBaseMetadata ***
-export interface InnerJoinExpressionMetadata
-  extends JoinExpressionBaseMetadata {
+export interface InnerJoinExpressionMetadata extends JoinExpressionBaseMetadata {
   $type: SqlExpressionType.InnerJoin;
   table: TableExpressionBaseMetadata; // <<< Usa metadados base
 }

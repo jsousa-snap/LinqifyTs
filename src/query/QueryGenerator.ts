@@ -14,17 +14,8 @@ import {
   LambdaExpression,
 } from "../expressions";
 import { QueryBuilderContext } from "./generation/QueryBuilderContext";
-import {
-  SourceInfo,
-  SelectClause,
-  VisitFn,
-  SqlResult,
-} from "./generation/types";
-import {
-  escapeIdentifier,
-  generateSqlLiteral,
-  getTableName,
-} from "./generation/utils/sqlUtils";
+import { SourceInfo, SelectClause, VisitFn, SqlResult } from "./generation/types";
+import { escapeIdentifier, generateSqlLiteral, getTableName } from "./generation/utils/sqlUtils";
 
 // Visitors
 import { visitConstant } from "./generation/visitors/visitConstant";
@@ -55,9 +46,7 @@ export class QueryGenerator {
       } else {
         console.error("Final visit result was not a SourceInfo:", visitResult);
         console.error("Original Expression:", expression.toString());
-        throw new Error(
-          "Internal Error: Query expression did not resolve to a valid SourceInfo object."
-        );
+        throw new Error("Internal Error: Query expression did not resolve to a valid SourceInfo object.");
       }
 
       if (!finalSourceInfo) {
@@ -104,42 +93,23 @@ export class QueryGenerator {
       case ExpressionType.Constant:
         return visitConstant(expression as ConstantExpression, context);
       case ExpressionType.Call:
-        return visitMethodCall(
-          expression as MethodCallExpression,
-          context,
-          this.visit.bind(this),
-          this
-        );
+        return visitMethodCall(expression as MethodCallExpression, context, this.visit.bind(this), this);
       case ExpressionType.MemberAccess:
-        return visitMember(
-          expression as MemberExpression,
-          context,
-          this.visit.bind(this)
-        );
+        return visitMember(expression as MemberExpression, context, this.visit.bind(this));
       case ExpressionType.Literal:
         return visitLiteral(expression as LiteralExpression, context);
       case ExpressionType.Binary:
-        return visitBinaryExpression(
-          expression as BinaryExpression,
-          context,
-          this.visit.bind(this)
-        );
+        return visitBinaryExpression(expression as BinaryExpression, context, this.visit.bind(this));
       case ExpressionType.NewObject:
         // Retorna a própria expressão, pois deve ser tratada no contexto da projeção (visitMember/buildSql)
         return expression as NewObjectExpression;
       case ExpressionType.Parameter:
         return visitParameter(expression as ParameterExpression, context);
       case ExpressionType.Scope:
-        return visitScope(
-          expression as ScopeExpression,
-          context,
-          this.visit.bind(this)
-        );
+        return visitScope(expression as ScopeExpression, context, this.visit.bind(this));
       case ExpressionType.Lambda:
         // Lambdas não são visitadas diretamente neste fluxo
-        throw new Error(
-          "Internal Error: Cannot visit LambdaExpression directly."
-        );
+        throw new Error("Internal Error: Cannot visit LambdaExpression directly.");
       // default: // Removido o default para permitir que o TypeScript cheque exaustividade dos tipos de ExpressionType se usado como enum
       //   // Correção TS2322: Atribui expression.type, não expression
       //   const exhaustiveCheck: never = expression.type;
@@ -147,34 +117,18 @@ export class QueryGenerator {
     }
     // Adicionado para satisfazer o compilador sobre retorno em todos os caminhos
     // Logicamente não deve ser alcançado se todos os ExpressionType forem tratados
-    throw new Error(
-      `Internal Error: Reached end of visit dispatcher unexpectedly for type: ${expression.type}`
-    );
+    throw new Error(`Internal Error: Reached end of visit dispatcher unexpectedly for type: ${expression.type}`);
   }
 
   // buildSql - Usa o contexto (FROM/WHERE) e as selectClauses populadas por visitMethodCall
-  private buildSql(
-    finalSourceInfo: SourceInfo,
-    context: QueryBuilderContext
-  ): string {
+  private buildSql(finalSourceInfo: SourceInfo, context: QueryBuilderContext): string {
     const fromSql = context.fromClauseParts.join(" ");
-    if (
-      !fromSql &&
-      context.selectClauses.length === 0 &&
-      context.whereClauses.length === 0
-    ) {
-      console.warn(
-        "Warning: Empty FROM, SELECT, and WHERE clauses. Returning empty SQL."
-      );
+    if (!fromSql && context.selectClauses.length === 0 && context.whereClauses.length === 0) {
+      console.warn("Warning: Empty FROM, SELECT, and WHERE clauses. Returning empty SQL.");
       return "";
     }
-    if (
-      !fromSql &&
-      (context.selectClauses.length > 0 || context.whereClauses.length > 0)
-    ) {
-      throw new Error(
-        "Internal Error: SELECT or WHERE clauses generated without a FROM clause."
-      );
+    if (!fromSql && (context.selectClauses.length > 0 || context.whereClauses.length > 0)) {
+      throw new Error("Internal Error: SELECT or WHERE clauses generated without a FROM clause.");
     }
 
     let selectSql: string;
@@ -183,10 +137,7 @@ export class QueryGenerator {
       selectSql = context.selectClauses
         .map((c: SelectClause) => {
           // Não adiciona 'AS alias' se for uma seleção de todas as colunas sem alias específico
-          if (
-            c.sql === `${escapeIdentifier(finalSourceInfo.alias)}.*` &&
-            !c.alias
-          ) {
+          if (c.sql === `${escapeIdentifier(finalSourceInfo.alias)}.*` && !c.alias) {
             return c.sql;
           }
           return c.alias ? `${c.sql} AS ${escapeIdentifier(c.alias)}` : c.sql;
@@ -195,39 +146,26 @@ export class QueryGenerator {
     } else {
       const defaultAlias = finalSourceInfo.alias;
       const escapedDefaultAlias = escapeIdentifier(defaultAlias);
-      console.warn(
-        `Warning: No explicit SELECT clause found. Defaulting to SELECT ${escapedDefaultAlias}.*`
-      );
+      console.warn(`Warning: No explicit SELECT clause found. Defaulting to SELECT ${escapedDefaultAlias}.*`);
       selectSql = `${escapedDefaultAlias}.*`;
     }
 
     if (!selectSql) {
-      throw new Error(
-        "Internal Error: Failed to generate SELECT clause SQL string."
-      );
+      throw new Error("Internal Error: Failed to generate SELECT clause SQL string.");
     }
 
-    const whereSql =
-      context.whereClauses.length > 0
-        ? `WHERE ${context.whereClauses.join(" AND ")}`
-        : "";
+    const whereSql = context.whereClauses.length > 0 ? `WHERE ${context.whereClauses.join(" AND ")}` : "";
 
     return `SELECT ${selectSql} FROM ${fromSql} ${whereSql}`.trim();
   }
 
   // visitSubquery - Mantido para lidar com subqueries em projeções
-  private visitSubquery(
-    subqueryExpr: MethodCallExpression,
-    outerContext: QueryBuilderContext
-  ): SqlResult {
+  private visitSubquery(subqueryExpr: MethodCallExpression, outerContext: QueryBuilderContext): SqlResult {
     console.log("--- Generating Subquery SQL ---");
     console.log("Subquery Expr:", subqueryExpr.toString());
 
     // Passa o contador de alias atual do contexto externo para o subContexto
-    const subContext = new QueryBuilderContext(
-      outerContext,
-      outerContext.getCurrentAliasCount()
-    );
+    const subContext = new QueryBuilderContext(outerContext, outerContext.getCurrentAliasCount());
     const visitResult = this.visit(subqueryExpr, subContext);
 
     if (
@@ -238,9 +176,7 @@ export class QueryGenerator {
         "isBaseTable" in visitResult
       )
     ) {
-      throw new Error(
-        "Internal Error: Visiting the subquery expression did not yield a valid SourceInfo."
-      );
+      throw new Error("Internal Error: Visiting the subquery expression did not yield a valid SourceInfo.");
     }
     const finalSubInfo = visitResult as SourceInfo;
 
@@ -256,19 +192,12 @@ export class QueryGenerator {
 
     // --- Assemble subquery SQL ---
     const subFromSql = subContext.fromClauseParts.join(" ");
-    const subWhereSql =
-      subContext.whereClauses.length > 0
-        ? `WHERE ${subContext.whereClauses.join(" AND ")}`
-        : "";
+    const subWhereSql = subContext.whereClauses.length > 0 ? `WHERE ${subContext.whereClauses.join(" AND ")}` : "";
     if (!subFromSql) throw new Error("Subquery FROM clause was not generated.");
 
     // --- Build sub-select projection string ---
     let subSelectProjection: string;
-    if (
-      subSelectClauses.length === 1 &&
-      !subSelectClauses[0].alias &&
-      subSelectClauses[0].sql.endsWith(".*")
-    ) {
+    if (subSelectClauses.length === 1 && !subSelectClauses[0].alias && subSelectClauses[0].sql.endsWith(".*")) {
       // Caso especial: SELECT t0.* -> agrega o objeto t0
       subSelectProjection = escapeIdentifier(finalSubInfo.alias); // Usa só o alias para agregar o objeto todo
     } else if (subSelectClauses.length === 1 && !subSelectClauses[0].alias) {

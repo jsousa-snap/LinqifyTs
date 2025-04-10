@@ -2,18 +2,14 @@
 
 // --- START OF FILE src/sql-expressions/CompositeUnionExpression.ts ---
 
-import {
-  TableExpressionBase,
-  TableExpressionBaseMetadata,
-} from "./TableExpressionBase"; // Importar TableExpressionBaseMetadata
+import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase"; // Importar TableExpressionBaseMetadata
 import { SelectExpression } from "./SelectExpression";
 import { SqlExpressionType } from "./SqlExpressionType";
 import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
 import { SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
 
 // Nova interface de metadados para CompositeUnionExpression
-export interface CompositeUnionExpressionMetadata
-  extends TableExpressionBaseMetadata {
+export interface CompositeUnionExpressionMetadata extends TableExpressionBaseMetadata {
   $type: SqlExpressionType.Union;
   sources: SqlExpressionMetadata[]; // Array de metadados de SelectExpression
   distinct: boolean;
@@ -39,9 +35,7 @@ export class CompositeUnionExpression extends TableExpressionBase {
   ) {
     super(alias); // <<< Passa o alias para a classe base
     if (!sources || sources.length < 2) {
-      throw new Error(
-        "CompositeUnionExpression requires at least two source SelectExpressions."
-      );
+      throw new Error("CompositeUnionExpression requires at least two source SelectExpressions.");
     }
     this.sources = sources;
     this.distinct = distinct;

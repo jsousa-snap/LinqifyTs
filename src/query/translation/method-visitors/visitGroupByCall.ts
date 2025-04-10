@@ -52,19 +52,13 @@ export function visitGroupByCall(
   }
   const keyLambda = expression.args[0] as LinqLambdaExpression;
   const resultLambda = expression.args[1] as LinqLambdaExpression;
-  if (
-    keyLambda.parameters.length !== 1 ||
-    resultLambda.parameters.length !== 2
-  ) {
+  if (keyLambda.parameters.length !== 1 || resultLambda.parameters.length !== 2) {
     throw new Error("Invalid parameter count for 'groupBy' lambda selectors.");
   }
   const keyEntityParam = keyLambda.parameters[0];
   const resultKeyParam = resultLambda.parameters[0];
   const resultGroupParam = resultLambda.parameters[1];
-  const keyContext = context.createChildContext(
-    [keyEntityParam],
-    [sourceForOuterLambda]
-  );
+  const keyContext = context.createChildContext([keyEntityParam], [sourceForOuterLambda]);
   const keySqlExpressions: SqlExpression[] = [];
   const keyMapping = new Map<string | symbol, SqlExpression>();
   const keyBody = keyLambda.body;
@@ -80,9 +74,7 @@ export function visitGroupByCall(
           keyPartSql instanceof SqlFunctionCallExpression
         )
       ) {
-        throw new Error(
-          `Could not translate or unsupported key part '${propName}' in groupBy.`
-        );
+        throw new Error(`Could not translate or unsupported key part '${propName}' in groupBy.`);
       }
       keySqlExpressions.push(keyPartSql);
       keyMapping.set(propName, keyPartSql);
@@ -97,9 +89,7 @@ export function visitGroupByCall(
         keyPartSql instanceof SqlFunctionCallExpression
       )
     ) {
-      throw new Error(
-        `Could not translate or unsupported simple key in groupBy.`
-      );
+      throw new Error(`Could not translate or unsupported simple key in groupBy.`);
     }
     keySqlExpressions.push(keyPartSql);
     keyMapping.set(resultKeyParam.name, keyPartSql);
@@ -126,10 +116,7 @@ export function visitGroupByCall(
     isGroupPlaceholder: true,
     originalSource: sourceForOuterLambda,
   };
-  resultContext.registerParameter(
-    resultGroupParam,
-    groupPlaceholderSource as any
-  );
+  resultContext.registerParameter(resultGroupParam, groupPlaceholderSource as any);
   const finalProjections: ProjectionExpression[] = [];
   const resultBody = resultLambda.body;
   if (resultBody.type === LinqExpressionType.NewObject) {
@@ -145,9 +132,7 @@ export function visitGroupByCall(
         resultGroupParam
       );
       if (!sqlExpr) {
-        throw new Error(
-          `groupBy: Projection failed for result alias '${alias}'. Expr: ${expr.toString()}`
-        );
+        throw new Error(`groupBy: Projection failed for result alias '${alias}'. Expr: ${expr.toString()}`);
       }
       finalProjections.push(new ProjectionExpression(sqlExpr, alias));
     }
@@ -162,9 +147,7 @@ export function visitGroupByCall(
       resultGroupParam
     );
     if (!sqlExpr) {
-      throw new Error(
-        `groupBy: Simple projection translation failed for: ${resultBody.toString()}`
-      );
+      throw new Error(`groupBy: Simple projection translation failed for: ${resultBody.toString()}`);
     }
     const alias = `groupResult${finalProjections.length}`;
     finalProjections.push(new ProjectionExpression(sqlExpr, alias));
@@ -202,87 +185,49 @@ function translateResultSelectorExpression(
 ): SqlExpression | null {
   // (Lógica interna do helper inalterada...)
   // --- 1. Check for Key Access ---
-  const keyPlaceholderSource =
-    resultContext.getDataSourceForParameter(keyParam);
-  if (
-    expression.type === LinqExpressionType.Parameter &&
-    expression === keyParam
-  ) {
-    if (
-      keyPlaceholderSource &&
-      (keyPlaceholderSource as any).isGroupKeyPlaceholder
-    ) {
+  const keyPlaceholderSource = resultContext.getDataSourceForParameter(keyParam);
+  if (expression.type === LinqExpressionType.Parameter && expression === keyParam) {
+    if (keyPlaceholderSource && (keyPlaceholderSource as any).isGroupKeyPlaceholder) {
       const keySql = (keyPlaceholderSource as any).getSqlForKeyAccess();
       if (keySql) return keySql;
-      else
-        throw new Error("Could not resolve simple key SQL in result selector.");
+      else throw new Error("Could not resolve simple key SQL in result selector.");
     }
   } else if (expression.type === LinqExpressionType.MemberAccess) {
     const memberExpr = expression as LinqMemberExpression;
-    if (
-      memberExpr.objectExpression.type === LinqExpressionType.Parameter &&
-      memberExpr.objectExpression === keyParam
-    ) {
-      if (
-        keyPlaceholderSource &&
-        (keyPlaceholderSource as any).isGroupKeyPlaceholder
-      ) {
-        const keySql = (keyPlaceholderSource as any).getSqlForKeyAccess(
-          memberExpr.memberName
-        );
+    if (memberExpr.objectExpression.type === LinqExpressionType.Parameter && memberExpr.objectExpression === keyParam) {
+      if (keyPlaceholderSource && (keyPlaceholderSource as any).isGroupKeyPlaceholder) {
+        const keySql = (keyPlaceholderSource as any).getSqlForKeyAccess(memberExpr.memberName);
         if (keySql) return keySql;
-        else
-          throw new Error(
-            `Could not resolve key member '${memberExpr.memberName}' in result selector.`
-          );
+        else throw new Error(`Could not resolve key member '${memberExpr.memberName}' in result selector.`);
       }
     }
   }
   // --- 2. Check for Aggregate Call on Group ---
   if (expression.type === LinqExpressionType.Call) {
     const callExpr = expression as LinqMethodCallExpression;
-    if (
-      callExpr.source?.type === LinqExpressionType.Parameter &&
-      callExpr.source === groupParam
-    ) {
-      const groupPlaceholderSource =
-        resultContext.getDataSourceForParameter(groupParam);
-      if (
-        groupPlaceholderSource &&
-        (groupPlaceholderSource as any).isGroupPlaceholder
-      ) {
+    if (callExpr.source?.type === LinqExpressionType.Parameter && callExpr.source === groupParam) {
+      const groupPlaceholderSource = resultContext.getDataSourceForParameter(groupParam);
+      if (groupPlaceholderSource && (groupPlaceholderSource as any).isGroupPlaceholder) {
         const sqlFunctionName = mapLinqAggregateToSql(callExpr.methodName);
         let aggregateArgSql: SqlExpression;
         if (callExpr.args.length === 0 && callExpr.methodName === "count") {
           aggregateArgSql = new SqlConstantExpression(1);
-        } else if (
-          callExpr.args.length === 1 &&
-          callExpr.args[0].type === LinqExpressionType.Lambda
-        ) {
+        } else if (callExpr.args.length === 1 && callExpr.args[0].type === LinqExpressionType.Lambda) {
           const innerLambda = callExpr.args[0] as LinqLambdaExpression;
           const innerParam = innerLambda.parameters[0];
           const originalSourceContext = rootContext.createChildContext(
             [innerParam],
             [(groupPlaceholderSource as any).originalSource]
           );
-          const innerValueSql = visitInContext(
-            innerLambda.body,
-            originalSourceContext
-          );
+          const innerValueSql = visitInContext(innerLambda.body, originalSourceContext);
           if (!innerValueSql) {
-            throw new Error(
-              `Could not translate aggregate selector '${innerLambda.toString()}' in groupBy.`
-            );
+            throw new Error(`Could not translate aggregate selector '${innerLambda.toString()}' in groupBy.`);
           }
           aggregateArgSql = innerValueSql;
         } else {
-          throw new Error(
-            `Unsupported aggregate call arguments in groupBy: ${callExpr.methodName}`
-          );
+          throw new Error(`Unsupported aggregate call arguments in groupBy: ${callExpr.methodName}`);
         }
-        return new SqlFunctionCallExpression(sqlFunctionName, [
-          aggregateArgSql,
-        ]);
+        return new SqlFunctionCallExpression(sqlFunctionName, [aggregateArgSql]);
       }
     }
   }
@@ -304,9 +249,7 @@ function mapLinqAggregateToSql(methodName: string): string {
     case "max":
       return "MAX";
     default:
-      throw new Error(
-        `Unsupported aggregate function in groupBy: ${methodName}`
-      );
+      throw new Error(`Unsupported aggregate function in groupBy: ${methodName}`);
   }
 }
 

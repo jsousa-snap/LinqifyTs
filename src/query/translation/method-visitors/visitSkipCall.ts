@@ -9,11 +9,7 @@ import {
   ConstantExpression as LinqConstantExpression,
   LiteralExpression as LinqLiteralExpression, // Importar LiteralExpression
 } from "../../../expressions";
-import {
-  SqlExpression,
-  SelectExpression,
-  SqlConstantExpression,
-} from "../../../sql-expressions";
+import { SqlExpression, SelectExpression, SqlConstantExpression } from "../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../TranslationContext";
 
 /**
@@ -33,17 +29,11 @@ export function visitSkipCall(
   let count: number | undefined = undefined;
 
   // **VERIFICAÇÃO CORRIGIDA: Aceita Constant ou Literal**
-  if (
-    arg instanceof LinqConstantExpression &&
-    arg.type === LinqExpressionType.Constant
-  ) {
+  if (arg instanceof LinqConstantExpression && arg.type === LinqExpressionType.Constant) {
     if (typeof arg.value === "number") {
       count = arg.value;
     }
-  } else if (
-    arg instanceof LinqLiteralExpression &&
-    arg.type === LinqExpressionType.Literal
-  ) {
+  } else if (arg instanceof LinqLiteralExpression && arg.type === LinqExpressionType.Literal) {
     if (typeof arg.value === "number") {
       count = arg.value;
     }
@@ -63,9 +53,7 @@ export function visitSkipCall(
   // **FIM DA VERIFICAÇÃO CORRIGIDA**
 
   if (!Number.isInteger(count) || count < 0) {
-    throw new Error(
-      "Translation Error: 'skip' count must be a non-negative integer."
-    );
+    throw new Error("Translation Error: 'skip' count must be a non-negative integer.");
   }
 
   const offsetSql = new SqlConstantExpression(count);

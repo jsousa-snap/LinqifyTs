@@ -1,10 +1,7 @@
 // --- START OF FILE src/sql-expressions/SqlInExpression.ts ---
 
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
-import {
-  SqlConstantExpression,
-  SqlConstantExpressionMetadata,
-} from "./SqlConstantExpression";
+import { SqlConstantExpression, SqlConstantExpressionMetadata } from "./SqlConstantExpression";
 import { SqlExpressionType } from "./SqlExpressionType";
 // Importar SelectExpressionMetadata se/quando suportarmos subqueries IN
 // import { SelectExpressionMetadata } from './SelectExpression';
@@ -53,9 +50,7 @@ export class SqlInExpression extends SqlExpression {
     }
     // Validação adicional (opcional): Verificar se todos os elementos são SqlConstantExpression
     if (!values.every((v) => v instanceof SqlConstantExpression)) {
-      throw new Error(
-        "Currently, SqlInExpression only supports an array of SqlConstantExpression values."
-      );
+      throw new Error("Currently, SqlInExpression only supports an array of SqlConstantExpression values.");
     }
   }
 

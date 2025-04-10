@@ -4,8 +4,7 @@ import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Impor
 import { SqlExpressionType } from "./SqlExpressionType";
 
 // Nova interface de metadados para SqlFunctionCallExpression
-export interface SqlFunctionCallExpressionMetadata
-  extends SqlExpressionMetadata {
+export interface SqlFunctionCallExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.FunctionCall;
   functionName: string;
   args: SqlExpressionMetadata[]; // Array de metadados dos argumentos

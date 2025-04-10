@@ -2,10 +2,7 @@
 
 // src/query/QueryProvider.ts
 
-import {
-  Expression as LinqExpression,
-  MethodCallExpression as LinqMethodCallExpression,
-} from "../expressions";
+import { Expression as LinqExpression, MethodCallExpression as LinqMethodCallExpression } from "../expressions";
 import { IQueryable, IQueryProvider, ElementType } from "../interfaces";
 import { Query } from "./Query";
 import { QueryExpressionVisitor } from "./translation/QueryExpressionVisitor";
@@ -21,10 +18,7 @@ import { SqlServerQuerySqlGenerator } from "./generation/SqlServerQuerySqlGenera
 export class QueryProvider implements IQueryProvider {
   constructor() {}
 
-  createQuery<TElement>(
-    expression: LinqExpression,
-    elementType: ElementType
-  ): IQueryable<TElement> {
+  createQuery<TElement>(expression: LinqExpression, elementType: ElementType): IQueryable<TElement> {
     return new Query<TElement>(expression, this, elementType);
   }
 
@@ -41,31 +35,23 @@ export class QueryProvider implements IQueryProvider {
     console.log("----------------------------------");
 
     // Determina se a chamada original foi Async
-    const isAsyncCall =
-      expression instanceof LinqMethodCallExpression &&
-      expression.methodName.endsWith("Async");
+    const isAsyncCall = expression instanceof LinqMethodCallExpression && expression.methodName.endsWith("Async");
     // Obtém o nome base do método (sem Async)
     const baseMethodName =
-      expression instanceof LinqMethodCallExpression
-        ? expression.methodName.replace(/Async$/, "")
-        : "unknown";
+      expression instanceof LinqMethodCallExpression ? expression.methodName.replace(/Async$/, "") : "unknown";
 
     // ---- Simulação ----
 
     // Tratamento especial para 'any' (SEMPRE SÍNCRONO)
     if (baseMethodName === "any") {
-      console.warn(
-        "Simulating DB execution for ANY (synchronous): Returning TRUE."
-      );
+      console.warn("Simulating DB execution for ANY (synchronous): Returning TRUE.");
       return true as TResult;
     }
 
     // Tratamento para 'toListAsync' (SEMPRE ASSÍNCRONO)
     if (baseMethodName === "toList") {
       // Note: a expressão LINQ pode ser só 'toList'
-      console.warn(
-        "Simulating DB execution for toListAsync: Returning mocked array."
-      );
+      console.warn("Simulating DB execution for toListAsync: Returning mocked array.");
       return Promise.resolve([
         { id: 1, name: "Mock 1" },
         { id: 2, name: "Mock 2" },
@@ -85,8 +71,7 @@ export class QueryProvider implements IQueryProvider {
       let simulatedResult: any = null; // Valor padrão
 
       // Verifica se o SQL indica conjunto vazio (simplificação)
-      const isSimulatedEmpty =
-        sql.includes("WHERE 1 = 0") || sql.includes("WHERE 0");
+      const isSimulatedEmpty = sql.includes("WHERE 1 = 0") || sql.includes("WHERE 0");
 
       switch (baseMethodName) {
         case "count":
@@ -105,42 +90,27 @@ export class QueryProvider implements IQueryProvider {
           simulatedResult = isSimulatedEmpty ? null : 99; // Exemplo para número
           break;
         case "first":
-          if (isSimulatedEmpty)
-            throw new Error(
-              "Simulation: Sequence contains no elements (for First)."
-            );
+          if (isSimulatedEmpty) throw new Error("Simulation: Sequence contains no elements (for First).");
           simulatedResult = { id: 1, name: "Mock First" };
           break;
         case "firstOrDefault":
-          simulatedResult = isSimulatedEmpty
-            ? null
-            : { id: 1, name: "Mock FirstOrDefault" };
+          simulatedResult = isSimulatedEmpty ? null : { id: 1, name: "Mock FirstOrDefault" };
           break;
         case "single":
           // Simulação simplificada, não verifica unicidade
-          if (isSimulatedEmpty)
-            throw new Error(
-              "Simulation: Sequence contains no elements (for Single)."
-            );
+          if (isSimulatedEmpty) throw new Error("Simulation: Sequence contains no elements (for Single).");
           simulatedResult = { id: 5, name: "Mock Single" };
           break;
         case "singleOrDefault":
           // Simulação simplificada, não verifica unicidade > 1
-          simulatedResult = isSimulatedEmpty
-            ? null
-            : { id: 5, name: "Mock SingleOrDefault" };
+          simulatedResult = isSimulatedEmpty ? null : { id: 5, name: "Mock SingleOrDefault" };
           break;
         default:
           // Se não for um método terminal conhecido que retorna valor único
-          const originalMethod =
-            (expression as LinqMethodCallExpression)?.methodName ?? "unknown";
-          console.error(
-            `Simulation not handled for method '${originalMethod}' resulting in standard SELECT.`
-          );
+          const originalMethod = (expression as LinqMethodCallExpression)?.methodName ?? "unknown";
+          console.error(`Simulation not handled for method '${originalMethod}' resulting in standard SELECT.`);
           // Retorna erro para async, ou lança para sync
-          const error = new Error(
-            `Simulation not handled for method '${originalMethod}'.`
-          );
+          const error = new Error(`Simulation not handled for method '${originalMethod}'.`);
           if (isAsyncCall) return Promise.reject(error);
           else throw error;
       }
@@ -164,9 +134,7 @@ export class QueryProvider implements IQueryProvider {
       }
     } else {
       // Tipo SQL final inesperado
-      const error = new Error(
-        `Execution simulation not supported for SQL expression type ${finalSqlExpression.type}`
-      );
+      const error = new Error(`Execution simulation not supported for SQL expression type ${finalSqlExpression.type}`);
       if (isAsyncCall) return Promise.reject(error);
       else throw error;
     }

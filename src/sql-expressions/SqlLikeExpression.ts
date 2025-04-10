@@ -1,10 +1,7 @@
 // src/sql-expressions/SqlLikeExpression.ts
 
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
-import {
-  SqlConstantExpression,
-  SqlConstantExpressionMetadata,
-} from "./SqlConstantExpression"; // Importar SqlConstantExpressionMetadata
+import { SqlConstantExpression, SqlConstantExpressionMetadata } from "./SqlConstantExpression"; // Importar SqlConstantExpressionMetadata
 import { SqlExpressionType } from "./SqlExpressionType";
 
 // Nova interface de metadados para SqlLikeExpression
@@ -29,13 +26,8 @@ export class SqlLikeExpression extends SqlExpression {
     if (!sourceExpression) {
       throw new Error("Source expression cannot be null for LIKE.");
     }
-    if (
-      !patternExpression ||
-      !(patternExpression instanceof SqlConstantExpression)
-    ) {
-      throw new Error(
-        "Pattern expression must be a SqlConstantExpression for LIKE."
-      );
+    if (!patternExpression || !(patternExpression instanceof SqlConstantExpression)) {
+      throw new Error("Pattern expression must be a SqlConstantExpression for LIKE.");
     }
   }
 

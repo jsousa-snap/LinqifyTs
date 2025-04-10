@@ -48,19 +48,15 @@ SELECT AVG([u].[age]) AS [avg_result]
 FROM [Users] AS [u]
     `;
     expect(await queryPromise).toBe(42.5);
-    const avgExpression = new (require("../expressions").MethodCallExpression)(
-      "avg",
-      users.expression,
-      [new (require("../parsing").LambdaParser)().parse((u: User) => u.age)]
-    );
+    const avgExpression = new (require("../expressions").MethodCallExpression)("avg", users.expression, [
+      new (require("../parsing").LambdaParser)().parse((u: User) => u.age),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(avgExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Aggregate 2: should generate correct SQL for avgAsync() after where()", async () => {
-    const queryPromise = users
-      .where((u) => u.name === "Alice")
-      .avgAsync((u) => u.age); // Usa Async
+    const queryPromise = users.where((u) => u.name === "Alice").avgAsync((u) => u.age); // Usa Async
     const expectedSql = `
 SELECT AVG([u].[age]) AS [avg_result]
 FROM [Users] AS [u]
@@ -68,11 +64,9 @@ WHERE [u].[name] = 'Alice'
     `;
     expect(await queryPromise).toBe(42.5);
     const filteredUsers = users.where((u) => u.name === "Alice");
-    const avgExpression = new (require("../expressions").MethodCallExpression)(
-      "avg",
-      filteredUsers.expression,
-      [new (require("../parsing").LambdaParser)().parse((u: User) => u.age)]
-    );
+    const avgExpression = new (require("../expressions").MethodCallExpression)("avg", filteredUsers.expression, [
+      new (require("../parsing").LambdaParser)().parse((u: User) => u.age),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(avgExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -84,11 +78,9 @@ SELECT AVG([u].[salary]) AS [avg_result]
 FROM [Users] AS [u]
     `;
     expect(await queryPromise).toBe(42.5);
-    const avgExpression = new (require("../expressions").MethodCallExpression)(
-      "avg",
-      users.expression,
-      [new (require("../parsing").LambdaParser)().parse((u: User) => u.salary)]
-    );
+    const avgExpression = new (require("../expressions").MethodCallExpression)("avg", users.expression, [
+      new (require("../parsing").LambdaParser)().parse((u: User) => u.salary),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(avgExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -100,19 +92,15 @@ SELECT SUM([p].[views]) AS [sum_result]
 FROM [Posts] AS [p]
     `;
     expect(await queryPromise).toBe(1234);
-    const sumExpression = new (require("../expressions").MethodCallExpression)(
-      "sum",
-      posts.expression,
-      [new (require("../parsing").LambdaParser)().parse((p: Post) => p.views)]
-    );
+    const sumExpression = new (require("../expressions").MethodCallExpression)("sum", posts.expression, [
+      new (require("../parsing").LambdaParser)().parse((p: Post) => p.views),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(sumExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
   it("Teste Aggregate 5: should generate correct SQL for sumAsync() after where()", async () => {
-    const queryPromise = posts
-      .where((p) => p.authorId === 1)
-      .sumAsync((p) => p.views); // Usa Async
+    const queryPromise = posts.where((p) => p.authorId === 1).sumAsync((p) => p.views); // Usa Async
     const expectedSql = `
 SELECT SUM([p].[views]) AS [sum_result]
 FROM [Posts] AS [p]
@@ -120,11 +108,9 @@ WHERE [p].[authorId] = 1
     `;
     expect(await queryPromise).toBe(1234);
     const filteredPosts = posts.where((p) => p.authorId === 1);
-    const sumExpression = new (require("../expressions").MethodCallExpression)(
-      "sum",
-      filteredPosts.expression,
-      [new (require("../parsing").LambdaParser)().parse((p: Post) => p.views)]
-    );
+    const sumExpression = new (require("../expressions").MethodCallExpression)("sum", filteredPosts.expression, [
+      new (require("../parsing").LambdaParser)().parse((p: Post) => p.views),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(sumExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -136,11 +122,9 @@ SELECT MIN([u].[age]) AS [min_result]
 FROM [Users] AS [u]
     `;
     expect(await queryPromise).toBe(1);
-    const minExpression = new (require("../expressions").MethodCallExpression)(
-      "min",
-      users.expression,
-      [new (require("../parsing").LambdaParser)().parse((u: User) => u.age)]
-    );
+    const minExpression = new (require("../expressions").MethodCallExpression)("min", users.expression, [
+      new (require("../parsing").LambdaParser)().parse((u: User) => u.age),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(minExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -152,11 +136,9 @@ SELECT MIN([u].[name]) AS [min_result]
 FROM [Users] AS [u]
     `;
     expect(await queryPromise).toBe(1); // Simulado
-    const minExpression = new (require("../expressions").MethodCallExpression)(
-      "min",
-      users.expression,
-      [new (require("../parsing").LambdaParser)().parse((u: User) => u.name)]
-    );
+    const minExpression = new (require("../expressions").MethodCallExpression)("min", users.expression, [
+      new (require("../parsing").LambdaParser)().parse((u: User) => u.name),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(minExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -168,11 +150,9 @@ SELECT MAX([p].[views]) AS [max_result]
 FROM [Posts] AS [p]
     `;
     expect(await queryPromise).toBe(99);
-    const maxExpression = new (require("../expressions").MethodCallExpression)(
-      "max",
-      posts.expression,
-      [new (require("../parsing").LambdaParser)().parse((p: Post) => p.views)]
-    );
+    const maxExpression = new (require("../expressions").MethodCallExpression)("max", posts.expression, [
+      new (require("../parsing").LambdaParser)().parse((p: Post) => p.views),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(maxExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -186,11 +166,9 @@ WHERE [u].[age] < 30
     `;
     expect(await queryPromise).toBe(99);
     const filteredUsers = users.where((u) => u.age < 30);
-    const maxExpression = new (require("../expressions").MethodCallExpression)(
-      "max",
-      filteredUsers.expression,
-      [new (require("../parsing").LambdaParser)().parse((u: User) => u.age)]
-    );
+    const maxExpression = new (require("../expressions").MethodCallExpression)("max", filteredUsers.expression, [
+      new (require("../parsing").LambdaParser)().parse((u: User) => u.age),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(maxExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -203,11 +181,9 @@ FROM [Users] AS [u]
 WHERE 0
     `;
     expect(await queryPromise).toBe(null); // AVG de vazio é NULL
-    const avgExpression = new (require("../expressions").MethodCallExpression)(
-      "avg",
-      emptyUsers.expression,
-      [new (require("../parsing").LambdaParser)().parse((u: User) => u.age)]
-    );
+    const avgExpression = new (require("../expressions").MethodCallExpression)("avg", emptyUsers.expression, [
+      new (require("../parsing").LambdaParser)().parse((u: User) => u.age),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(avgExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
@@ -215,9 +191,7 @@ WHERE 0
   it("Teste Aggregate 11 (Subquery): should generate correct SQL for avgAsync() in projection", () => {
     const query = users.provideScope({ posts }).select((u) => ({
       UserName: u.name,
-      AveragePostViews: posts
-        .where((p) => p.authorId === u.id)
-        .avgAsync((p) => p.views), // Usa Async
+      AveragePostViews: posts.where((p) => p.authorId === u.id).avgAsync((p) => p.views), // Usa Async
     }));
 
     const expectedSql = `
@@ -235,9 +209,7 @@ FROM [Users] AS [u]
   it("Teste Aggregate 12 (Subquery): should generate correct SQL for sumAsync() in projection", () => {
     const query = users.provideScope({ posts }).select((u) => ({
       UserName: u.name,
-      TotalPostViews: posts
-        .where((p) => p.authorId === u.id)
-        .sumAsync((p) => p.views), // Usa Async
+      TotalPostViews: posts.where((p) => p.authorId === u.id).sumAsync((p) => p.views), // Usa Async
     }));
 
     const expectedSql = `
@@ -255,9 +227,7 @@ FROM [Users] AS [u]
   it("Teste Aggregate 13 (Subquery): should generate correct SQL for minAsync() in projection", () => {
     const query = users.provideScope({ posts }).select((u) => ({
       UserName: u.name,
-      MinPostViews: posts
-        .where((p) => p.authorId === u.id)
-        .minAsync((p) => p.views), // Usa Async
+      MinPostViews: posts.where((p) => p.authorId === u.id).minAsync((p) => p.views), // Usa Async
     }));
 
     const expectedSql = `
@@ -275,9 +245,7 @@ FROM [Users] AS [u]
   it("Teste Aggregate 14 (Subquery): should generate correct SQL for maxAsync() in projection", () => {
     const query = users.provideScope({ posts }).select((u) => ({
       UserName: u.name,
-      MaxPostViews: posts
-        .where((p) => p.authorId === u.id)
-        .maxAsync((p) => p.views), // Usa Async
+      MaxPostViews: posts.where((p) => p.authorId === u.id).maxAsync((p) => p.views), // Usa Async
     }));
 
     const expectedSql = `
@@ -315,14 +283,10 @@ WHERE EXISTS (
     // Verifica SQL gerado (lógica interna)
     const filteredUsers = users
       .provideScope({ posts })
-      .where((u) =>
-        posts.where((p) => p.authorId === u.id).any((p) => p.views > 50)
-      );
-    const avgExpression = new (require("../expressions").MethodCallExpression)(
-      "avg",
-      filteredUsers.expression,
-      [new (require("../parsing").LambdaParser)().parse((u: User) => u.age)]
-    );
+      .where((u) => posts.where((p) => p.authorId === u.id).any((p) => p.views > 50));
+    const avgExpression = new (require("../expressions").MethodCallExpression)("avg", filteredUsers.expression, [
+      new (require("../parsing").LambdaParser)().parse((u: User) => u.age),
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(avgExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });

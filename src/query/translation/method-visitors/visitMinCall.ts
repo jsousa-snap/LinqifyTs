@@ -33,25 +33,16 @@ export function visitMinCall(
   currentSelect: SelectExpression,
   sourceForLambda: SqlDataSource,
   context: TranslationContext,
-  visitInContext: (
-    expression: LinqExpression,
-    context: TranslationContext
-  ) => SqlExpression | null,
+  visitInContext: (expression: LinqExpression, context: TranslationContext) => SqlExpression | null,
   aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
 ): SelectExpression {
-  if (
-    expression.args.length !== 1 ||
-    expression.args[0].type !== LinqExpressionType.Lambda
-  ) {
+  if (expression.args.length !== 1 || expression.args[0].type !== LinqExpressionType.Lambda) {
     throw new Error("Invalid arguments for 'min' method call.");
   }
   const lambda = expression.args[0] as LinqLambdaExpression;
   const param = lambda.parameters[0];
 
-  const selectorContext = context.createChildContext(
-    [param],
-    [sourceForLambda]
-  );
+  const selectorContext = context.createChildContext([param], [sourceForLambda]);
   const valueToAggregateSql = visitInContext(lambda.body, selectorContext);
 
   if (!valueToAggregateSql) {
@@ -59,9 +50,7 @@ export function visitMinCall(
   }
 
   // Cria a função SQL MIN
-  const minFunction = new SqlFunctionCallExpression("MIN", [
-    valueToAggregateSql,
-  ]);
+  const minFunction = new SqlFunctionCallExpression("MIN", [valueToAggregateSql]);
   const minProjection = new ProjectionExpression(minFunction, "min_result");
 
   // Agregação terminal não precisa de alias externo

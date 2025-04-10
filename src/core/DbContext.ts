@@ -20,10 +20,7 @@ export class DbContext {
     this.queryProvider = new QueryProvider();
   }
 
-  registerEntity<T>(
-    name: string,
-    type: { new (...args: any[]): T } | Function
-  ): void {
+  registerEntity<T>(name: string, type: { new (...args: any[]): T } | Function): void {
     this.entityRegistry.set(name.toLowerCase(), {
       name: name,
       type: type as ElementType,

@@ -77,9 +77,7 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
   }
 
   it("Teste Metadata 1: Simple Select/Where", () => {
-    const query = users
-      .where((u) => u.age > 30 && u.name == "Alice")
-      .select((u) => u.email);
+    const query = users.where((u) => u.age > 30 && u.name == "Alice").select((u) => u.email);
     const metadata = getMetadata(query.expression); // Passa a expressão
     expect(metadata.$type).toBe(SqlExpressionType.Select);
     // ... (outros asserts inalterados)
@@ -98,9 +96,7 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
   });
 
   it("Teste Metadata 3: Union", () => {
-    const query = items1
-      .select((i) => ({ Val: i.value }))
-      .union(items2.select((i) => ({ Val: i.value })));
+    const query = items1.select((i) => ({ Val: i.value })).union(items2.select((i) => ({ Val: i.value })));
     const metadata = getMetadata(query.expression); // Passa a expressão
     expect(metadata.$type).toBe(SqlExpressionType.Select);
     // ... (outros asserts inalterados)
@@ -126,12 +122,11 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     expect(countResult).toBe(10);
 
     // Verificação dos metadados da expressão ANTES da execução final
-    const countLinqExpr =
-      new (require("../expressions/MethodCallExpression").MethodCallExpression)(
-        "count", // Nome base na expressão
-        query.expression,
-        []
-      );
+    const countLinqExpr = new (require("../expressions/MethodCallExpression").MethodCallExpression)(
+      "count", // Nome base na expressão
+      query.expression,
+      []
+    );
     const metadata = getMetadata(countLinqExpr); // Passa a expressão do count
 
     expect(metadata.$type).toBe(SqlExpressionType.Select);
@@ -139,20 +134,14 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     const selectMeta = metadata as SelectExpressionMetadata;
     expect(selectMeta.projection).toHaveLength(1);
     expect(selectMeta.projection[0].alias).toBe("count_result");
-    expect(selectMeta.projection[0].expression.$type).toBe(
-      SqlExpressionType.FunctionCall
-    );
-    const funcCall = selectMeta.projection[0]
-      .expression as SqlFunctionCallExpressionMetadata;
+    expect(selectMeta.projection[0].expression.$type).toBe(SqlExpressionType.FunctionCall);
+    const funcCall = selectMeta.projection[0].expression as SqlFunctionCallExpressionMetadata;
     expect(funcCall.functionName.toUpperCase()).toBe("COUNT_BIG");
     expect((funcCall.args[0] as SqlConstantExpressionMetadata).value).toBe(1);
     expect(selectMeta.predicate).not.toBeNull();
-    expect(
-      (
-        (selectMeta.predicate as SqlBinaryExpressionMetadata)
-          .right as SqlConstantExpressionMetadata
-      ).value
-    ).toBe("BR");
+    expect(((selectMeta.predicate as SqlBinaryExpressionMetadata).right as SqlConstantExpressionMetadata).value).toBe(
+      "BR"
+    );
   });
 
   it("Teste Metadata 6: Paging (Skip/Take)", () => {
@@ -179,20 +168,14 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     // ... (outros asserts inalterados)
     const selectMeta = metadata as SelectExpressionMetadata;
     expect(selectMeta.groupBy).toHaveLength(1);
-    expect((selectMeta.groupBy[0] as ColumnExpressionMetadata).name).toBe(
-      "country"
-    );
+    expect((selectMeta.groupBy[0] as ColumnExpressionMetadata).name).toBe("country");
     expect(selectMeta.projection).toHaveLength(2);
-    expect(selectMeta.projection[1].expression.$type).toBe(
-      SqlExpressionType.FunctionCall
-    );
+    expect(selectMeta.projection[1].expression.$type).toBe(SqlExpressionType.FunctionCall);
     expect(selectMeta.predicate).not.toBeNull();
   });
 
   it("Teste Metadata 8: JSON Stringify Comparison for Simple Select/Where", () => {
-    const query = users
-      .where((u) => u.age > 30 && u.name == "Alice")
-      .select((u) => u.email);
+    const query = users.where((u) => u.age > 30 && u.name == "Alice").select((u) => u.email);
 
     const metadata = getMetadata(query.expression); // Passa a expressão
     const generatedJson = JSON.stringify(metadata, null, 4);

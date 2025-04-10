@@ -24,9 +24,7 @@ export class SqlConstantExpression extends SqlExpression {
       typeofValue !== "boolean" &&
       !(value instanceof Date)
     ) {
-      console.warn(
-        `SqlConstantExpression created with potentially unsupported type: ${typeofValue}`
-      );
+      console.warn(`SqlConstantExpression created with potentially unsupported type: ${typeofValue}`);
     }
   }
 

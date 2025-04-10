@@ -9,12 +9,7 @@ import {
   LambdaExpression as LinqLambdaExpression,
   ParameterExpression as LinqParameterExpression, // Importar ParameterExpression
 } from "../../../expressions";
-import {
-  SqlExpression,
-  SelectExpression,
-  ProjectionExpression,
-  SqlOrdering,
-} from "../../../sql-expressions";
+import { SqlExpression, SelectExpression, ProjectionExpression, SqlOrdering } from "../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../TranslationContext";
 // *** NOVO: Importa AliasGenerator ***
 import { AliasGenerator } from "../../generation/AliasGenerator";
@@ -35,16 +30,10 @@ export function visitSelectCall(
   currentSelect: SelectExpression,
   sourceForOuterLambda: SqlDataSource,
   context: TranslationContext,
-  createProjections: (
-    body: LinqExpression,
-    context: TranslationContext
-  ) => ProjectionExpression[],
+  createProjections: (body: LinqExpression, context: TranslationContext) => ProjectionExpression[],
   aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
 ): SelectExpression {
-  if (
-    expression.args.length !== 1 ||
-    expression.args[0].type !== LinqExpressionType.Lambda
-  ) {
+  if (expression.args.length !== 1 || expression.args[0].type !== LinqExpressionType.Lambda) {
     throw new Error("Invalid arguments for 'select' method call.");
   }
   const lambda = expression.args[0] as LinqLambdaExpression;
@@ -65,22 +54,14 @@ export function visitSelectCall(
     // É uma projeção de identidade (x => x)
     // **** CORREÇÃO: Reutiliza a projeção readonly diretamente ****
     finalProjections = currentSelect.projection;
-    console.warn(
-      "Detected identity select (x => x). Reusing previous projections."
-    );
+    console.warn("Detected identity select (x => x). Reusing previous projections.");
     // Ainda precisa de um novo alias para o SELECT externo
     selectAlias = aliasGenerator.generateAlias("selectId"); // Alias específico ou padrão
   } else {
     // Projeção normal
-    const projectionContext = context.createChildContext(
-      [param],
-      [sourceForOuterLambda]
-    );
+    const projectionContext = context.createChildContext([param], [sourceForOuterLambda]);
     // createProjections retorna ProjectionExpression[], que é atribuível a ReadonlyArray
-    const createdProjections = createProjections(
-      lambda.body,
-      projectionContext
-    );
+    const createdProjections = createProjections(lambda.body, projectionContext);
     if (createdProjections.length === 0) {
       throw new Error("Select projection resulted in no columns.");
     }

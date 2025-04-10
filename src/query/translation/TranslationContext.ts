@@ -49,17 +49,9 @@ export class TranslationContext {
    * @param {SqlDataSource} source A fonte de dados SQL (Table, Select, Union) correspondente.
    * @memberof TranslationContext
    */
-  public registerParameter(
-    parameter: LinqParameterExpression,
-    source: SqlDataSource
-  ): void {
-    if (
-      this.parameterMap.has(parameter) &&
-      this.parameterMap.get(parameter) !== source
-    ) {
-      console.warn(
-        `TranslationContext: Parameter '${parameter.name}' is being re-registered.`
-      );
+  public registerParameter(parameter: LinqParameterExpression, source: SqlDataSource): void {
+    if (this.parameterMap.has(parameter) && this.parameterMap.get(parameter) !== source) {
+      console.warn(`TranslationContext: Parameter '${parameter.name}' is being re-registered.`);
     }
     this.parameterMap.set(parameter, source);
   }
@@ -72,9 +64,7 @@ export class TranslationContext {
    * @returns {(SqlDataSource | null)} A fonte de dados SQL encontrada ou null.
    * @memberof TranslationContext
    */
-  public getDataSourceForParameter(
-    parameter: LinqParameterExpression
-  ): SqlDataSource | null {
+  public getDataSourceForParameter(parameter: LinqParameterExpression): SqlDataSource | null {
     let current: TranslationContext | undefined = this;
     while (current) {
       const source = current.parameterMap.get(parameter);
@@ -95,14 +85,10 @@ export class TranslationContext {
    * @throws {Error} Se a fonte de dados para o parâmetro não for encontrada.
    * @memberof TranslationContext
    */
-  public getDataSourceForParameterStrict(
-    parameter: LinqParameterExpression
-  ): SqlDataSource {
+  public getDataSourceForParameterStrict(parameter: LinqParameterExpression): SqlDataSource {
     const source = this.getDataSourceForParameter(parameter);
     if (!source) {
-      console.error(
-        "Context state when error occurred (getDataSourceForParameterStrict):"
-      );
+      console.error("Context state when error occurred (getDataSourceForParameterStrict):");
       let ctx: TranslationContext | undefined = this;
       let level = 0;
       while (ctx) {
@@ -136,9 +122,7 @@ export class TranslationContext {
     sources: ReadonlyArray<SqlDataSource>
   ): TranslationContext {
     if (parameters.length !== sources.length) {
-      throw new Error(
-        "Mismatch between number of lambda parameters and SQL data sources."
-      );
+      throw new Error("Mismatch between number of lambda parameters and SQL data sources.");
     }
     const childContext = new TranslationContext(this); // Passa o contexto atual como pai
     // Registra cada parâmetro da lambda no contexto filho

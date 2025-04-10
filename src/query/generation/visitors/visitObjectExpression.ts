@@ -37,10 +37,7 @@ export function visitObjectExpression(
         name,
         valueSql: generateSqlLiteral((valueExpr as LiteralExpression).value),
       });
-    } else if (
-      valueExpr?.type === ExpressionType.Constant &&
-      !(valueExpr as ConstantExpression).value?.type
-    ) {
+    } else if (valueExpr?.type === ExpressionType.Constant && !(valueExpr as ConstantExpression).value?.type) {
       propertiesResult.push({
         name,
         valueSql: generateSqlLiteral((valueExpr as ConstantExpression).value),

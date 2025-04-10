@@ -36,25 +36,16 @@ export function visitAvgCall(
   currentSelect: SelectExpression,
   sourceForLambda: SqlDataSource,
   context: TranslationContext,
-  visitInContext: (
-    expression: LinqExpression,
-    context: TranslationContext
-  ) => SqlExpression | null,
+  visitInContext: (expression: LinqExpression, context: TranslationContext) => SqlExpression | null,
   aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
 ): SelectExpression {
-  if (
-    expression.args.length !== 1 ||
-    expression.args[0].type !== LinqExpressionType.Lambda
-  ) {
+  if (expression.args.length !== 1 || expression.args[0].type !== LinqExpressionType.Lambda) {
     throw new Error("Invalid arguments for 'avg' method call.");
   }
   const lambda = expression.args[0] as LinqLambdaExpression;
   const param = lambda.parameters[0];
 
-  const selectorContext = context.createChildContext(
-    [param],
-    [sourceForLambda]
-  );
+  const selectorContext = context.createChildContext([param], [sourceForLambda]);
   const valueToAggregateSql = visitInContext(lambda.body, selectorContext);
 
   if (!valueToAggregateSql) {
@@ -62,9 +53,7 @@ export function visitAvgCall(
   }
 
   // Cria a função SQL AVG
-  const avgFunction = new SqlFunctionCallExpression("AVG", [
-    valueToAggregateSql,
-  ]);
+  const avgFunction = new SqlFunctionCallExpression("AVG", [valueToAggregateSql]);
   const avgProjection = new ProjectionExpression(avgFunction, "avg_result");
 
   // As agregações terminais geralmente não precisam de um alias externo significativo

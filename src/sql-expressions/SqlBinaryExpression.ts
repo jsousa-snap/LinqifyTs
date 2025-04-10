@@ -1,10 +1,7 @@
 // --- START OF FILE src/sql-expressions/SqlBinaryExpression.ts ---
 
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
-import {
-  mapOperatorToSql,
-  OperatorType,
-} from "../query/generation/utils/sqlUtils";
+import { mapOperatorToSql, OperatorType } from "../query/generation/utils/sqlUtils";
 import { SqlExpressionType } from "./SqlExpressionType";
 
 // Nova interface de metadados para SqlBinaryExpression

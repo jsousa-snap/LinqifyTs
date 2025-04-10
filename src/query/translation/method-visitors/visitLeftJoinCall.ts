@@ -32,74 +32,44 @@ export function visitLeftJoinCall(
   sourceForOuterLambda: SqlDataSource,
   context: TranslationContext,
   visit: (expression: LinqExpression | null) => SqlExpression | null,
-  visitInContext: (
-    expression: LinqExpression,
-    context: TranslationContext
-  ) => SqlExpression | null,
-  createProjections: (
-    body: LinqExpression,
-    context: TranslationContext
-  ) => ProjectionExpression[],
+  visitInContext: (expression: LinqExpression, context: TranslationContext) => SqlExpression | null,
+  createProjections: (body: LinqExpression, context: TranslationContext) => ProjectionExpression[],
   aliasGenerator: AliasGenerator
 ): SelectExpression {
   // Validações de argumentos (idênticas a join)
-  const [
-    innerSourceLinqExpr,
-    outerKeyLambdaExpr,
-    innerKeyLambdaExpr,
-    resultLambdaExpr,
-  ] = expression.args as [
+  const [innerSourceLinqExpr, outerKeyLambdaExpr, innerKeyLambdaExpr, resultLambdaExpr] = expression.args as [
     LinqExpression,
     LinqLambdaExpression,
     LinqLambdaExpression,
-    LinqLambdaExpression
+    LinqLambdaExpression,
   ];
 
   // --- 1. Visita a fonte interna (idêntico a join) ---
   const innerSqlSourceBase = visit(innerSourceLinqExpr);
-  if (
-    !innerSqlSourceBase ||
-    !(innerSqlSourceBase instanceof TableExpressionBase)
-  ) {
+  if (!innerSqlSourceBase || !(innerSqlSourceBase instanceof TableExpressionBase)) {
     throw new Error(
       `Visiting inner source for 'leftJoin' did not yield a Table, Select, or Union. Found: ${innerSqlSourceBase?.constructor.name}`
     );
   }
-  if (
-    !innerSqlSourceBase.alias &&
-    innerSqlSourceBase instanceof TableExpressionBase
-  ) {
-    (innerSqlSourceBase as { alias: string }).alias =
-      aliasGenerator.generateAlias(
-        innerSqlSourceBase instanceof TableExpression
-          ? innerSqlSourceBase.name
-          : innerSqlSourceBase.type
-      );
+  if (!innerSqlSourceBase.alias && innerSqlSourceBase instanceof TableExpressionBase) {
+    (innerSqlSourceBase as { alias: string }).alias = aliasGenerator.generateAlias(
+      innerSqlSourceBase instanceof TableExpression ? innerSqlSourceBase.name : innerSqlSourceBase.type
+    );
   }
 
   // --- 2. Tradução das chaves (idêntico a join) ---
   const outerParam = outerKeyLambdaExpr.parameters[0];
   const innerParam = innerKeyLambdaExpr.parameters[0];
-  const outerKeyContext = context.createChildContext(
-    [outerParam],
-    [sourceForOuterLambda]
-  );
+  const outerKeyContext = context.createChildContext([outerParam], [sourceForOuterLambda]);
   const outerKeySql = visitInContext(outerKeyLambdaExpr.body, outerKeyContext);
-  const innerKeyContext = context.createChildContext(
-    [innerParam],
-    [innerSqlSourceBase]
-  );
+  const innerKeyContext = context.createChildContext([innerParam], [innerSqlSourceBase]);
   const innerKeySql = visitInContext(innerKeyLambdaExpr.body, innerKeyContext);
   if (!outerKeySql || !innerKeySql) {
     throw new Error("Could not translate leftJoin keys.");
   }
 
   // --- 3. Criação da expressão de JOIN ---
-  const joinPredicate = new SqlBinaryExpression(
-    outerKeySql,
-    OperatorType.Equal,
-    innerKeySql
-  );
+  const joinPredicate = new SqlBinaryExpression(outerKeySql, OperatorType.Equal, innerKeySql);
   // **** DIFERENÇA PRINCIPAL: Cria LeftJoinExpression ****
   const joinExpr = new LeftJoinExpression(innerSqlSourceBase, joinPredicate); // <<< LeftJoinExpression
   const newJoins = [...currentSelect.joins, joinExpr];
@@ -111,10 +81,7 @@ export function visitLeftJoinCall(
     [resultOuterParam, resultInnerParam],
     [sourceForOuterLambda, innerSqlSourceBase]
   );
-  const resultProjections = createProjections(
-    resultLambdaExpr.body,
-    resultContext
-  );
+  const resultProjections = createProjections(resultLambdaExpr.body, resultContext);
   if (resultProjections.length === 0) {
     throw new Error("LeftJoin projection resulted in no columns.");
   }

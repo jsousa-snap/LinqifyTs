@@ -8,8 +8,6 @@ export class ConstantExpression extends Expression {
   }
   toString(): string {
     // Para uma tabela, apenas o nome
-    return typeof this.value === "string"
-      ? this.value
-      : JSON.stringify(this.value);
+    return typeof this.value === "string" ? this.value : JSON.stringify(this.value);
   }
 }

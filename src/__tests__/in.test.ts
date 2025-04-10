@@ -91,7 +91,7 @@ WHERE [p].[price] < 10 OR [p].[name] IN ('Laptop', 'Mouse')
         .where((p) => emptyIds.includes(p.id)) // <<< Lambda usa a variável do escopo
         .toQueryString(); // Tentativa de tradução/geração
     }).toThrow(
-      "Query Processing Failed: Translation Error: Array provided to 'includes' (for SQL IN) cannot be empty."
+      "Query Processing Failed: Erro de Tradução: O array fornecido para 'includes' (SQL IN) não pode estar vazio."
     ); // Verifica a mensagem de erro do construtor SqlInExpression
   });
 

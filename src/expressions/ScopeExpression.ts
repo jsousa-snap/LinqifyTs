@@ -13,10 +13,8 @@ export class ScopeExpression extends Expression {
     public readonly scopeMap: ReadonlyMap<string, Expression> // Ex: { 'postsRef': Constant<Table>('Posts') }
   ) {
     super();
-    if (!sourceExpression)
-      throw new Error("Source expression cannot be null for ScopeExpression.");
-    if (!scopeMap)
-      throw new Error("Scope map cannot be null for ScopeExpression.");
+    if (!sourceExpression) throw new Error("Source expression cannot be null for ScopeExpression.");
+    if (!scopeMap) throw new Error("Scope map cannot be null for ScopeExpression.");
   }
 
   toString(): string {

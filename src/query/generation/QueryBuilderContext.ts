@@ -18,10 +18,7 @@ export class QueryBuilderContext {
   public aliasCounter = 0;
   public outerContext?: QueryBuilderContext;
 
-  constructor(
-    outerContext?: QueryBuilderContext,
-    initialAliasCount: number = 0
-  ) {
+  constructor(outerContext?: QueryBuilderContext, initialAliasCount: number = 0) {
     this.outerContext = outerContext;
     this.aliasCounter = initialAliasCount;
   }
@@ -32,9 +29,7 @@ export class QueryBuilderContext {
 
   generateNewAlias(): string {
     // A lógica do prefixo pode ser simplificada se não acessarmos mais o counter externo
-    const prefix = this.outerContext
-      ? `sub${this.outerContext.getCurrentAliasCount()}_`
-      : ""; // Usa o getter público
+    const prefix = this.outerContext ? `sub${this.outerContext.getCurrentAliasCount()}_` : ""; // Usa o getter público
     const alias = `${prefix}t${this.aliasCounter++}`;
     return alias;
   }
@@ -72,10 +67,7 @@ export class QueryBuilderContext {
     return info;
   }
 
-  registerParameter(
-    parameter: ParameterExpression,
-    sourceInfo: SourceInfo
-  ): void {
+  registerParameter(parameter: ParameterExpression, sourceInfo: SourceInfo): void {
     if (this.sources.has(parameter)) {
       // Permite re-registrar se for exatamente o mesmo SourceInfo (idempotente)
       if (this.sources.get(parameter) !== sourceInfo) {

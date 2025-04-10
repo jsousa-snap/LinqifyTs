@@ -38,48 +38,28 @@ export function visitCountCall(
   currentSelect: SelectExpression,
   sourceForLambda: SqlDataSource,
   context: TranslationContext,
-  visitInContext: (
-    expression: LinqExpression,
-    context: TranslationContext
-  ) => SqlExpression | null,
+  visitInContext: (expression: LinqExpression, context: TranslationContext) => SqlExpression | null,
   aliasGenerator: AliasGenerator // <<< NOVO PARÂMETRO
 ): SelectExpression {
   let finalPredicate = currentSelect.predicate;
   if (expression.args.length > 0) {
     // Se Count(predicate)
-    if (
-      expression.args.length !== 1 ||
-      expression.args[0].type !== LinqExpressionType.Lambda
-    ) {
-      throw new Error(
-        "Invalid arguments for 'count' method call with predicate."
-      );
+    if (expression.args.length !== 1 || expression.args[0].type !== LinqExpressionType.Lambda) {
+      throw new Error("Invalid arguments for 'count' method call with predicate.");
     }
     const lambda = expression.args[0] as LinqLambdaExpression;
     const param = lambda.parameters[0];
-    const predicateContext = context.createChildContext(
-      [param],
-      [sourceForLambda]
-    );
+    const predicateContext = context.createChildContext([param], [sourceForLambda]);
     const predicateSql = visitInContext(lambda.body, predicateContext);
     if (!predicateSql) {
       throw new Error("Could not translate 'count' predicate lambda body.");
     }
     finalPredicate = currentSelect.predicate
-      ? new SqlBinaryExpression(
-          currentSelect.predicate,
-          OperatorType.And,
-          predicateSql
-        )
+      ? new SqlBinaryExpression(currentSelect.predicate, OperatorType.And, predicateSql)
       : predicateSql;
   }
-  const countFunction = new SqlFunctionCallExpression("COUNT_BIG", [
-    new SqlConstantExpression(1),
-  ]);
-  const countProjection = new ProjectionExpression(
-    countFunction,
-    "count_result"
-  );
+  const countFunction = new SqlFunctionCallExpression("COUNT_BIG", [new SqlConstantExpression(1)]);
+  const countProjection = new ProjectionExpression(countFunction, "count_result");
 
   // COUNT terminal não precisa de alias externo
   const countAlias = ""; // Alias vazio

@@ -51,9 +51,7 @@ export class Query<T> implements IOrderedQueryable<T> {
 
   // --- Declarações Placeholder (Implementadas em QueryableExtensions) ---
 
-  select<TResultSelect>(
-    selector: (entity: T) => TResultSelect
-  ): IQueryable<TResultSelect> {
+  select<TResultSelect>(selector: (entity: T) => TResultSelect): IQueryable<TResultSelect> {
     console.error("Base Query.select declaration should not be executed.");
     throw new Error("Base Query.select declaration should not be executed.");
   }
@@ -80,12 +78,8 @@ export class Query<T> implements IOrderedQueryable<T> {
     throw new Error("Base Query.leftJoin declaration should not be executed.");
   }
   provideScope(scope: { [key: string]: IQueryable<any> | any }): IQueryable<T> {
-    console.error(
-      "Base Query.provideScope declaration should not be executed."
-    );
-    throw new Error(
-      "Base Query.provideScope declaration should not be executed."
-    );
+    console.error("Base Query.provideScope declaration should not be executed.");
+    throw new Error("Base Query.provideScope declaration should not be executed.");
   }
   any(predicate?: (entity: T) => boolean): boolean {
     console.error("Base Query.any declaration should not be executed.");
@@ -99,29 +93,17 @@ export class Query<T> implements IOrderedQueryable<T> {
     console.error("Base Query.orderBy declaration should not be executed.");
     throw new Error("Base Query.orderBy declaration should not be executed.");
   }
-  orderByDescending<TKey>(
-    keySelector: (entity: T) => TKey
-  ): IOrderedQueryable<T> {
-    console.error(
-      "Base Query.orderByDescending declaration should not be executed."
-    );
-    throw new Error(
-      "Base Query.orderByDescending declaration should not be executed."
-    );
+  orderByDescending<TKey>(keySelector: (entity: T) => TKey): IOrderedQueryable<T> {
+    console.error("Base Query.orderByDescending declaration should not be executed.");
+    throw new Error("Base Query.orderByDescending declaration should not be executed.");
   }
   thenBy<TKey>(keySelector: (entity: T) => TKey): IOrderedQueryable<T> {
     console.error("Base Query.thenBy declaration should not be executed.");
     throw new Error("Base Query.thenBy declaration should not be executed.");
   }
-  thenByDescending<TKey>(
-    keySelector: (entity: T) => TKey
-  ): IOrderedQueryable<T> {
-    console.error(
-      "Base Query.thenByDescending declaration should not be executed."
-    );
-    throw new Error(
-      "Base Query.thenByDescending declaration should not be executed."
-    );
+  thenByDescending<TKey>(keySelector: (entity: T) => TKey): IOrderedQueryable<T> {
+    console.error("Base Query.thenByDescending declaration should not be executed.");
+    throw new Error("Base Query.thenByDescending declaration should not be executed.");
   }
   count(predicate?: (entity: T) => boolean): number {
     console.error("Base Query.count declaration should not be executed.");
@@ -129,9 +111,7 @@ export class Query<T> implements IOrderedQueryable<T> {
   }
   async countAsync(predicate?: (entity: T) => boolean): Promise<number> {
     console.error("Base Query.countAsync declaration should not be executed.");
-    throw new Error(
-      "Base Query.countAsync declaration should not be executed."
-    );
+    throw new Error("Base Query.countAsync declaration should not be executed.");
   }
   skip(count: number): IQueryable<T> {
     console.error("Base Query.skip declaration should not be executed.");
@@ -157,27 +137,19 @@ export class Query<T> implements IOrderedQueryable<T> {
     console.error("Base Query.sumAsync declaration should not be executed.");
     throw new Error("Base Query.sumAsync declaration should not be executed.");
   }
-  min<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): TResult | null {
+  min<TResult extends number | string | Date>(selector: (entity: T) => TResult): TResult | null {
     console.error("Base Query.min declaration should not be executed.");
     throw new Error("Base Query.min declaration should not be executed.");
   }
-  async minAsync<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): Promise<TResult | null> {
+  async minAsync<TResult extends number | string | Date>(selector: (entity: T) => TResult): Promise<TResult | null> {
     console.error("Base Query.minAsync declaration should not be executed.");
     throw new Error("Base Query.minAsync declaration should not be executed.");
   }
-  max<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): TResult | null {
+  max<TResult extends number | string | Date>(selector: (entity: T) => TResult): TResult | null {
     console.error("Base Query.max declaration should not be executed.");
     throw new Error("Base Query.max declaration should not be executed.");
   }
-  async maxAsync<TResult extends number | string | Date>(
-    selector: (entity: T) => TResult
-  ): Promise<TResult | null> {
+  async maxAsync<TResult extends number | string | Date>(selector: (entity: T) => TResult): Promise<TResult | null> {
     console.error("Base Query.maxAsync declaration should not be executed.");
     throw new Error("Base Query.maxAsync declaration should not be executed.");
   }
@@ -199,9 +171,7 @@ export class Query<T> implements IOrderedQueryable<T> {
 
   async toListAsync(): Promise<T[]> {
     console.error("Base Query.toListAsync declaration should not be executed.");
-    throw new Error(
-      "Base Query.toListAsync declaration should not be executed."
-    );
+    throw new Error("Base Query.toListAsync declaration should not be executed.");
   }
   first(predicate?: (entity: T) => boolean): T {
     console.error("Base Query.first declaration should not be executed.");
@@ -209,27 +179,15 @@ export class Query<T> implements IOrderedQueryable<T> {
   }
   async firstAsync(predicate?: (entity: T) => boolean): Promise<T> {
     console.error("Base Query.firstAsync declaration should not be executed.");
-    throw new Error(
-      "Base Query.firstAsync declaration should not be executed."
-    );
+    throw new Error("Base Query.firstAsync declaration should not be executed.");
   }
   firstOrDefault(predicate?: (entity: T) => boolean): T | null {
-    console.error(
-      "Base Query.firstOrDefault declaration should not be executed."
-    );
-    throw new Error(
-      "Base Query.firstOrDefault declaration should not be executed."
-    );
+    console.error("Base Query.firstOrDefault declaration should not be executed.");
+    throw new Error("Base Query.firstOrDefault declaration should not be executed.");
   }
-  async firstOrDefaultAsync(
-    predicate?: (entity: T) => boolean
-  ): Promise<T | null> {
-    console.error(
-      "Base Query.firstOrDefaultAsync declaration should not be executed."
-    );
-    throw new Error(
-      "Base Query.firstOrDefaultAsync declaration should not be executed."
-    );
+  async firstOrDefaultAsync(predicate?: (entity: T) => boolean): Promise<T | null> {
+    console.error("Base Query.firstOrDefaultAsync declaration should not be executed.");
+    throw new Error("Base Query.firstOrDefaultAsync declaration should not be executed.");
   }
   single(predicate?: (entity: T) => boolean): T {
     console.error("Base Query.single declaration should not be executed.");
@@ -237,27 +195,15 @@ export class Query<T> implements IOrderedQueryable<T> {
   }
   async singleAsync(predicate?: (entity: T) => boolean): Promise<T> {
     console.error("Base Query.singleAsync declaration should not be executed.");
-    throw new Error(
-      "Base Query.singleAsync declaration should not be executed."
-    );
+    throw new Error("Base Query.singleAsync declaration should not be executed.");
   }
   singleOrDefault(predicate?: (entity: T) => boolean): T | null {
-    console.error(
-      "Base Query.singleOrDefault declaration should not be executed."
-    );
-    throw new Error(
-      "Base Query.singleOrDefault declaration should not be executed."
-    );
+    console.error("Base Query.singleOrDefault declaration should not be executed.");
+    throw new Error("Base Query.singleOrDefault declaration should not be executed.");
   }
-  async singleOrDefaultAsync(
-    predicate?: (entity: T) => boolean
-  ): Promise<T | null> {
-    console.error(
-      "Base Query.singleOrDefaultAsync declaration should not be executed."
-    );
-    throw new Error(
-      "Base Query.singleOrDefaultAsync declaration should not be executed."
-    );
+  async singleOrDefaultAsync(predicate?: (entity: T) => boolean): Promise<T | null> {
+    console.error("Base Query.singleOrDefaultAsync declaration should not be executed.");
+    throw new Error("Base Query.singleOrDefaultAsync declaration should not be executed.");
   }
 }
 // --- END OF FILE src/query/Query.ts ---

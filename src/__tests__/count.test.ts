@@ -45,12 +45,11 @@ describe("Queryable Count Operator Tests (Async)", () => {
 SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
     `;
-    const countExpression =
-      new (require("../expressions").MethodCallExpression)(
-        "count", // Nome interno
-        query.expression,
-        []
-      );
+    const countExpression = new (require("../expressions").MethodCallExpression)(
+      "count", // Nome interno
+      query.expression,
+      []
+    );
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
@@ -65,15 +64,10 @@ SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
 WHERE [u].[age] > 30
     `;
-    const predicateLambda = new (require("../parsing").LambdaParser)().parse(
-      predicate
-    );
-    const countExpression =
-      new (require("../expressions").MethodCallExpression)(
-        "count",
-        query.expression,
-        [predicateLambda]
-      );
+    const predicateLambda = new (require("../parsing").LambdaParser)().parse(predicate);
+    const countExpression = new (require("../expressions").MethodCallExpression)("count", query.expression, [
+      predicateLambda,
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
@@ -87,12 +81,7 @@ SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
 WHERE [u].[name] = 'Alice'
     `;
-    const countExpression =
-      new (require("../expressions").MethodCallExpression)(
-        "count",
-        query.expression,
-        []
-      );
+    const countExpression = new (require("../expressions").MethodCallExpression)("count", query.expression, []);
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
@@ -107,15 +96,10 @@ SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
 WHERE [u].[name] LIKE '%a%' AND [u].[age] < 25
     `;
-    const predicateLambda = new (require("../parsing").LambdaParser)().parse(
-      predicate
-    );
-    const countExpression =
-      new (require("../expressions").MethodCallExpression)(
-        "count",
-        query.expression,
-        [predicateLambda]
-      );
+    const predicateLambda = new (require("../parsing").LambdaParser)().parse(predicate);
+    const countExpression = new (require("../expressions").MethodCallExpression)("count", query.expression, [
+      predicateLambda,
+    ]);
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 
@@ -128,12 +112,7 @@ WHERE [u].[name] LIKE '%a%' AND [u].[age] < 25
 SELECT COUNT_BIG(1) AS [count_result]
 FROM [Users] AS [u]
     `;
-    const countExpression =
-      new (require("../expressions").MethodCallExpression)(
-        "count",
-        query.expression,
-        []
-      );
+    const countExpression = new (require("../expressions").MethodCallExpression)("count", query.expression, []);
     const actualSql = dbContext["queryProvider"].getQueryText(countExpression);
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
 

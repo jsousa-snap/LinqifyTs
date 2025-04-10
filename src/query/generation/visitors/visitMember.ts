@@ -34,14 +34,11 @@ export function visitMember(
 
   if (currentExpr.type !== ExpressionType.Parameter) {
     console.error("Member access base object:", currentExpr.toString());
-    throw new Error(
-      `Member access chain must start with a ParameterExpression. Found: ${currentExpr.type}`
-    );
+    throw new Error(`Member access chain must start with a ParameterExpression. Found: ${currentExpr.type}`);
   }
 
   let baseParam = currentExpr as ParameterExpression; // Ex: 'joinedResult' ou 'u'
-  let currentSourceInfo: SourceInfo | null =
-    context.getSourceInfoStrict(baseParam);
+  let currentSourceInfo: SourceInfo | null = context.getSourceInfoStrict(baseParam);
 
   for (let i = 0; i < members.length; i++) {
     const memberName = members[i]; // Ex: 'UserName' ou 'name'
@@ -55,10 +52,8 @@ export function visitMember(
     // --- Navegação em Fontes Virtuais ---
     if (!currentSourceInfo.isBaseTable && currentSourceInfo.projectionBody) {
       const projectionBody = currentSourceInfo.projectionBody;
-      const projectionParams: ReadonlyArray<ParameterExpression> | undefined =
-        currentSourceInfo.projectionParameters;
-      const projectionSources: ReadonlyArray<SourceInfo> | undefined =
-        currentSourceInfo.projectionSourceInfos;
+      const projectionParams: ReadonlyArray<ParameterExpression> | undefined = currentSourceInfo.projectionParameters;
+      const projectionSources: ReadonlyArray<SourceInfo> | undefined = currentSourceInfo.projectionSourceInfos;
 
       if (!projectionParams || !projectionSources) {
         throw new Error(
@@ -70,14 +65,10 @@ export function visitMember(
 
       // Caso A: Projeção é NewObjectExpression { prop: val, ... }
       if (projectionBody.type === ExpressionType.NewObject) {
-        mappedExpr = (projectionBody as NewObjectExpression).properties.get(
-          memberName
-        );
+        mappedExpr = (projectionBody as NewObjectExpression).properties.get(memberName);
 
         if (!mappedExpr) {
-          console.error(
-            `Member '${memberName}' requested from virtual source '${currentSourceInfo.alias}'.`
-          );
+          console.error(`Member '${memberName}' requested from virtual source '${currentSourceInfo.alias}'.`);
           console.error(
             `Available projection properties: ${Array.from(
               (projectionBody as NewObjectExpression).properties.keys()
@@ -110,9 +101,7 @@ export function visitMember(
 
           if (i === members.length - 1) {
             if (!currentSourceInfo)
-              throw new Error(
-                "Internal error: currentSourceInfo became null unexpectedly before return."
-              );
+              throw new Error("Internal error: currentSourceInfo became null unexpectedly before return.");
             return currentSourceInfo;
           }
           continue; // Continua o loop FOR principal
@@ -123,18 +112,12 @@ export function visitMember(
 
           // 1. Decompõe a expressão mapeada (user.name)
           // *** CORREÇÃO TS2339: Cast mappedExpr para MemberExpression ***
-          let mappedBaseExpr: Expression = (mappedExpr as MemberExpression)
-            .objectExpression;
-          const mappedMembers: string[] = [
-            (mappedExpr as MemberExpression).memberName,
-          ];
+          let mappedBaseExpr: Expression = (mappedExpr as MemberExpression).objectExpression;
+          const mappedMembers: string[] = [(mappedExpr as MemberExpression).memberName];
           while (mappedBaseExpr.type === ExpressionType.MemberAccess) {
             // *** CORREÇÃO TS2339: Cast mappedBaseExpr para MemberExpression ***
-            mappedMembers.unshift(
-              (mappedBaseExpr as MemberExpression).memberName
-            );
-            mappedBaseExpr = (mappedBaseExpr as MemberExpression)
-              .objectExpression;
+            mappedMembers.unshift((mappedBaseExpr as MemberExpression).memberName);
+            mappedBaseExpr = (mappedBaseExpr as MemberExpression).objectExpression;
           }
 
           if (mappedBaseExpr.type !== ExpressionType.Parameter) {
@@ -145,9 +128,7 @@ export function visitMember(
           const mappedBaseParam = mappedBaseExpr as ParameterExpression;
 
           // 2. Encontra a fonte original correspondente ao parâmetro base mapeado ('user')
-          const paramIndex: number = projectionParams.findIndex(
-            (p) => p.name === mappedBaseParam.name
-          );
+          const paramIndex: number = projectionParams.findIndex((p) => p.name === mappedBaseParam.name);
           if (paramIndex === -1 || paramIndex >= projectionSources.length) {
             throw new Error(
               `Internal Error: Could not link base parameter '${mappedBaseParam.name}' of mapped expression back to source.`
@@ -162,10 +143,7 @@ export function visitMember(
           // 4. Cria a nova expressão MemberExpression para resolver (ex: user.name)
           let finalExprToResolve: Expression = mappedBaseParam;
           for (const member of finalMembers) {
-            finalExprToResolve = new MemberExpression(
-              finalExprToResolve,
-              member
-            );
+            finalExprToResolve = new MemberExpression(finalExprToResolve, member);
           }
 
           // 5. Resolve a nova expressão recursivamente com contexto temporário
@@ -176,12 +154,7 @@ export function visitMember(
               return result as SqlResult;
             }
             // Tratar outros retornos possíveis se necessário
-            else if (
-              result &&
-              typeof result === "object" &&
-              "alias" in result &&
-              "expression" in result
-            ) {
+            else if (result && typeof result === "object" && "alias" in result && "expression" in result) {
               console.warn(
                 `Recursive member resolution returned SourceInfo: ${
                   (result as SourceInfo).alias
@@ -189,9 +162,7 @@ export function visitMember(
               );
               return finalExprToResolve; // Retorna a expressão não resolvida para SQL
             } else {
-              throw new Error(
-                `Recursive resolution of '${finalExprToResolve.toString()}' did not yield SQL.`
-              );
+              throw new Error(`Recursive resolution of '${finalExprToResolve.toString()}' did not yield SQL.`);
             }
           } finally {
             // 6. Garante que o parâmetro temporário seja desregistrado
@@ -205,31 +176,18 @@ export function visitMember(
           // ... (código inalterado aqui) ...
           if (i === members.length - 1) {
             const visitedMappedExpr = visitFn(mappedExpr, context);
-            if (
-              visitedMappedExpr &&
-              typeof visitedMappedExpr === "object" &&
-              "sql" in visitedMappedExpr
-            ) {
+            if (visitedMappedExpr && typeof visitedMappedExpr === "object" && "sql" in visitedMappedExpr) {
               return visitedMappedExpr as SqlResult;
             } else if (mappedExpr.type === ExpressionType.Literal) {
               return {
-                sql: generateSqlLiteral(
-                  (mappedExpr as LiteralExpression).value
-                ),
+                sql: generateSqlLiteral((mappedExpr as LiteralExpression).value),
               } as SqlResult;
-            } else if (
-              mappedExpr.type === ExpressionType.Constant &&
-              !(mappedExpr as ConstantExpression).value?.type
-            ) {
+            } else if (mappedExpr.type === ExpressionType.Constant && !(mappedExpr as ConstantExpression).value?.type) {
               return {
-                sql: generateSqlLiteral(
-                  (mappedExpr as ConstantExpression).value
-                ),
+                sql: generateSqlLiteral((mappedExpr as ConstantExpression).value),
               } as SqlResult;
             } else {
-              console.warn(
-                `visitMember returning unresolved expression for mapped value: ${mappedExpr.toString()}`
-              );
+              console.warn(`visitMember returning unresolved expression for mapped value: ${mappedExpr.toString()}`);
               return mappedExpr;
             }
           } else {
@@ -267,18 +225,12 @@ export function visitMember(
       // Case C: Projection is MemberExpression (e.g., select(u => u.profile))
       else if (projectionBody.type === ExpressionType.MemberAccess) {
         // *** CORREÇÃO: Adicionado cast aqui também ***
-        let baseOfProjection: Expression = (projectionBody as MemberExpression)
-          .objectExpression;
-        const projectionMembers = [
-          (projectionBody as MemberExpression).memberName,
-        ];
+        let baseOfProjection: Expression = (projectionBody as MemberExpression).objectExpression;
+        const projectionMembers = [(projectionBody as MemberExpression).memberName];
         while (baseOfProjection.type === ExpressionType.MemberAccess) {
           // *** CORREÇÃO: Adicionado cast aqui também ***
-          projectionMembers.unshift(
-            (baseOfProjection as MemberExpression).memberName
-          );
-          baseOfProjection = (baseOfProjection as MemberExpression)
-            .objectExpression;
+          projectionMembers.unshift((baseOfProjection as MemberExpression).memberName);
+          baseOfProjection = (baseOfProjection as MemberExpression).objectExpression;
         }
 
         if (baseOfProjection.type === ExpressionType.Parameter) {
@@ -288,9 +240,7 @@ export function visitMember(
             (p: ParameterExpression) => p.name === projectionParam.name
           );
           if (paramIndex === -1 || paramIndex >= projectionSources.length) {
-            throw new Error(
-              `Internal Error: Could not link projection parameter '${projectionParam.name}'...`
-            );
+            throw new Error(`Internal Error: Could not link projection parameter '${projectionParam.name}'...`);
           }
           baseParam = projectionParams[paramIndex];
           currentSourceInfo = projectionSources[paramIndex];
@@ -303,9 +253,7 @@ export function visitMember(
           i = -1;
           continue;
         } else {
-          throw new Error(
-            `Projection body MemberExpression base is not a Parameter: ${projectionBody.toString()}`
-          );
+          throw new Error(`Projection body MemberExpression base is not a Parameter: ${projectionBody.toString()}`);
         }
       }
       // Caso D: Outros tipos de projeção
@@ -326,11 +274,7 @@ export function visitMember(
         const sql = `${finalAlias}.${finalMember}`;
         return { sql: sql };
       } else {
-        throw new Error(
-          `Cannot access nested member '${
-            members[i + 1]
-          }' on base table property '${memberName}'.`
-        );
+        throw new Error(`Cannot access nested member '${members[i + 1]}' on base table property '${memberName}'.`);
       }
     }
     // --- Erro Inesperado ---
@@ -345,8 +289,6 @@ export function visitMember(
   // ou se a expressão original não era um MemberExpression (members.length === 0)
   // O valor correto já deve ter sido retornado DENTRO do loop ou nos branches A.2/A.3
   // Chegar aqui indica um erro na lógica do loop ou nos retornos.
-  throw new Error(
-    `Internal Error: Reached end of visitMember unexpectedly for ${expression.toString()}.`
-  );
+  throw new Error(`Internal Error: Reached end of visitMember unexpectedly for ${expression.toString()}.`);
 }
 // --- END OF FILE src/query/generation/visitors/visitMember.ts ---

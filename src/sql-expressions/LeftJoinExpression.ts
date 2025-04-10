@@ -2,15 +2,9 @@
 
 // src/sql-expressions/LeftJoinExpression.ts
 
-import {
-  JoinExpressionBase,
-  JoinExpressionBaseMetadata,
-} from "./JoinExpressionBase";
+import { JoinExpressionBase, JoinExpressionBaseMetadata } from "./JoinExpressionBase";
 import { SqlExpression } from "./SqlExpression";
-import {
-  TableExpressionBase,
-  TableExpressionBaseMetadata,
-} from "./TableExpressionBase";
+import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase";
 import { SqlExpressionType } from "./SqlExpressionType";
 import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
 

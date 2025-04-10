@@ -4,10 +4,7 @@
 
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
 // *** CORREÇÃO: Importar TableExpressionBase ***
-import {
-  TableExpressionBase,
-  TableExpressionBaseMetadata,
-} from "./TableExpressionBase"; // Importar Base
+import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase"; // Importar Base
 import { SqlExpressionType } from "./SqlExpressionType"; // Importar SqlExpressionType
 
 /**
@@ -65,9 +62,7 @@ export abstract class JoinExpressionBase extends SqlExpression {
   // *** CORREÇÃO: Estreitar o tipo abstrato aqui ***
   // Exige que as classes filhas definam o tipo como um dos tipos de JOIN válidos.
   // *** ATENÇÃO: Adicionado LeftJoin ***
-  abstract override readonly type:
-    | SqlExpressionType.InnerJoin
-    | SqlExpressionType.LeftJoin; // <<< ADICIONADO LeftJoin
+  abstract override readonly type: SqlExpressionType.InnerJoin | SqlExpressionType.LeftJoin; // <<< ADICIONADO LeftJoin
 
   /**
    * Retorna a representação em string desta expressão JOIN para depuração.

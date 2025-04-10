@@ -8,12 +8,7 @@ import {
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../expressions";
-import {
-  SqlExpression,
-  SelectExpression,
-  SqlOrdering,
-  SortDirection,
-} from "../../../sql-expressions";
+import { SqlExpression, SelectExpression, SqlOrdering, SortDirection } from "../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../TranslationContext";
 
 /**
@@ -31,39 +26,24 @@ export function visitThenByCall(
   currentSelect: SelectExpression,
   sourceForLambda: SqlDataSource,
   context: TranslationContext,
-  visitInContext: (
-    expression: LinqExpression,
-    context: TranslationContext
-  ) => SqlExpression | null,
+  visitInContext: (expression: LinqExpression, context: TranslationContext) => SqlExpression | null,
   direction: SortDirection
 ): SelectExpression {
   if (currentSelect.orderBy.length === 0) {
-    throw new Error(
-      `Cannot call '${expression.methodName}' on a query that has not been ordered.`
-    );
+    throw new Error(`Cannot call '${expression.methodName}' on a query that has not been ordered.`);
   }
 
-  if (
-    expression.args.length !== 1 ||
-    expression.args[0].type !== LinqExpressionType.Lambda
-  ) {
-    throw new Error(
-      `Invalid arguments for '${expression.methodName}' method call.`
-    );
+  if (expression.args.length !== 1 || expression.args[0].type !== LinqExpressionType.Lambda) {
+    throw new Error(`Invalid arguments for '${expression.methodName}' method call.`);
   }
   const lambda = expression.args[0] as LinqLambdaExpression;
   const param = lambda.parameters[0];
 
-  const keySelectorContext = context.createChildContext(
-    [param],
-    [sourceForLambda]
-  );
+  const keySelectorContext = context.createChildContext([param], [sourceForLambda]);
   const keySql = visitInContext(lambda.body, keySelectorContext);
 
   if (!keySql) {
-    throw new Error(
-      `Could not translate key selector for '${expression.methodName}'.`
-    );
+    throw new Error(`Could not translate key selector for '${expression.methodName}'.`);
   }
 
   const newOrdering: SqlOrdering = { expression: keySql, direction };
