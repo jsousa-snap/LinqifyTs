@@ -1,18 +1,9 @@
-// --- START OF FILE src/query/QueryProvider.ts ---
-
-// src/query/QueryProvider.ts
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Expression as LinqExpression, MethodCallExpression as LinqMethodCallExpression } from "../expressions";
 import { IQueryable, IQueryProvider, ElementType } from "../interfaces";
 import { Query } from "./Query";
 import { QueryExpressionVisitor } from "./translation/QueryExpressionVisitor";
-import {
-  SqlExpression,
-  SelectExpression,
-  SqlExistsExpression,
-  SqlExpressionType,
-  SqlFunctionCallExpression,
-} from "../sql-expressions";
+import { SqlExpressionType } from "../sql-expressions";
 import { SqlServerQuerySqlGenerator } from "./generation/SqlServerQuerySqlGenerator";
 
 export class QueryProvider implements IQueryProvider {
@@ -65,9 +56,6 @@ export class QueryProvider implements IQueryProvider {
       if (isAsyncCall) return Promise.resolve(true as TResult);
       else return true as TResult; // Inconsistente, mas segue o fluxo
     } else if (finalSqlExpression.type === SqlExpressionType.Select) {
-      const selectExpr = finalSqlExpression as SelectExpression;
-
-      // Simulação para agregações e seleções de item único/primeiro
       let simulatedResult: any = null; // Valor padrão
 
       // Verifica se o SQL indica conjunto vazio (simplificação)
@@ -105,7 +93,7 @@ export class QueryProvider implements IQueryProvider {
           // Simulação simplificada, não verifica unicidade > 1
           simulatedResult = isSimulatedEmpty ? null : { id: 5, name: "Mock SingleOrDefault" };
           break;
-        default:
+        default: {
           // Se não for um método terminal conhecido que retorna valor único
           const originalMethod = (expression as LinqMethodCallExpression)?.methodName ?? "unknown";
           console.error(`Simulation not handled for method '${originalMethod}' resulting in standard SELECT.`);
@@ -113,6 +101,7 @@ export class QueryProvider implements IQueryProvider {
           const error = new Error(`Simulation not handled for method '${originalMethod}'.`);
           if (isAsyncCall) return Promise.reject(error);
           else throw error;
+        }
       }
 
       // Retorna Promise para chamadas Async, valor direto para síncronas

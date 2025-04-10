@@ -1,8 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// --- START OF FILE src/parsing/ExpressionVisitor.ts ---
-
-/* src/parsing/ExpressionVisitor.ts */
-// --- START OF FILE src/parsing/ExpressionVisitor.ts ---
 
 import {
   Expression,

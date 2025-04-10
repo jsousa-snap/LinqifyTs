@@ -1,5 +1,3 @@
-// --- START OF FILE expressions/Expression.ts ---
-
 export enum ExpressionType {
   Parameter = "Parameter",
   MemberAccess = "MemberAccess",
@@ -9,12 +7,10 @@ export enum ExpressionType {
   Binary = "Binary",
   Literal = "Literal",
   NewObject = "NewObject",
-  Scope = "Scope", // **** NOVO TIPO ****
-  // ...
+  Scope = "Scope",
 }
 
 export abstract class Expression {
   abstract readonly type: ExpressionType;
   abstract toString(): string;
 }
-// --- END OF FILE expressions/Expression.ts ---

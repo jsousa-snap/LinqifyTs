@@ -93,13 +93,11 @@ export class SelectVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
       // É uma projeção de identidade.
       // Reutiliza as projeções da SelectExpression anterior para evitar SELECT * FROM (SELECT * FROM ...) desnecessário.
       finalProjections = currentSelect.projection;
-      console.warn("Detectado select de identidade (x => x). Reutilizando projeções anteriores.");
       // Mesmo reutilizando projeções, o SELECT externo que representa esta operação 'select' precisa de um alias.
       selectAlias = this.aliasGenerator.generateAlias("selectId"); // Alias específico ou padrão
     } else {
       // --- Projeção Normal ---
       // Cria contexto filho para a lambda de projeção
-      // <<< Usa SqlDataSource importado de TranslationContext >>>
       const projectionContext = this.context.createChildContext([param], [sourceForLambda]);
 
       // Usa a função `createProjections` (armazenada em `this.createProjections`) para gerar as projeções SQL
@@ -112,10 +110,7 @@ export class SelectVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
       // Gera um novo alias padrão para esta SelectExpression com novas projeções
       selectAlias = this.aliasGenerator.generateAlias("select");
     }
-    // --- Fim da Detecção/Projeção ---
 
-    // Retorna uma *nova* instância de SelectExpression com as projeções atualizadas.
-    // Select MUDA a forma (projeções), mas preserva o resto (from, where, joins, order, etc.).
     return new SelectExpression(
       selectAlias, // Define novo alias para esta etapa do SELECT
       finalProjections, // <<< Define as novas projeções

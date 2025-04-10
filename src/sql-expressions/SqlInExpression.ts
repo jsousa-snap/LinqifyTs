@@ -1,24 +1,19 @@
-// --- START OF FILE src/sql-expressions/SqlInExpression.ts ---
-
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
 import { SqlConstantExpression, SqlConstantExpressionMetadata } from "./SqlConstantExpression";
 import { SqlExpressionType } from "./SqlExpressionType";
-// Importar SelectExpressionMetadata se/quando suportarmos subqueries IN
-// import { SelectExpressionMetadata } from './SelectExpression';
 
 /**
  * Interface de metadados para SqlInExpression.
  */
 export interface SqlInExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.In;
-  /** A expressão cujo valor será verificado (geralmente uma coluna). */
   expression: SqlExpressionMetadata;
   /**
    * Os valores a serem verificados.
    * Atualmente suporta apenas um array de constantes.
    * Poderia ser estendido para suportar SqlSelectExpressionMetadata para subqueries.
    */
-  values: ReadonlyArray<SqlConstantExpressionMetadata>; // | SqlSelectExpressionMetadata;
+  values: ReadonlyArray<SqlConstantExpressionMetadata>;
 }
 
 /**
@@ -48,7 +43,6 @@ export class SqlInExpression extends SqlExpression {
         "Value list for SqlInExpression cannot be null or empty. Use a condition like 1=0 instead for empty lists."
       );
     }
-    // Validação adicional (opcional): Verificar se todos os elementos são SqlConstantExpression
     if (!values.every((v) => v instanceof SqlConstantExpression)) {
       throw new Error("Currently, SqlInExpression only supports an array of SqlConstantExpression values.");
     }
@@ -73,4 +67,3 @@ export class SqlInExpression extends SqlExpression {
     };
   }
 }
-// --- END OF FILE src/sql-expressions/SqlInExpression.ts ---

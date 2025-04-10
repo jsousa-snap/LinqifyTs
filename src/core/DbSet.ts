@@ -1,11 +1,8 @@
-// --- START OF FILE core/DbSet.ts ---
-
-import { Expression, ConstantExpression } from "../expressions";
-import { IQueryable, IQueryProvider, ElementType } from "../interfaces";
+import { ConstantExpression } from "../expressions";
+import { IQueryProvider, ElementType } from "../interfaces";
 import { Query } from "../query/Query";
 
-// **** REMOVER implements IQueryable<T> TEMPORARIAMENTE ****
-export class DbSet<T> extends Query<T> /* implements IQueryable<T> */ {
+export class DbSet<T> extends Query<T> {
   constructor(
     public readonly entityName: string,
     provider: IQueryProvider,
@@ -17,7 +14,4 @@ export class DbSet<T> extends Query<T> /* implements IQueryable<T> */ {
     });
     super(initialExpression, provider, elementType);
   }
-
-  // Herda os métodos select, where, join, provideScope de Query<T>
 }
-// --- END OF FILE core/DbSet.ts ---

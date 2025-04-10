@@ -1,6 +1,4 @@
-// --- START OF FILE src/__tests__/query.test.ts ---
-
-// src/main.test.ts  (ou o caminho que preferir)
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 // Assumindo que DbContext e QueryableExtensions estão em locais acessíveis
 // Ajuste os caminhos conforme a estrutura do seu projeto
@@ -17,22 +15,10 @@ interface User {
   age: number;
   departmentId?: number | null; // <<< Deixamos aqui caso outros testes usem
 }
-class UserEntity implements User {
-  id!: number;
-  name!: string;
-  email!: string;
-  age!: number;
-  departmentId?: number | null;
-}
 interface Post {
   postId: number;
   title: string;
   authorId: number;
-}
-class PostEntity implements Post {
-  postId!: number;
-  title!: string;
-  authorId!: number;
 }
 interface Profile {
   profileId: number;
@@ -40,27 +26,13 @@ interface Profile {
   bio: string;
   website?: string;
 }
-class ProfileEntity implements Profile {
-  profileId!: number;
-  userId!: number;
-  bio!: string;
-  website?: string;
-}
 interface Category {
   categoryId: number;
   name: string;
 }
-class CategoryEntity implements Category {
-  categoryId!: number;
-  name!: string;
-}
 interface PostCategory {
   postId: number;
   categoryId: number;
-}
-class PostCategoryEntity implements PostCategory {
-  postId!: number;
-  categoryId!: number;
 }
 // *** NOVA INTERFACE PARA TESTE LEFT JOIN ***
 interface Department {

@@ -1,15 +1,10 @@
-// --- START OF FILE src/__tests__/any.test.ts ---
-
-// src/__tests__/any.test.ts
-
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions";
-import { MethodCallExpression, LambdaExpression, Expression } from "../expressions";
+import { MethodCallExpression } from "../expressions";
 import { LambdaParser } from "../parsing";
 import { normalizeSql } from "./utils/testUtils";
 
-// --- Interfaces ---
 interface User {
   id: number;
   name: string;
@@ -21,7 +16,6 @@ interface Post {
   title: string;
   authorId: number;
 }
-// --- Fim Interfaces ---
 
 describe("Queryable Any Operator Tests", () => {
   // Descrição padrão
@@ -128,4 +122,3 @@ WHERE EXISTS (
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
-// --- END OF FILE src/__tests__/any.test.ts ---

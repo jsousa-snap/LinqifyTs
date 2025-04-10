@@ -1,13 +1,10 @@
-// --- START OF FILE src/sql-expressions/SqlExistsExpression.ts ---
-
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
 import { SelectExpression, SelectExpressionMetadata } from "./SelectExpression"; // Importar SelectExpressionMetadata
 import { SqlExpressionType } from "./SqlExpressionType";
 
-// Nova interface de metadados para SqlExistsExpression
 export interface SqlExistsExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.Exists;
-  selectExpression: SelectExpressionMetadata; // Metadados da subquery SELECT
+  selectExpression: SelectExpressionMetadata;
 }
 
 /**
@@ -24,7 +21,6 @@ export class SqlExistsExpression extends SqlExpression {
   }
 
   toString(): string {
-    // ... (inalterado) ...
     const subQueryStr = this.selectExpression
       .toString()
       .split("\n")
@@ -33,11 +29,10 @@ export class SqlExistsExpression extends SqlExpression {
     return `EXISTS (\n${subQueryStr}\n)`;
   }
 
-  // *** IMPLEMENTAR toMetadata() ***
   toMetadata(): SqlExistsExpressionMetadata {
     return {
       $type: SqlExpressionType.Exists,
-      selectExpression: this.selectExpression.toMetadata(), // Metadados da SelectExpression
+      selectExpression: this.selectExpression.toMetadata(),
     };
   }
 }

@@ -1,5 +1,3 @@
-// --- START OF FILE src/query/generation/types.ts ---
-
 import { Expression, ParameterExpression } from "../../expressions";
 import { SqlExpression } from "../../sql-expressions";
 import { TranslationContext } from "../translation";
@@ -10,10 +8,7 @@ import { TranslationContext } from "../translation";
  * @param context O contexto de tradução atual a ser usado para esta visita.
  * @returns A expressão SQL resultante ou null.
  */
-export type VisitFn = (
-  expression: Expression | null, // Permitir null como entrada
-  context: TranslationContext // <<< Adicionar contexto como parâmetro obrigatório
-) => SqlExpression | null;
+export type VisitFn = (expression: Expression | null, context: TranslationContext) => SqlExpression | null;
 
 // Informações sobre uma fonte de dados (tabela base ou resultado de operação)
 export interface SourceInfo {
@@ -44,4 +39,3 @@ export interface ResolvedMember {
 export interface SqlResult {
   sql: string;
 }
-// --- END OF FILE src/query/generation/types.ts ---

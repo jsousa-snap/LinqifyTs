@@ -1,16 +1,8 @@
-// --- START OF FILE src/sql-expressions/InnerJoinExpression.ts ---
-
-// --- START OF FILE src/sql-expressions/InnerJoinExpression.ts ---
-
-import { JoinExpressionBase, JoinExpressionBaseMetadata } from "./JoinExpressionBase"; // Importar JoinExpressionBaseMetadata
-import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
-// *** CORREÇÃO: Importar TableExpressionBase ***
-import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase"; // Importar TableExpressionBase
+import { JoinExpressionBase, JoinExpressionBaseMetadata } from "./JoinExpressionBase";
+import { SqlExpression } from "./SqlExpression";
+import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase";
 import { SqlExpressionType } from "./SqlExpressionType";
-import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
 
-// Nova interface de metadados para InnerJoinExpression (opcional, só para type safety extra)
-// *** CORREÇÃO: Usar TableExpressionBaseMetadata ***
 export interface InnerJoinExpressionMetadata extends JoinExpressionBaseMetadata {
   $type: SqlExpressionType.InnerJoin;
   table: TableExpressionBaseMetadata; // <<< Usa metadados base
@@ -40,9 +32,8 @@ export class InnerJoinExpression extends JoinExpressionBase {
    * @param {SqlExpression} joinPredicate A condição SQL da cláusula ON.
    * @memberof InnerJoinExpression
    */
-  // *** CORREÇÃO: Aceitar TableExpressionBase ***
   constructor(table: TableExpressionBase, joinPredicate: SqlExpression) {
-    super(table, joinPredicate); // <<< Passa TableExpressionBase para o construtor base
+    super(table, joinPredicate);
   }
 
   /**
@@ -55,7 +46,6 @@ export class InnerJoinExpression extends JoinExpressionBase {
    * @memberof InnerJoinExpression
    */
   override toString(): string {
-    // O toString da fonte (table) cuidará de gerar (SELECT...) AS alias ou Tabela AS alias
     return `INNER JOIN ${this.table.toString()} ON ${this.joinPredicate.toString()}`;
   }
 
@@ -70,11 +60,8 @@ export class InnerJoinExpression extends JoinExpressionBase {
     const baseMeta = super.toMetadata(); // Chama o método da base
     return {
       ...baseMeta,
-      // Garante que table use TableExpressionBaseMetadata
       table: this.table.toMetadata() as TableExpressionBaseMetadata,
-      $type: SqlExpressionType.InnerJoin, // Redefine para InnerJoin
+      $type: SqlExpressionType.InnerJoin,
     };
   }
 }
-
-// --- END OF FILE src/sql-expressions/InnerJoinExpression.ts ---

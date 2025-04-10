@@ -1,7 +1,3 @@
-// --- START OF FILE src/__tests__/paging.test.ts ---
-
-// src/__tests__/paging.test.ts
-
 import { DbContext } from "../core";
 import "../query/QueryableExtensions"; // Importa para aplicar os métodos no protótipo
 import { IQueryable } from "../interfaces"; // Se necessário para tipagem
@@ -15,22 +11,10 @@ interface User {
   age: number;
   limit?: number;
 }
-class UserEntity implements User {
-  id!: number;
-  name!: string;
-  email!: string;
-  age!: number;
-  limit?: number;
-}
 interface Post {
   postId: number;
   title: string;
   authorId: number;
-}
-class PostEntity implements Post {
-  postId!: number;
-  title!: string;
-  authorId!: number;
 }
 // --- Fim Entidades ---
 

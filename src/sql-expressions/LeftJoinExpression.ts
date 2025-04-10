@@ -1,12 +1,7 @@
-// --- START OF FILE src/sql-expressions/LeftJoinExpression.ts ---
-
-// src/sql-expressions/LeftJoinExpression.ts
-
 import { JoinExpressionBase, JoinExpressionBaseMetadata } from "./JoinExpressionBase";
 import { SqlExpression } from "./SqlExpression";
 import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase";
 import { SqlExpressionType } from "./SqlExpressionType";
-import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
 
 /**
  * Interface de metadados específica para LeftJoinExpression.
@@ -78,5 +73,3 @@ export class LeftJoinExpression extends JoinExpressionBase {
     };
   }
 }
-
-// --- END OF FILE src/sql-expressions/LeftJoinExpression.ts ---

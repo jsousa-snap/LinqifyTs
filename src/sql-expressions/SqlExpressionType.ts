@@ -1,7 +1,3 @@
-// --- START OF FILE src/sql-expressions/SqlExpressionType.ts ---
-
-// src/sql-expressions/SqlExpressionType.ts
-
 /**
  * Enumeração dos tipos possíveis de nós em uma árvore de expressão SQL.
  * Ajuda na identificação e processamento de diferentes partes de uma consulta SQL.
@@ -36,4 +32,3 @@ export enum SqlExpressionType {
   // Fontes Compostas (para FROM)
   Union = "Union", // Representa uma operação UNION ou UNION ALL.
 }
-// --- END OF FILE src/sql-expressions/SqlExpressionType.ts ---

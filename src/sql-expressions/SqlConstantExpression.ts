@@ -1,14 +1,12 @@
-// --- START OF FILE src/sql-expressions/SqlConstantExpression.ts ---
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
+import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
 import { generateSqlLiteral } from "../query/generation/utils/sqlUtils";
 import { SqlExpressionType } from "./SqlExpressionType";
 
-// Nova interface de metadados para SqlConstantExpression
 export interface SqlConstantExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.Constant;
-  value: any; // O valor constante
-  // sqlType?: string; // Se quiser adicionar tipo SQL
+  value: any;
 }
 
 export class SqlConstantExpression extends SqlExpression {
@@ -36,14 +34,10 @@ export class SqlConstantExpression extends SqlExpression {
     }
   }
 
-  // *** IMPLEMENTAR toMetadata() ***
   toMetadata(): SqlConstantExpressionMetadata {
     return {
       $type: SqlExpressionType.Constant,
-      value: this.value, // Inclui o valor constante
-      // sqlType: this.sqlType // Se adicionarmos sqlType
+      value: this.value,
     };
   }
 }
-
-// --- END OF FILE src/sql-expressions/SqlConstantExpression.ts ---

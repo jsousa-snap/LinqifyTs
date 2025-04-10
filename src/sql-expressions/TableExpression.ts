@@ -1,6 +1,3 @@
-// --- START OF FILE src/sql-expressions/TableExpression.ts ---
-
-import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
 import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
 import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase"; // Importar TableExpressionBase e seus metadados
 import { SqlExpressionType } from "./SqlExpressionType";
@@ -27,14 +24,11 @@ export class TableExpression extends TableExpressionBase {
     return `${escapeIdentifier(this.name)} AS ${escapeIdentifier(this.alias)}`;
   }
 
-  // *** IMPLEMENTAR toMetadata() ***
   override toMetadata(): TableExpressionMetadata {
     return {
-      ...super.toMetadata(), // Inclui metadados da base (alias e type)
-      $type: SqlExpressionType.Table, // Redefine para Table (era Union ou Table na base)
-      name: this.name, // Adiciona 'name' específico de TableExpression
+      ...super.toMetadata(),
+      $type: SqlExpressionType.Table,
+      name: this.name,
     };
   }
 }
-
-// --- END OF FILE src/sql-expressions/TableExpression.ts ---

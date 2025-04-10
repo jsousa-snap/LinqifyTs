@@ -1,21 +1,15 @@
-// --- START OF FILE src/__tests__/functions.test.ts ---
-
-// src/__tests__/functions.test.ts
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
 import { normalizeSql } from "./utils/testUtils"; // Importa a função padrão
 
-// --- Interfaces ---
 interface User {
   id: number;
   name: string;
   email: string;
   registrationDate: Date;
   lastLogin: Date | null;
-  // Adiciona propriedades para teste de acesso direto (se suportado pelo visitor)
-  // get Year(): number { return this.registrationDate.getFullYear(); } // Exemplo se fosse getter JS
 }
 
 interface Product {
@@ -24,7 +18,6 @@ interface Product {
   price: number;
   category: string | null;
 }
-// --- Fim Interfaces ---
 
 describe("Queryable SQL Function Translation Tests", () => {
   let dbContext: DbContext;
@@ -43,7 +36,6 @@ describe("Queryable SQL Function Translation Tests", () => {
     // jest.restoreAllMocks(); // Não necessário se não houver mock
   });
 
-  // --- String Functions ---
   it("Teste Func 1: should translate string.toUpperCase()", () => {
     const query = users.where((u) => u.name.toUpperCase() === "ALICE");
     const expectedSql = `
@@ -162,7 +154,6 @@ WHERE [u].[name] LIKE '%[[]%'`; // Correto
     expect(normalizeSql(actualSqlIncludes)).toEqual(normalizeSql(expectedIncludes));
   });
 
-  // --- Date Functions ---
   it("Teste Func 11: should translate date.getFullYear()", () => {
     const query = users.where((u) => u.registrationDate.getFullYear() === 2023);
     const expectedSql = `
@@ -175,7 +166,6 @@ WHERE YEAR([u].[registrationDate]) = 2023`;
 
   it("Teste Func 12: should translate date.getMonth() (JS=0-11)", () => {
     const query = users.where((u) => u.registrationDate.getMonth() === 0); // Janeiro (JS=0)
-    // CORRIGIDO: Espera SQL que gera 0-11 (MONTH(...) - 1) e compara com 0
     const expectedSql = `
 SELECT [u].*
 FROM [Users] AS [u]
@@ -225,11 +215,7 @@ WHERE DATEPART(second, [u].[registrationDate]) < 10`;
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 
-  // CORRIGIDO: Assumindo que o visitor mapeia acesso a propriedade .Year via visitMember -> mapPropertyToSqlFunction
   it("Teste Func 17: should translate property access date.Year", () => {
-    // Use uma expressão que o parser TS/JS entenda como acesso a membro 'Year'
-    // NOTA: Isso pode requerer que 'Year' exista na interface ou um type assertion,
-    // ou que o parser LINQ seja robusto o suficiente. Usando type assertion aqui.
     const query = users.where((u) => (u.registrationDate as any).Year === 2022);
     const expectedSql = `
 SELECT [u].*
@@ -292,4 +278,3 @@ WHERE LOWER([u].[email]) LIKE '%@test.com' AND MONTH([u].[registrationDate]) - 1
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
-// --- END OF FILE src/__tests__/functions.test.ts ---

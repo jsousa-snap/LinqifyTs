@@ -1,5 +1,3 @@
-// --- START OF FILE src/sql-expressions/SqlCaseExpression.ts ---
-
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
 import { SqlExpressionType } from "./SqlExpressionType";
 
@@ -13,7 +11,6 @@ export interface SqlCaseWhen {
 
 export interface SqlCaseExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.Case;
-  // operand?: SqlExpressionMetadata | null; // Para CASE simples (CASE x WHEN 1 THEN 'a') - Não implementado ainda
   whenClauses: { when: SqlExpressionMetadata; then: SqlExpressionMetadata }[];
   elseExpression: SqlExpressionMetadata | null;
 }
@@ -44,9 +41,7 @@ export class SqlCaseExpression extends SqlExpression {
 
   toString(): string {
     let result = "CASE";
-    // if (this.operand) {
-    //     result += ` ${this.operand.toString()}`; // Para CASE simples
-    // }
+
     this.whenClauses.forEach((wc) => {
       result += ` WHEN ${wc.when.toString()} THEN ${wc.then.toString()}`;
     });
@@ -69,4 +64,3 @@ export class SqlCaseExpression extends SqlExpression {
     };
   }
 }
-// --- END OF FILE src/sql-expressions/SqlCaseExpression.ts ---

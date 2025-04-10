@@ -1,20 +1,7 @@
-// --- START OF FILE src/query/Query.ts ---
-
-// src/query/Query.ts
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Expression } from "../expressions";
-import {
-  IQueryable,
-  IOrderedQueryable,
-  IQueryProvider,
-  ElementType,
-  TInnerJoin,
-  TKeyJoin,
-  TResultJoin,
-  TResultSelect,
-  TKey,
-  IGrouping,
-} from "../interfaces";
+import { IQueryable, IOrderedQueryable, IQueryProvider, ElementType } from "../interfaces";
 
 /**
  * Implementação base da interface IOrderedQueryable<T>.
@@ -27,7 +14,6 @@ import {
  * @implements {IOrderedQueryable<T>}
  */
 export class Query<T> implements IOrderedQueryable<T> {
-  // Já implementa a interface correta
   constructor(
     public readonly expression: Expression,
     public readonly provider: IQueryProvider,
@@ -206,4 +192,3 @@ export class Query<T> implements IOrderedQueryable<T> {
     throw new Error("Base Query.singleOrDefaultAsync declaration should not be executed.");
   }
 }
-// --- END OF FILE src/query/Query.ts ---

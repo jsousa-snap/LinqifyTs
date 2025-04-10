@@ -1,11 +1,8 @@
-// --- START OF FILE src/sql-expressions/ColumnExpression.ts ---
-
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
 import { TableExpression, TableExpressionMetadata } from "./TableExpression"; // Importar TableExpression e seus metadados
 import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
 import { SqlExpressionType } from "./SqlExpressionType";
 
-// Nova interface de metadados para ColumnExpression
 export interface ColumnExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.Column;
   name: string;
@@ -28,7 +25,6 @@ export class ColumnExpression extends SqlExpression {
     return `${escapeIdentifier(this.table.alias)}.${escapeIdentifier(this.name)}`;
   }
 
-  // *** IMPLEMENTAR toMetadata() ***
   toMetadata(): ColumnExpressionMetadata {
     return {
       $type: SqlExpressionType.Column,
@@ -37,5 +33,3 @@ export class ColumnExpression extends SqlExpression {
     };
   }
 }
-
-// --- END OF FILE src/sql-expressions/ColumnExpression.ts ---

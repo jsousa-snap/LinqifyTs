@@ -1,7 +1,3 @@
-// --- START OF FILE src/__tests__/groupBy.test.ts ---
-
-// src/__tests__/groupBy.test.ts
-
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
@@ -147,6 +143,7 @@ HAVING COUNT(1) > 10
 
   it("Teste GroupBy 7: Group by constant key (groups all)", () => {
     const query = employees.groupBy(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       (e) => 1,
       // **** CORREÇÃO: Usa group.count(), avg() ****
       (key, group) => ({

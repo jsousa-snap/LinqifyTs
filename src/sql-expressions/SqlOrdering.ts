@@ -1,7 +1,3 @@
-// --- START OF FILE src/sql-expressions/SqlOrdering.ts ---
-
-// src/sql-expressions/SqlOrdering.ts
-
 import { SqlExpression } from "./SqlExpression";
 
 export type SortDirection = "ASC" | "DESC";

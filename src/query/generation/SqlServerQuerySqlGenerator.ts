@@ -1,7 +1,4 @@
-// --- START OF FILE src/query/generation/SqlServerQuerySqlGenerator.ts ---
-
-// src/query/generation/SqlServerQuerySqlGenerator.ts
-
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   SqlExpression,
   SelectExpression,
@@ -15,15 +12,13 @@ import {
   JoinExpressionBase,
   SqlExpressionType,
   SqlScalarSubqueryAsJsonExpression,
-  JsonMode,
   SqlExistsExpression,
   SqlLikeExpression,
   SqlFunctionCallExpression,
   SqlScalarSubqueryExpression,
   CompositeUnionExpression,
-  TableExpressionBase,
   SqlCaseExpression,
-  SqlInExpression, // <<< IMPORTAR SqlInExpression
+  SqlInExpression,
 } from "../../sql-expressions";
 import {
   escapeIdentifier,
@@ -33,7 +28,6 @@ import {
   getOperatorPrecedence,
 } from "./utils/sqlUtils";
 
-// Classe SqlBuilder (Inalterada)
 class SqlBuilder {
   private parts: string[] = [];
   private indentationLevel = 0;
@@ -175,15 +169,13 @@ export class SqlServerQuerySqlGenerator {
       case SqlExpressionType.InnerJoin:
       case SqlExpressionType.LeftJoin:
         throw new Error(`Cannot directly visit SqlExpressionType: ${expression.type}`);
-      default:
+      default: {
         const exCheck: never = expression.type;
         throw new Error(`Unsupported SqlExpressionType in generator dispatcher: ${exCheck}`);
+      }
     }
   }
 
-  // VisitSelect, VisitProjection, VisitTable, VisitColumn, VisitConstant, VisitBinary, VisitFunctionCall, VisitCase, VisitScalarSubquery, VisitScalarSubqueryAsJson, VisitLike, VisitExists, VisitJoin, VisitInnerJoin, VisitLeftJoin, VisitUnion
-  // (Lógica existente inalterada)
-  // ... (cole aqui os métodos Visit* existentes e inalterados) ...
   protected VisitSelect(expression: SelectExpression, isSubquerySource: boolean): void {
     const isSub = isSubquerySource;
 
@@ -405,9 +397,10 @@ export class SqlServerQuerySqlGenerator {
       case SqlExpressionType.LeftJoin:
         this.VisitLeftJoin(join as LeftJoinExpression);
         break;
-      default:
+      default: {
         const exhaustiveCheck: never = join.type;
         throw new Error(`Unsupported join type: ${exhaustiveCheck}`);
+      }
     }
   }
   protected VisitInnerJoin(join: InnerJoinExpression): void {
@@ -545,7 +538,6 @@ export class SqlServerQuerySqlGenerator {
     }
   }
 
-  // **** NOVO MÉTODO: VisitIn ****
   /**
    * Visita e gera SQL para uma expressão IN.
    * @param expression A expressão IN a ser visitada.
@@ -569,6 +561,4 @@ export class SqlServerQuerySqlGenerator {
 
     this.builder.append(")");
   }
-  // **** FIM NOVO MÉTODO ****
 }
-// --- END OF FILE src/query/generation/SqlServerQuerySqlGenerator.ts ---

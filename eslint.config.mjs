@@ -6,7 +6,7 @@ import pluginReact from "eslint-plugin-react";
 
 export default defineConfig([
   {
-    ignores: [".prettierrc.js"],
+    ignores: [".prettierrc.js", "*.config.js"],
     files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
     plugins: { js },
     extends: ["js/recommended"],

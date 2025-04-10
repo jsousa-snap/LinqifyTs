@@ -1,7 +1,3 @@
-// --- START OF FILE src/__tests__/union.test.ts ---
-
-// src/__tests__/union.test.ts
-
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
@@ -20,10 +16,6 @@ interface User {
   name: string;
 }
 
-interface DataItemDto {
-  itemId: number;
-  itemValue: string;
-}
 // --- Fim Interfaces ---
 
 describe("Queryable Union/Concat Tests", () => {

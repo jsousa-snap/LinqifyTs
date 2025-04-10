@@ -1,13 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* src/query/generation/utils/sqlUtils.ts */
-// --- START OF FILE src/query/generation/utils/sqlUtils.ts ---
 
 import { ConstantExpression } from "../../../expressions";
 
-// IMPORTANTE: Usar o enum importado diretamente
 import { OperatorType } from "../../../expressions/BinaryExpression"; // Caminho direto para o enum
 
-// **NOVO: Reexportar OperatorType**
 export { OperatorType };
 
 /**
@@ -31,7 +27,7 @@ export function generateSqlLiteral(value: any): string {
 
 /**
  * Mapeia um OperatorType da árvore de expressão LINQ para o operador SQL correspondente.
- * ATUALIZADO: Adiciona mapeamento para operadores aritméticos e corrige NotEqual.
+ * Adiciona mapeamento para operadores aritméticos e corrige NotEqual.
  *
  * @export
  * @param {OperatorType} op O operador LINQ.
@@ -56,7 +52,6 @@ export function mapOperatorToSql(op: OperatorType): string {
       return "AND";
     case OperatorType.Or:
       return "OR";
-    // ** NOVO: Aritméticos **
     case OperatorType.Add:
       return "+";
     case OperatorType.Subtract:
@@ -67,7 +62,6 @@ export function mapOperatorToSql(op: OperatorType): string {
       return "/";
     case OperatorType.Modulo:
       return "%";
-    // ** FIM: Aritméticos **
     default: {
       const exhaustiveCheck: never = op;
       throw new Error(`Unsupported operator type encountered in SQL generation: ${exhaustiveCheck}`);
@@ -79,22 +73,18 @@ export function mapOperatorToSql(op: OperatorType): string {
  * Retorna a precedência numérica de um operador SQL.
  * Números maiores indicam maior precedência.
  * Usado para determinar a necessidade de parênteses em expressões binárias.
- * ATUALIZADO: Adiciona precedência para operadores aritméticos.
  *
  * @param op O tipo do operador.
  * @returns A precedência numérica.
  */
 export function getOperatorPrecedence(op: OperatorType): number {
   switch (op) {
-    // ** NOVO: Aritméticos (precedência maior) **
     case OperatorType.Multiply:
     case OperatorType.Divide:
       return 5;
     case OperatorType.Add:
     case OperatorType.Subtract:
       return 4;
-    // ** FIM: Aritméticos **
-    // Comparação e LIKE (precedência menor que aritméticos)
     case OperatorType.Equal:
     case OperatorType.NotEqual:
     case OperatorType.GreaterThan:
@@ -102,13 +92,12 @@ export function getOperatorPrecedence(op: OperatorType): number {
     case OperatorType.LessThan:
     case OperatorType.LessThanOrEqual:
       return 3;
-    // Lógicos (precedência menor que comparação)
     case OperatorType.And:
       return 2;
     case OperatorType.Or:
       return 1;
     default:
-      return 0; // Precedência mais baixa para desconhecidos ou não binários
+      return 0;
   }
 }
 
@@ -142,5 +131,3 @@ export function getTableName(tableConstantExpr: ConstantExpression): string | nu
   }
   return null;
 }
-
-// --- END OF FILE src/query/generation/utils/sqlUtils.ts ---

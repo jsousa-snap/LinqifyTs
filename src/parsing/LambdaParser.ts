@@ -1,10 +1,8 @@
-// --- START OF FILE src/parsing/LambdaParser.ts ---
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as acorn from "acorn";
-import { Expression, ParameterExpression, LambdaExpression, ConstantExpression } from "../expressions";
+import { Expression, ParameterExpression, LambdaExpression } from "../expressions";
 import { ExpressionVisitor } from "./ExpressionVisitor";
 
-// --- AST Interfaces (inalteradas) ---
 interface AstNode {
   type: string;
   [key: string]: any;
@@ -18,17 +16,11 @@ interface ArrowFunctionExpressionNode extends AstNode {
   params: AstNode[];
   body: AstNode;
 }
-interface ExpressionStatementNode extends AstNode {
-  type: "ExpressionStatement";
-  expression: AstNode;
-}
-// --- Fim AST Interfaces ---
 
 export class LambdaParser {
-  // ** CORREÇÃO: Aceita pilha inicial de parâmetros (geralmente vazia no início) **
   parse(
-    lambda: Function,
-    initialParameterMapsStack: ReadonlyArray<ReadonlyMap<string, ParameterExpression>> = [], // Opcional, padrão vazio
+    lambda: (...args: any[]) => any,
+    initialParameterMapsStack: ReadonlyArray<ReadonlyMap<string, ParameterExpression>> = [],
     scopeMap?: ReadonlyMap<string, Expression> // Escopo do provideScope
   ): LambdaExpression {
     const lambdaString = lambda.toString();
@@ -75,4 +67,3 @@ export class LambdaParser {
     }
   }
 }
-// --- END OF FILE src/parsing/LambdaParser.ts ---

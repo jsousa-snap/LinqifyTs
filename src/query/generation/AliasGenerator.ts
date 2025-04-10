@@ -1,7 +1,3 @@
-// --- START OF FILE src/query/generation/AliasGenerator.ts ---
-
-// src/query/generation/AliasGenerator.ts
-
 /**
  * Gera aliases únicos para fontes SQL (tabelas, subconsultas).
  * O primeiro alias para um prefixo é apenas a letra (e.g., u, p, s).
@@ -32,16 +28,12 @@ export class AliasGenerator {
     let prefix = "t"; // Prefixo padrão
 
     if (baseName && typeof baseName === "string" && baseName.length > 0) {
-      // *** LÓGICA SIMPLIFICADA ***
-      // Tenta pegar a primeira letra do baseName.
       const match = baseName.match(/[a-zA-Z]/);
       if (match) {
         prefix = match[0].toLowerCase();
       }
-      // Se não encontrar uma letra (ex: nome como "_internal"), usa 't'.
     }
 
-    // --- Lógica de numeração (inalterada) ---
     if (!this.prefixCounts.has(prefix)) {
       this.prefixCounts.set(prefix, 1);
       return prefix;
@@ -60,5 +52,3 @@ export class AliasGenerator {
     this.prefixCounts.clear();
   }
 }
-
-// --- END OF FILE src/query/generation/AliasGenerator.ts ---

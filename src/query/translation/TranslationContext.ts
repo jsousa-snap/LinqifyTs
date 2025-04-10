@@ -1,15 +1,6 @@
-// --- START OF FILE src/query/translation/TranslationContext.ts ---
-
-// src/query/translation/TranslationContext.ts
-
+/* eslint-disable @typescript-eslint/no-this-alias */
 import { ParameterExpression as LinqParameterExpression } from "../../expressions";
-import {
-  TableExpression as SqlTableExpression,
-  SelectExpression as SqlSelectExpression,
-  SqlExpression,
-  TableExpressionBase,
-  CompositeUnionExpression,
-} from "../../sql-expressions";
+import { SelectExpression as SqlSelectExpression, TableExpressionBase } from "../../sql-expressions";
 
 export type SqlDataSource = TableExpressionBase | SqlSelectExpression;
 
@@ -27,9 +18,6 @@ export class TranslationContext {
   // Referência ao contexto pai (para lambdas aninhadas)
   public readonly outerContext?: TranslationContext;
 
-  // <<< REMOVIDO: aliasCounter e métodos relacionados >>>
-  // private aliasCounter = 0;
-
   /**
    * Cria uma instância de TranslationContext.
    * @param {TranslationContext} [outerContext] O contexto pai, se este for um contexto aninhado.
@@ -37,10 +25,7 @@ export class TranslationContext {
    */
   constructor(outerContext?: TranslationContext) {
     this.outerContext = outerContext;
-    // <<< REMOVIDO: Herança de aliasCounter >>>
   }
-
-  // <<< REMOVIDO: generateTableAlias() >>>
 
   /**
    * Registra o mapeamento entre um parâmetro LINQ e sua fonte de dados SQL.
@@ -131,8 +116,4 @@ export class TranslationContext {
     });
     return childContext;
   }
-
-  // <<< REMOVIDO: updateAliasCounterFromChild() >>>
 }
-
-// --- END OF FILE src/query/translation/TranslationContext.ts ---

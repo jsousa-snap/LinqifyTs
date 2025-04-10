@@ -1,33 +1,18 @@
-// --- START OF FILE src/query/QueryableExtensions.ts ---
-
-// src/query/QueryableExtensions.ts
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Expression,
   ExpressionType,
   LambdaExpression,
   MethodCallExpression,
   ScopeExpression,
-  ParameterExpression,
   ConstantExpression,
 } from "../expressions";
-import {
-  IQueryable,
-  IOrderedQueryable,
-  ElementType,
-  TInnerJoin,
-  TKeyJoin,
-  TResultJoin,
-  TKey,
-  IGrouping,
-} from "../interfaces";
+import { IQueryable, IOrderedQueryable, ElementType } from "../interfaces";
 import { LambdaParser } from "../parsing";
 import { Query } from "./Query";
 
-// --- Declaração de Módulo (Com pares Sync/Async) ---
 declare module "../interfaces" {
   interface IQueryable<T> {
-    // **** PARES Síncrono/Assíncrono ****
     any(): boolean;
     any(predicate: (entity: T) => boolean): boolean;
     anyAsync(): Promise<boolean>;
@@ -70,11 +55,8 @@ declare module "../interfaces" {
     singleOrDefaultAsync(): Promise<T | null>;
     singleOrDefaultAsync(predicate?: (entity: T) => boolean): Promise<T | null>;
 
-    // toList permanece apenas Async
     toListAsync(): Promise<T[]>;
-    // **** FIM PARES ****
 
-    // Métodos não-terminais (inalterados)
     leftJoin<TInnerJoin, TKeyJoin, TResultJoin>(
       inner: IQueryable<TInnerJoin>,
       outerKeySelector: (outer: T) => TKeyJoin,
@@ -87,12 +69,9 @@ declare module "../interfaces" {
     ): IQueryable<TResult>;
     union(second: IQueryable<T>): IQueryable<T>;
     concat(second: IQueryable<T>): IQueryable<T>;
-    // ... outros métodos não-terminais ...
   }
 }
-// --- Fim Declaração ---
 
-// Helper findScopeMap (inalterado)
 function findScopeMap(expression: Expression): ReadonlyMap<string, Expression> | undefined {
   let current: Expression | null = expression;
   let combinedScope: Map<string, Expression> | null = null;
@@ -115,22 +94,18 @@ function findScopeMap(expression: Expression): ReadonlyMap<string, Expression> |
   return combinedScope ?? undefined;
 }
 
-// Instância única do parser de lambda
 const lambdaParser = new LambdaParser();
 
-// Helper para lidar com resultado síncrono/assíncrono do provider
 function handleSyncExecution<TResult>(methodName: string, result: Promise<TResult> | TResult): TResult {
   if (result instanceof Promise) {
     console.error(
       `Error: IQueryProvider.execute returned a Promise for synchronous method '${methodName}'. A sync provider or specific handling is required for truly synchronous execution.`
     );
-    // Lançar erro é a opção mais segura para indicar a inconsistência.
     throw new Error(`Internal Error: Unexpected Promise returned for '${methodName}'.`);
   }
   return result;
 }
 
-// Implementação de provideScope (inalterada)
 Query.prototype.provideScope = function <T>(
   this: IQueryable<T>,
   scope: { [key: string]: IQueryable<any> | any }
@@ -158,7 +133,6 @@ Query.prototype.provideScope = function <T>(
   return this.provider.createQuery<T>(scopeExpr, this.elementType);
 };
 
-// Implementação de select (inalterada)
 Query.prototype.select = function <T, TResult>(
   this: IQueryable<T>,
   selector: (entity: T) => TResult
@@ -170,7 +144,6 @@ Query.prototype.select = function <T, TResult>(
   return this.provider.createQuery<TResult>(callExpr, resultElementType);
 };
 
-// Implementação de where (inalterada)
 Query.prototype.where = function <T>(this: IQueryable<T>, predicate: (entity: T) => boolean): IQueryable<T> {
   const scopeMap = findScopeMap(this.expression);
   const lambdaExpr: LambdaExpression = lambdaParser.parse(predicate, [], scopeMap);
@@ -179,7 +152,6 @@ Query.prototype.where = function <T>(this: IQueryable<T>, predicate: (entity: T)
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
-// Implementação de join (inalterada)
 Query.prototype.join = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   this: IQueryable<TOuter>,
   innerSource: IQueryable<TInnerJoin>,
@@ -202,7 +174,6 @@ Query.prototype.join = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   return this.provider.createQuery<TResultJoin>(callExpr, resultElementType);
 };
 
-// Implementação de leftJoin (inalterada)
 Query.prototype.leftJoin = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   this: IQueryable<TOuter>,
   innerSource: IQueryable<TInnerJoin>,
@@ -225,7 +196,6 @@ Query.prototype.leftJoin = function <TOuter, TInnerJoin, TKeyJoin, TResultJoin>(
   return this.provider.createQuery<TResultJoin>(callExpr, resultElementType);
 };
 
-// **** Implementação de any (SÍNCRONO) ****
 Query.prototype.any = function <T>(this: IQueryable<T>, predicate?: (entity: T) => boolean): boolean {
   const scopeMap = findScopeMap(this.expression);
   const args: Expression[] = [];
@@ -235,11 +205,9 @@ Query.prototype.any = function <T>(this: IQueryable<T>, predicate?: (entity: T) 
     args.push(lambdaExpr);
   }
   const callExpr = new MethodCallExpression("any", this.expression, args);
-  // Chama execute e lida com o resultado (que deve ser síncrono para any)
   return handleSyncExecution("any", this.provider.execute<boolean>(callExpr));
 };
 
-// **** Implementação de anyAsync ****
 Query.prototype.anyAsync = async function <T>(
   this: IQueryable<T>,
   predicate?: (entity: T) => boolean
@@ -251,13 +219,10 @@ Query.prototype.anyAsync = async function <T>(
     if (lambdaExpr.parameters.length !== 1) throw new Error("AnyAsync lambda predicate needs 1 parameter.");
     args.push(lambdaExpr);
   }
-  // Usa o nome 'any' na expressão, o provider diferencia pelo contexto async
   const callExpr = new MethodCallExpression("any", this.expression, args);
-  // Executa assincronamente
   return await this.provider.execute<boolean>(callExpr);
 };
 
-// Implementação de orderBy (inalterada)
 Query.prototype.orderBy = function <T, TKey>(
   this: IQueryable<T>,
   keySelector: (entity: T) => TKey
@@ -269,7 +234,6 @@ Query.prototype.orderBy = function <T, TKey>(
   return this.provider.createQuery<T>(callExpr, this.elementType) as IOrderedQueryable<T>;
 };
 
-// Implementação de orderByDescending (inalterada)
 Query.prototype.orderByDescending = function <T, TKey>(
   this: IQueryable<T>,
   keySelector: (entity: T) => TKey
@@ -281,7 +245,6 @@ Query.prototype.orderByDescending = function <T, TKey>(
   return this.provider.createQuery<T>(callExpr, this.elementType) as IOrderedQueryable<T>;
 };
 
-// Implementação de thenBy (inalterada)
 Query.prototype.thenBy = function <T, TKey>(
   this: IOrderedQueryable<T>,
   keySelector: (entity: T) => TKey
@@ -293,7 +256,6 @@ Query.prototype.thenBy = function <T, TKey>(
   return this.provider.createQuery<T>(callExpr, this.elementType) as IOrderedQueryable<T>;
 };
 
-// Implementação de thenByDescending (inalterada)
 Query.prototype.thenByDescending = function <T, TKey>(
   this: IOrderedQueryable<T>,
   keySelector: (entity: T) => TKey
@@ -305,7 +267,6 @@ Query.prototype.thenByDescending = function <T, TKey>(
   return this.provider.createQuery<T>(callExpr, this.elementType) as IOrderedQueryable<T>;
 };
 
-// **** Implementação de count (SÍNCRONO) ****
 Query.prototype.count = function <T>(this: IQueryable<T>, predicate?: (entity: T) => boolean): number {
   const scopeMap = findScopeMap(this.expression);
   const args: Expression[] = [];
@@ -318,7 +279,6 @@ Query.prototype.count = function <T>(this: IQueryable<T>, predicate?: (entity: T
   return handleSyncExecution("count", this.provider.execute<number>(callExpr));
 };
 
-// **** Implementação de countAsync ****
 Query.prototype.countAsync = async function <T>(
   this: IQueryable<T>,
   predicate?: (entity: T) => boolean
@@ -330,12 +290,10 @@ Query.prototype.countAsync = async function <T>(
     if (lambdaExpr.parameters.length !== 1) throw new Error("CountAsync lambda predicate needs 1 parameter.");
     args.push(lambdaExpr);
   }
-  // Usa o nome 'count' na expressão
   const callExpr = new MethodCallExpression("count", this.expression, args);
   return await this.provider.execute<number>(callExpr);
 };
 
-// Implementação de skip (inalterada)
 Query.prototype.skip = function <T>(this: IQueryable<T>, count: number): IQueryable<T> {
   if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
     throw new Error("Argument 'count' for 'skip' must be a non-negative integer.");
@@ -345,7 +303,6 @@ Query.prototype.skip = function <T>(this: IQueryable<T>, count: number): IQuerya
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
-// Implementação de take (inalterada)
 Query.prototype.take = function <T>(this: IQueryable<T>, count: number): IQueryable<T> {
   if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
     throw new Error("Argument 'count' for 'take' must be a non-negative integer.");
@@ -355,7 +312,6 @@ Query.prototype.take = function <T>(this: IQueryable<T>, count: number): IQuerya
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
-// **** Implementação de avg (SÍNCRONO) ****
 Query.prototype.avg = function <T>(this: IQueryable<T>, selector: (entity: T) => number): number | null {
   const scopeMap = findScopeMap(this.expression);
   const lambdaExpr: LambdaExpression = lambdaParser.parse(selector, [], scopeMap);
@@ -364,7 +320,6 @@ Query.prototype.avg = function <T>(this: IQueryable<T>, selector: (entity: T) =>
   return handleSyncExecution("avg", this.provider.execute<number | null>(callExpr));
 };
 
-// **** Implementação de avgAsync ****
 Query.prototype.avgAsync = async function <T>(
   this: IQueryable<T>,
   selector: (entity: T) => number
@@ -376,7 +331,6 @@ Query.prototype.avgAsync = async function <T>(
   return await this.provider.execute<number | null>(callExpr);
 };
 
-// **** Implementação de sum (SÍNCRONO) ****
 Query.prototype.sum = function <T>(this: IQueryable<T>, selector: (entity: T) => number): number | null {
   const scopeMap = findScopeMap(this.expression);
   const lambdaExpr: LambdaExpression = lambdaParser.parse(selector, [], scopeMap);
@@ -385,7 +339,6 @@ Query.prototype.sum = function <T>(this: IQueryable<T>, selector: (entity: T) =>
   return handleSyncExecution("sum", this.provider.execute<number | null>(callExpr));
 };
 
-// **** Implementação de sumAsync ****
 Query.prototype.sumAsync = async function <T>(
   this: IQueryable<T>,
   selector: (entity: T) => number
@@ -397,7 +350,6 @@ Query.prototype.sumAsync = async function <T>(
   return await this.provider.execute<number | null>(callExpr);
 };
 
-// **** Implementação de min (SÍNCRONO) ****
 Query.prototype.min = function <T, TResult extends number | string | Date>(
   this: IQueryable<T>,
   selector: (entity: T) => TResult
@@ -409,7 +361,6 @@ Query.prototype.min = function <T, TResult extends number | string | Date>(
   return handleSyncExecution("min", this.provider.execute<TResult | null>(callExpr));
 };
 
-// **** Implementação de minAsync ****
 Query.prototype.minAsync = async function <T, TResult extends number | string | Date>(
   this: IQueryable<T>,
   selector: (entity: T) => TResult
@@ -421,7 +372,6 @@ Query.prototype.minAsync = async function <T, TResult extends number | string | 
   return await this.provider.execute<TResult | null>(callExpr);
 };
 
-// **** Implementação de max (SÍNCRONO) ****
 Query.prototype.max = function <T, TResult extends number | string | Date>(
   this: IQueryable<T>,
   selector: (entity: T) => TResult
@@ -433,7 +383,6 @@ Query.prototype.max = function <T, TResult extends number | string | Date>(
   return handleSyncExecution("max", this.provider.execute<TResult | null>(callExpr));
 };
 
-// **** Implementação de maxAsync ****
 Query.prototype.maxAsync = async function <T, TResult extends number | string | Date>(
   this: IQueryable<T>,
   selector: (entity: T) => TResult
@@ -445,7 +394,6 @@ Query.prototype.maxAsync = async function <T, TResult extends number | string | 
   return await this.provider.execute<TResult | null>(callExpr);
 };
 
-// Implementação de groupBy (inalterada)
 Query.prototype.groupBy = function <T, TKey, TResult>(
   this: IQueryable<T>,
   keySelector: (entity: T) => TKey,
@@ -465,7 +413,6 @@ Query.prototype.groupBy = function <T, TKey, TResult>(
   return this.provider.createQuery<TResult>(callExpr, resultElementType);
 };
 
-// Implementação de union (inalterada)
 Query.prototype.union = function <T>(this: IQueryable<T>, second: IQueryable<T>): IQueryable<T> {
   if (!second || !second.expression || !second.provider) {
     throw new Error("Invalid second IQueryable provided for 'union'.");
@@ -474,7 +421,6 @@ Query.prototype.union = function <T>(this: IQueryable<T>, second: IQueryable<T>)
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
-// Implementação de concat (inalterada)
 Query.prototype.concat = function <T>(this: IQueryable<T>, second: IQueryable<T>): IQueryable<T> {
   if (!second || !second.expression || !second.provider) {
     throw new Error("Invalid second IQueryable provided for 'concat'.");
@@ -483,9 +429,6 @@ Query.prototype.concat = function <T>(this: IQueryable<T>, second: IQueryable<T>
   return this.provider.createQuery<T>(callExpr, this.elementType);
 };
 
-// **** IMPLEMENTAÇÕES DE EXECUÇÃO (Sync e Async) ****
-
-// Síncronas
 Query.prototype.first = function <T>(this: IQueryable<T>, predicate?: (entity: T) => boolean): T {
   const scopeMap = findScopeMap(this.expression);
   const args: Expression[] = [];
@@ -530,9 +473,8 @@ Query.prototype.singleOrDefault = function <T>(this: IQueryable<T>, predicate?: 
   return handleSyncExecution("singleOrDefault", this.provider.execute<T | null>(callExpr));
 };
 
-// Assíncronas
 Query.prototype.toListAsync = async function <T>(this: IQueryable<T>): Promise<T[]> {
-  const callExpr = new MethodCallExpression("toList", this.expression, []); // Nome interno pode ser toList
+  const callExpr = new MethodCallExpression("toList", this.expression, []);
   return await this.provider.execute<T[]>(callExpr);
 };
 
@@ -543,7 +485,7 @@ Query.prototype.firstAsync = async function <T>(this: IQueryable<T>, predicate?:
     const lambdaExpr: LambdaExpression = lambdaParser.parse(predicate, [], scopeMap);
     args.push(lambdaExpr);
   }
-  const callExpr = new MethodCallExpression("first", this.expression, args); // Nome interno pode ser first
+  const callExpr = new MethodCallExpression("first", this.expression, args);
   return await this.provider.execute<T>(callExpr);
 };
 
@@ -557,11 +499,7 @@ Query.prototype.firstOrDefaultAsync = async function <T>(
     const lambdaExpr: LambdaExpression = lambdaParser.parse(predicate, [], scopeMap);
     args.push(lambdaExpr);
   }
-  const callExpr = new MethodCallExpression(
-    "firstOrDefault", // Nome interno
-    this.expression,
-    args
-  );
+  const callExpr = new MethodCallExpression("firstOrDefault", this.expression, args);
   return await this.provider.execute<T | null>(callExpr);
 };
 
@@ -572,7 +510,7 @@ Query.prototype.singleAsync = async function <T>(this: IQueryable<T>, predicate?
     const lambdaExpr: LambdaExpression = lambdaParser.parse(predicate, [], scopeMap);
     args.push(lambdaExpr);
   }
-  const callExpr = new MethodCallExpression("single", this.expression, args); // Nome interno
+  const callExpr = new MethodCallExpression("single", this.expression, args);
   return await this.provider.execute<T>(callExpr);
 };
 
@@ -586,12 +524,6 @@ Query.prototype.singleOrDefaultAsync = async function <T>(
     const lambdaExpr: LambdaExpression = lambdaParser.parse(predicate, [], scopeMap);
     args.push(lambdaExpr);
   }
-  const callExpr = new MethodCallExpression(
-    "singleOrDefault", // Nome interno
-    this.expression,
-    args
-  );
+  const callExpr = new MethodCallExpression("singleOrDefault", this.expression, args);
   return await this.provider.execute<T | null>(callExpr);
 };
-
-// --- END OF FILE src/query/QueryableExtensions.ts ---

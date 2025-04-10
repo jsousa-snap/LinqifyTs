@@ -1,7 +1,3 @@
-// --- START OF FILE src/__tests__/scope.test.ts ---
-
-// Em src/__tests__/scope.test.ts
-
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions";

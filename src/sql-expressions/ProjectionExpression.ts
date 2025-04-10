@@ -1,10 +1,7 @@
-// --- START OF FILE src/sql-expressions/ProjectionExpression.ts ---
-
-import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
+import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
 import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
 import { SqlExpressionType } from "./SqlExpressionType";
 
-// Nova interface de metadados para ProjectionExpression
 export interface ProjectionExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.Projection;
   expression: SqlExpressionMetadata; // Metadados da expressão projetada
@@ -27,14 +24,11 @@ export class ProjectionExpression extends SqlExpression {
     return `${this.expression.toString()} AS ${escapeIdentifier(this.alias)}`;
   }
 
-  // *** IMPLEMENTAR toMetadata() ***
   toMetadata(): ProjectionExpressionMetadata {
     return {
       $type: SqlExpressionType.Projection,
-      expression: this.expression.toMetadata(), // Metadados da expressão
+      expression: this.expression.toMetadata(),
       alias: this.alias,
     };
   }
 }
-
-// --- END OF FILE src/sql-expressions/ProjectionExpression.ts ---

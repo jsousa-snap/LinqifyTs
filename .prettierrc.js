@@ -1,9 +1,7 @@
 // .prettierrc.js
 module.exports = {
-  // --- A OPÇÃO PRINCIPAL PARA CONTROLAR QUEBRA DE LINHA ---
   printWidth: 120, // <<<< AUMENTE ESTE VALOR! O padrão é 80. 100 ou 120 são comuns. Experimente!
 
-  // --- Outras opções comuns para consistência (ajuste ao seu gosto) ---
   tabWidth: 2, // Largura da tabulação (ou espaços equivalentes)
   useTabs: false, // Usar espaços em vez de tabs
   semi: true, // Usar ponto e vírgula no final das declarações

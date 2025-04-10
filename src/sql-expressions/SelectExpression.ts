@@ -1,25 +1,17 @@
-// --- START OF FILE src/sql-expressions/SelectExpression.ts ---
-
-// --- START OF FILE src/sql-expressions/SelectExpression.ts ---
-
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression";
 import { ProjectionExpression, ProjectionExpressionMetadata } from "./ProjectionExpression";
-import {
-  TableExpressionBase, // Importa a classe base
-  TableExpressionBaseMetadata,
-} from "./TableExpressionBase"; // Importa metadados base
+import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase";
 import { JoinExpressionBase, JoinExpressionBaseMetadata } from "./JoinExpressionBase";
 import { SqlOrdering, SortDirection } from "./SqlOrdering";
 import { SqlConstantExpressionMetadata, SqlConstantExpression } from "./SqlConstantExpression";
 import { SqlExpressionType } from "./SqlExpressionType";
 
-// *** CORREÇÃO: Estende metadados base ***
 export interface SelectExpressionMetadata extends TableExpressionBaseMetadata {
-  $type: SqlExpressionType.Select; // Redefine o tipo específico
+  $type: SqlExpressionType.Select;
   projection: ProjectionExpressionMetadata[];
   from: TableExpressionBaseMetadata;
-  predicate: SqlExpressionMetadata | null; // WHERE clause
-  having: SqlExpressionMetadata | null; // HAVING clause
+  predicate: SqlExpressionMetadata | null;
+  having: SqlExpressionMetadata | null;
   joins: JoinExpressionBaseMetadata[];
   orderBy: { expression: SqlExpressionMetadata; direction: SortDirection }[];
   offset: SqlConstantExpressionMetadata | null;
@@ -32,14 +24,13 @@ export interface SelectExpressionMetadata extends TableExpressionBaseMetadata {
  * Agora estende TableExpressionBase para poder ser usada diretamente como fonte.
  *
  * @class SelectExpression
- * @extends {TableExpressionBase} // <<< ESTENDE TableExpressionBase
+ * @extends {TableExpressionBase}
  */
 export class SelectExpression extends TableExpressionBase {
-  // <<< ESTENDE TableExpressionBase
-  public override readonly type = SqlExpressionType.Select; // <<< Define o tipo
+  public override readonly type = SqlExpressionType.Select;
 
   constructor(
-    alias: string, // <<< NOVO: Recebe o alias
+    alias: string,
     public readonly projection: ReadonlyArray<ProjectionExpression>,
     public readonly from: TableExpressionBase,
     public readonly predicate: SqlExpression | null = null,
@@ -59,10 +50,8 @@ export class SelectExpression extends TableExpressionBase {
   }
 
   toString(): string {
-    // toString da base já inclui o alias, então não precisamos dele aqui explicitamente
-    // Apenas a lógica interna do SELECT
     const projStr = this.projection.map((p) => p.toString()).join(", ");
-    const fromStr = this.from.toString(); // from também é TableExpressionBase
+    const fromStr = this.from.toString();
     const joinStr = this.joins.map((j) => ` ${j.toString()}`).join("");
     const whereStr = this.predicate ? ` WHERE ${this.predicate.toString()}` : "";
     const groupByStr = this.groupBy.length > 0 ? ` GROUP BY ${this.groupBy.map((g) => g.toString()).join(", ")}` : "";
@@ -74,7 +63,6 @@ export class SelectExpression extends TableExpressionBase {
     const offsetStr = this.offset ? ` OFFSET ${this.offset.toString()} ROWS` : "";
     const limitStr = this.limit ? ` FETCH NEXT ${this.limit.toString()} ROWS ONLY` : "";
 
-    // Retorna apenas o corpo do SELECT para debug, o gerador cuidará do alias/parênteses
     return `SELECT ${projStr} FROM ${fromStr}${joinStr}${whereStr}${groupByStr}${havingStr}${orderByStr}${offsetStr}${limitStr}`;
   }
 
@@ -83,10 +71,10 @@ export class SelectExpression extends TableExpressionBase {
     const limitMetadata = this.limit?.toMetadata() ?? null;
 
     return {
-      ...super.toMetadata(), // <<< Inclui alias e $type da base
-      $type: SqlExpressionType.Select, // <<< Redefine para Select
+      ...super.toMetadata(),
+      $type: SqlExpressionType.Select,
       projection: this.projection.map((p) => p.toMetadata()),
-      from: this.from.toMetadata(), // from também é TableExpressionBase
+      from: this.from.toMetadata(),
       predicate: this.predicate?.toMetadata() ?? null,
       having: this.having?.toMetadata() ?? null,
       joins: this.joins.map((j) => j.toMetadata()),
@@ -100,5 +88,3 @@ export class SelectExpression extends TableExpressionBase {
     };
   }
 }
-
-// --- END OF FILE src/sql-expressions/SelectExpression.ts ---

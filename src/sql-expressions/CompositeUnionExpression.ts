@@ -1,17 +1,13 @@
-// --- START OF FILE src/sql-expressions/CompositeUnionExpression.ts ---
-
-// --- START OF FILE src/sql-expressions/CompositeUnionExpression.ts ---
-
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { TableExpressionBase, TableExpressionBaseMetadata } from "./TableExpressionBase"; // Importar TableExpressionBaseMetadata
 import { SelectExpression } from "./SelectExpression";
 import { SqlExpressionType } from "./SqlExpressionType";
 import { escapeIdentifier } from "../query/generation/utils/sqlUtils";
-import { SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
+import { SqlExpressionMetadata } from "./SqlExpression";
 
-// Nova interface de metadados para CompositeUnionExpression
 export interface CompositeUnionExpressionMetadata extends TableExpressionBaseMetadata {
   $type: SqlExpressionType.Union;
-  sources: SqlExpressionMetadata[]; // Array de metadados de SelectExpression
+  sources: SqlExpressionMetadata[];
   distinct: boolean;
 }
 
@@ -20,20 +16,15 @@ export interface CompositeUnionExpressionMetadata extends TableExpressionBaseMet
  * Agora estende TableExpressionBase para poder ser usada diretamente como fonte.
  *
  * @class CompositeUnionExpression
- * @extends {TableExpressionBase} // <<< ESTENDE TableExpressionBase
+ * @extends {TableExpressionBase}
  */
 export class CompositeUnionExpression extends TableExpressionBase {
-  // <<< ESTENDE TableExpressionBase
   public override readonly type = SqlExpressionType.Union; // <<< Define o tipo
   public readonly sources: ReadonlyArray<SelectExpression>;
   public readonly distinct: boolean;
 
-  constructor(
-    sources: ReadonlyArray<SelectExpression>,
-    alias: string, // <<< Recebe o alias
-    distinct: boolean = true
-  ) {
-    super(alias); // <<< Passa o alias para a classe base
+  constructor(sources: ReadonlyArray<SelectExpression>, alias: string, distinct: boolean = true) {
+    super(alias);
     if (!sources || sources.length < 2) {
       throw new Error("CompositeUnionExpression requires at least two source SelectExpressions.");
     }
@@ -49,7 +40,6 @@ export class CompositeUnionExpression extends TableExpressionBase {
     return `(${sourcesStr}) AS ${escapeIdentifier(this.alias)}`;
   }
 
-  // *** IMPLEMENTAR toMetadata() ***
   override toMetadata(): CompositeUnionExpressionMetadata {
     return {
       ...super.toMetadata(), // Inclui metadados da base (alias e type)
@@ -58,9 +48,4 @@ export class CompositeUnionExpression extends TableExpressionBase {
       distinct: this.distinct,
     };
   }
-
-  // **** CÓDIGO REMOVIDO DAQUI ****
-  // protected visitMember(expression: LinqMemberExpression): SqlExpression { ... }
 }
-
-// --- END OF FILE src/sql-expressions/CompositeUnionExpression.ts ---

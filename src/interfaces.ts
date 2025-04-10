@@ -1,7 +1,4 @@
-// --- START OF FILE src/interfaces.ts ---
-
-// src/interfaces.ts
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Expression } from "./expressions";
 
 /**
@@ -9,7 +6,7 @@ import { Expression } from "./expressions";
  * Pode ser uma função construtora (classe) ou um objeto genérico.
  * @typedef {Function | Object} ElementType
  */
-export type ElementType = Function | object;
+export type ElementType = ((...args: any[]) => any) | object;
 
 // Tipos genéricos usados nas assinaturas de métodos IQueryable.
 // São placeholders para tipos específicos usados em cada chamada.
@@ -352,4 +349,3 @@ export interface IQueryProvider {
    */
   getQueryText(expression: Expression): string;
 }
-// --- END OF FILE src/interfaces.ts ---

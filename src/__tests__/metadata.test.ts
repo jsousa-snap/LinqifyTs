@@ -1,31 +1,15 @@
-// --- START OF FILE src/__tests__/metadata.test.ts ---
 import { DbContext } from "../core";
 import "../query/QueryableExtensions";
 import { IQueryable } from "../interfaces";
 import { QueryExpressionVisitor } from "../query/translation/QueryExpressionVisitor";
 import {
-  SqlExpression,
-  SelectExpression,
-  TableExpression,
-  ColumnExpression,
-  SqlBinaryExpression,
-  SqlConstantExpression,
-  ProjectionExpression,
-  InnerJoinExpression,
-  CompositeUnionExpression,
-  SqlFunctionCallExpression,
-  SqlScalarSubqueryAsJsonExpression,
   SqlExpressionType,
   SelectExpressionMetadata,
-  TableExpressionMetadata,
   ColumnExpressionMetadata,
   SqlBinaryExpressionMetadata,
   SqlConstantExpressionMetadata,
-  ProjectionExpressionMetadata,
-  InnerJoinExpressionMetadata,
-  CompositeUnionExpressionMetadata,
   SqlFunctionCallExpressionMetadata,
-  SqlScalarSubqueryAsJsonExpressionMetadata,
+  SqlExpressionMetadata,
 } from "../sql-expressions";
 import { Expression } from "../expressions";
 
@@ -70,7 +54,7 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     jest.restoreAllMocks();
   });
 
-  function getMetadata(expression: Expression): any {
+  function getMetadata(expression: Expression): SqlExpressionMetadata {
     // Ajustado para receber LinqExpression
     const sqlExpr = visitor.translate(expression);
     return sqlExpr.toMetadata();
@@ -122,6 +106,7 @@ describe("SQL Expression Metadata Generation Tests (Async)", () => {
     expect(countResult).toBe(10);
 
     // Verificação dos metadados da expressão ANTES da execução final
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const countLinqExpr = new (require("../expressions/MethodCallExpression").MethodCallExpression)(
       "count", // Nome base na expressão
       query.expression,

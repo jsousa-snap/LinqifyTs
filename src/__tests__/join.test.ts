@@ -1,7 +1,3 @@
-// --- START OF FILE src/__tests__/join.test.ts ---
-
-// src/__tests__/join.test.ts
-
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Importa para aplicar os métodos no protótipo
@@ -278,11 +274,6 @@ WHERE [u].[name] = 'Alice'`;
       })
     );
 
-    const expectedSql = `
-SELECT [u].[name] AS [UserName], CASE WHEN [d].[deptName] IS NOT NULL THEN [d].[deptName] ELSE 'No Department' END AS [DeptName]
-FROM [Users] AS [u]
-LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
-    `;
     // Nota: A tradução exata do operador ternário para CASE WHEN pode variar.
     // Vamos verificar as partes principais
     const actualSql = query.toQueryString();

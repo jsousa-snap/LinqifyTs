@@ -1,29 +1,22 @@
-/* src/expressions/BinaryExpression.ts */
-// --- START OF FILE src/expressions/BinaryExpression.ts ---
-
 import { Expression, ExpressionType } from "./Expression";
 
 /**
  * Enumeração dos tipos de operadores binários suportados na árvore de expressão LINQ.
  */
 export enum OperatorType {
-  // Comparação
   Equal = "==",
   NotEqual = "!=",
   GreaterThan = ">",
   GreaterThanOrEqual = ">=",
   LessThan = "<",
   LessThanOrEqual = "<=",
-  // Lógico
   And = "&&",
   Or = "||",
-  // ** NOVO: Aritméticos **
   Add = "+",
   Subtract = "-",
   Multiply = "*",
   Divide = "/",
   Modulo = "%",
-  // ** FIM: Aritméticos **
 }
 
 /**
@@ -68,4 +61,3 @@ export class BinaryExpression extends Expression {
     return `(${this.left.toString()} ${this.operator} ${this.right.toString()})`;
   }
 }
-// --- END OF FILE src/expressions/BinaryExpression.ts ---

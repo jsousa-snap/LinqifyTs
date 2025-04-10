@@ -1,9 +1,5 @@
-// --- START OF FILE src/__tests__/orderby.test.ts ---
-
-// src/__tests__/orderby.test.ts
-
 import { DbContext } from "../core";
-import { IQueryable, IOrderedQueryable } from "../interfaces"; // Import IOrderedQueryable
+import { IQueryable } from "../interfaces"; // Import IOrderedQueryable
 import { normalizeSql } from "./utils/testUtils"; // <<< IMPORTADO (caminho correto)
 import "../query/QueryableExtensions"; // Apply extensions
 

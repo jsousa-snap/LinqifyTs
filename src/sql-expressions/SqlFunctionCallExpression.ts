@@ -1,13 +1,10 @@
-// --- START OF FILE src/sql-expressions/SqlFunctionCallExpression.ts ---
-
 import { SqlExpression, SqlExpressionMetadata } from "./SqlExpression"; // Importar SqlExpressionMetadata
 import { SqlExpressionType } from "./SqlExpressionType";
 
-// Nova interface de metadados para SqlFunctionCallExpression
 export interface SqlFunctionCallExpressionMetadata extends SqlExpressionMetadata {
   $type: SqlExpressionType.FunctionCall;
   functionName: string;
-  args: SqlExpressionMetadata[]; // Array de metadados dos argumentos
+  args: SqlExpressionMetadata[];
 }
 
 /**
@@ -30,13 +27,11 @@ export class SqlFunctionCallExpression extends SqlExpression {
     return `${this.functionName}(${argsStr})`;
   }
 
-  // *** IMPLEMENTAR toMetadata() ***
   toMetadata(): SqlFunctionCallExpressionMetadata {
     return {
       $type: SqlExpressionType.FunctionCall,
       functionName: this.functionName,
-      args: this.args.map((arg) => arg.toMetadata()), // Metadados dos argumentos
+      args: this.args.map((arg) => arg.toMetadata()),
     };
   }
 }
-// --- END OF FILE src/sql-expressions/SqlFunctionCallExpression.ts ---

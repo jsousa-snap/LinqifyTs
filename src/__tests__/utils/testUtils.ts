@@ -1,5 +1,3 @@
-// --- START OF FILE src/__tests__/utils/testUtils.ts ---
-
 /**
  * Normaliza uma string SQL removendo espaços/quebras de linha extras
  * *apenas* no início e no fim, conforme padrão especificado.
@@ -17,5 +15,3 @@ export const normalizeSql = (sql: string): string => {
 
   return result;
 };
-
-// --- END OF FILE src/__tests__/utils/testUtils.ts ---

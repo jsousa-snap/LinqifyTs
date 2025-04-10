@@ -1,13 +1,10 @@
-// --- START OF FILE src/__tests__/count.test.ts ---
-
-// src/__tests__/count.test.ts
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
 import { normalizeSql } from "./utils/testUtils";
 
-// --- Interfaces ---
 interface User {
   id: number;
   name: string;
@@ -20,8 +17,6 @@ interface Post {
   title: string;
   authorId: number;
 }
-
-// --- Fim Interfaces ---
 
 describe("Queryable Count Operator Tests (Async)", () => {
   let dbContext: DbContext;
@@ -138,4 +133,3 @@ FROM [Users] AS [u]
     expect(normalizeSql(actualSql)).toEqual(normalizeSql(expectedSql));
   });
 });
-// --- END OF FILE src/__tests__/count.test.ts ---

@@ -1,14 +1,8 @@
-/* src/__tests__/arithmetic.test.ts */
-// --- START OF FILE src/__tests__/arithmetic.test.ts ---
-
-// src/__tests__/arithmetic.test.ts
-
 import { DbContext } from "../core";
 import { IQueryable } from "../interfaces";
 import "../query/QueryableExtensions"; // Apply extensions
 import { normalizeSql } from "./utils/testUtils";
 
-// --- Interfaces ---
 interface Product {
   id: number;
   name: string;
@@ -21,9 +15,8 @@ interface Order {
   orderId: number;
   productId: number;
   quantity: number;
-  discount: number; // 0.1 for 10%
+  discount: number;
 }
-// --- Fim Interfaces ---
 
 describe("Queryable Arithmetic Operator Tests", () => {
   let dbContext: DbContext;
@@ -35,8 +28,6 @@ describe("Queryable Arithmetic Operator Tests", () => {
     products = dbContext.set<Product>("Products");
     orders = dbContext.set<Order>("Orders");
   });
-
-  // --- Testes em SELECT ---
 
   it("Teste Arit 1: should handle addition in select", () => {
     const query = products.select((p) => ({
@@ -82,8 +73,6 @@ SELECT [p].[price] + [p].[stock] * 2 - 10 / 5 AS [Val]
 FROM [Products] AS [p]`;
     expect(normalizeSql(query.toQueryString())).toEqual(normalizeSql(expectedSql));
   });
-
-  // --- Testes em WHERE ---
 
   it("Teste Arit 5: should handle addition in where", () => {
     const query = products.where((p) => p.stock + 10 > 50);
@@ -135,4 +124,3 @@ WHERE ([p].[category] = 'SALE' OR [p].[category] = 'SS') AND [p].[price] * 1.05 
     expect(normalizeSql(query.toQueryString())).toEqual(normalizeSql(expectedSql));
   });
 });
-// --- END OF FILE src/__tests__/arithmetic.test.ts ---
