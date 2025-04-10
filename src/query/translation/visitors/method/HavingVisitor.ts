@@ -1,19 +1,10 @@
-// src/query/translation/visitors/method/HavingVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
-import {
-  SqlExpression,
-  SelectExpression,
-  SqlBinaryExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
-} from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
+import { SqlExpression, SelectExpression, SqlBinaryExpression } from "../../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -56,7 +47,6 @@ export class HavingVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource // Representa o grupo (k, g)
   ): SelectExpression {
     // Validações
@@ -75,7 +65,6 @@ export class HavingVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
 
     // Cria contexto filho para a lambda do predicado HAVING
     // A fonte para este contexto é o resultado do GroupBy (sourceForLambda)
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const predicateContext = this.context.createChildContext([param], [sourceForLambda]);
 
     // Visita o corpo da lambda (a condição HAVING) no contexto filho
@@ -97,7 +86,7 @@ export class HavingVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
       currentSelect.projection, // Mantém projeções (do GroupBy)
       currentSelect.from, // Mantém FROM original
       currentSelect.predicate, // Mantém WHERE original (antes do GroupBy)
-      newHaving, // <<< Define/Atualiza a cláusula HAVING
+      newHaving,
       currentSelect.joins, // Mantém Joins originais
       currentSelect.orderBy, // Mantém OrderBy (pode ser relevante após GroupBy)
       currentSelect.offset, // Mantém Offset

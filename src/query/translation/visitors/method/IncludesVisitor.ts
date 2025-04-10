@@ -1,5 +1,3 @@
-// src/query/translation/visitors/method/IncludesVisitor.ts
-
 import { MethodCallExpression as LinqMethodCallExpression } from "../../../../expressions";
 import { SqlExpression, SqlInExpression, SqlLikeExpression, SqlConstantExpression } from "../../../../sql-expressions";
 import { BaseExpressionVisitor } from "../base/BaseExpressionVisitor";
@@ -41,8 +39,6 @@ export class IncludesVisitor extends BaseExpressionVisitor<LinqMethodCallExpress
       return stringLikeSql; // Sucesso! Retorna SqlLikeExpression
     }
 
-    // --- Falha ---
-    // Se chegou aqui, não conseguiu traduzir nem como array nem como string.
     throw new Error(
       `Não foi possível traduzir a chamada 'includes'. Verifique se a fonte é um array constante ou uma string, e se o argumento é apropriado. Fonte: ${expression.source.toString()}, Arg: ${expression.args[0].toString()}`
     );

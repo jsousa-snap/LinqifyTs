@@ -1,20 +1,15 @@
-// src/query/translation/visitors/method/MaxVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
 import {
   SqlExpression,
   SelectExpression,
   ProjectionExpression,
   SqlFunctionCallExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
 } from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";

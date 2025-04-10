@@ -1,5 +1,3 @@
-// src/query/translation/visitors/method/FirstSingleVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -7,15 +5,7 @@ import {
   LambdaExpression as LinqLambdaExpression,
   ConstantExpression as LinqConstantExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
-import {
-  SqlExpression,
-  SelectExpression,
-  ProjectionExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
-  // SqlBinaryExpression -- Usado internamente por WhereVisitor
-} from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
+import { SqlExpression, SelectExpression, ProjectionExpression } from "../../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";

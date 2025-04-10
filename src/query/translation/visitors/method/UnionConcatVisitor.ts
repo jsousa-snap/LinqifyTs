@@ -1,9 +1,5 @@
-// src/query/translation/visitors/method/UnionConcatVisitor.ts
-
-import {
-  // Expression as LinqExpression, // Não usado diretamente
-  MethodCallExpression as LinqMethodCallExpression,
-} from "../../../../expressions";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { MethodCallExpression as LinqMethodCallExpression } from "../../../../expressions";
 import {
   SqlExpression,
   SelectExpression,

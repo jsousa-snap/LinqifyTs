@@ -1,20 +1,15 @@
-// src/query/translation/visitors/method/MinVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
 import {
   SqlExpression,
   SelectExpression,
   ProjectionExpression,
   SqlFunctionCallExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
 } from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -41,7 +36,6 @@ export class MinVisitor extends MethodVisitor<LinqMethodCallExpression, SelectEx
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     sourceForLambda: SqlDataSource
   ): SelectExpression {
     const methodName = expression.methodName.replace(/Async$/, ""); // Remove Async
@@ -59,7 +53,6 @@ export class MinVisitor extends MethodVisitor<LinqMethodCallExpression, SelectEx
     const param = lambda.parameters[0];
 
     // Cria contexto filho e visita o seletor
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const selectorContext = this.context.createChildContext([param], [sourceForLambda]);
     const valueToAggregateSql = this.visitInContext(lambda.body, selectorContext); // Usa this.visitInContext
 

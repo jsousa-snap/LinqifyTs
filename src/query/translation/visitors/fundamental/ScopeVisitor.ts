@@ -1,5 +1,3 @@
-// src/query/translation/visitors/fundamental/ScopeVisitor.ts
-
 import { ScopeExpression as LinqScopeExpression } from "../../../../expressions";
 import { SqlExpression } from "../../../../sql-expressions";
 import { BaseExpressionVisitor } from "../base/BaseExpressionVisitor";
@@ -17,8 +15,6 @@ export class ScopeVisitor extends BaseExpressionVisitor<LinqScopeExpression, Sql
    * @throws {Error} Se a tradução da expressão interna falhar (retornar null inesperadamente).
    */
   translate(expression: LinqScopeExpression): SqlExpression | null {
-    // Visita a expressão contida dentro do escopo,
-    // <<< CORREÇÃO: Passando o contexto atual (this.context) >>>
     const innerSql = this.visitSubexpression(expression.sourceExpression, this.context);
 
     // Embora visitSubexpression possa retornar null se a entrada for null,

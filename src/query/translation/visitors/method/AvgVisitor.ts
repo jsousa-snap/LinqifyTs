@@ -1,21 +1,15 @@
-// src/query/translation/visitors/method/AvgVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
 import {
   SqlExpression,
   SelectExpression,
   ProjectionExpression,
   SqlFunctionCallExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
-  // SqlConstantExpression -- Não diretamente necessário aqui, mas usado implicitamente
 } from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -74,7 +68,6 @@ export class AvgVisitor extends MethodVisitor<LinqMethodCallExpression, SelectEx
     const param = lambda.parameters[0]; // Parâmetro da lambda (ex: u)
 
     // Cria contexto filho e visita o seletor (a expressão a ser agregada)
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const selectorContext = this.context.createChildContext([param], [sourceForLambda]);
     const valueToAggregateSql = this.visitInContext(lambda.body, selectorContext); // Usa this.visitInContext
 
@@ -106,6 +99,5 @@ export class AvgVisitor extends MethodVisitor<LinqMethodCallExpression, SelectEx
       null, // LIMIT removido
       [] // GROUP BY removido (AVG simples não agrupa)
     );
-    // Nota: AVG após GroupBy é tratado no GroupByVisitor.
   }
 }

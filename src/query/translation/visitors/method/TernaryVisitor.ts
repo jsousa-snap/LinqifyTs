@@ -1,15 +1,5 @@
-// src/query/translation/visitors/method/TernaryVisitor.ts
-
-import {
-  MethodCallExpression as LinqMethodCallExpression,
-  // Imports abaixo não usados diretamente, mas relevantes para o contexto
-  // Expression as LinqExpression
-} from "../../../../expressions";
-import {
-  SqlCaseExpression, // Tipo SQL para CASE WHEN THEN ELSE END
-  // SqlConstantExpression, // Pode ser necessário se as partes resultarem nisso
-  // ColumnExpression // Pode ser necessário se as partes resultarem nisso
-} from "../../../../sql-expressions";
+import { MethodCallExpression as LinqMethodCallExpression } from "../../../../expressions";
+import { SqlCaseExpression } from "../../../../sql-expressions";
 import { BaseExpressionVisitor } from "../base/BaseExpressionVisitor";
 
 /**

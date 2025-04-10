@@ -1,5 +1,4 @@
-// src/query/translation/visitors/fundamental/ConstantVisitor.ts
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ConstantExpression as LinqConstantExpression } from "../../../../expressions";
 import { SqlExpression, TableExpression, SqlConstantExpression } from "../../../../sql-expressions";
 import { getTableName } from "../../../generation/utils/sqlUtils";

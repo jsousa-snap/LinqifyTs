@@ -66,12 +66,9 @@ export class BinaryVisitor extends BaseExpressionVisitor<LinqBinaryExpression, S
       case LinqOperatorType.Or:
         return SqlOperatorType.Or;
       default: {
-        // <<< ADICIONA CHAVES AQUI
-        // Garante verificação em tempo de compilação para operadores não mapeados
         const exhaustiveCheck: never = linqOp;
-        // Lança erro em tempo de execução se um operador desconhecido for encontrado
         throw new Error(`Operador LINQ não mapeado para SQL: ${exhaustiveCheck}`);
-      } // <<< FECHA CHAVES AQUI
+      }
     }
   }
 }

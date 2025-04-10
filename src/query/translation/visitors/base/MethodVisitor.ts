@@ -1,5 +1,4 @@
-// src/query/translation/visitors/base/MethodVisitor.ts
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Expression as LinqExpression,
   MethodCallExpression as LinqMethodCallExpression,

@@ -1,5 +1,3 @@
-// src/query/translation/visitors/method/InstanceMethodVisitor.ts
-
 import { MethodCallExpression as LinqMethodCallExpression } from "../../../../expressions";
 import {
   SqlExpression,
@@ -34,23 +32,19 @@ export class InstanceMethodVisitor extends BaseExpressionVisitor<LinqMethodCallE
     switch (expression.methodName) {
       // --- Métodos de String ---
       case "toUpperCase": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         return new SqlFunctionCallExpression("UPPER", [sourceSql]);
-      } // <<< Fecha Chaves
+      }
       case "toLowerCase": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         return new SqlFunctionCallExpression("LOWER", [sourceSql]);
-      } // <<< Fecha Chaves
+      }
       case "trim": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         return new SqlFunctionCallExpression("TRIM", [sourceSql]);
-      } // <<< Fecha Chaves
+      }
       case "startsWith":
       case "endsWith": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 1);
         const patternArgSql = this.visitSubexpression(expression.args[0], this.context);
         if (!(patternArgSql instanceof SqlConstantExpression) || typeof patternArgSql.value !== "string") {
@@ -60,9 +54,8 @@ export class InstanceMethodVisitor extends BaseExpressionVisitor<LinqMethodCallE
         const escapedPattern = patternValue.replace(/\[/g, "[[]").replace(/%/g, "[%]").replace(/_/g, "[_]");
         const likePattern = expression.methodName === "startsWith" ? `${escapedPattern}%` : `%${escapedPattern}`;
         return new SqlLikeExpression(sourceSql, new SqlConstantExpression(likePattern));
-      } // <<< Fecha Chaves
+      }
       case "substring": {
-        // <<< Adiciona Chaves
         if (expression.args.length < 1 || expression.args.length > 2) {
           throw new Error("'substring' requer 1 ou 2 argumentos (startIndex, [length]).");
         }
@@ -95,46 +88,39 @@ export class InstanceMethodVisitor extends BaseExpressionVisitor<LinqMethodCallE
           lengthArgSql = new SqlConstantExpression(8000); // Aproximação para "até o fim"
         }
         return new SqlFunctionCallExpression("SUBSTRING", [sourceSql, sqlStart, lengthArgSql]);
-      } // <<< Fecha Chaves
+      }
 
       // --- Métodos de Data/Hora ---
       case "getFullYear": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         return new SqlFunctionCallExpression("YEAR", [sourceSql]);
-      } // <<< Fecha Chaves
+      }
       case "getMonth": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         const monthSql = new SqlFunctionCallExpression("MONTH", [sourceSql]);
         // Ajusta de 1-based (SQL) para 0-based (JS)
         return new SqlBinaryExpression(monthSql, OperatorType.Subtract, new SqlConstantExpression(1));
-      } // <<< Fecha Chaves
+      }
       case "getDate": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         return new SqlFunctionCallExpression("DAY", [sourceSql]);
-      } // <<< Fecha Chaves
+      }
       case "getHours": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         return new SqlFunctionCallExpression("DATEPART", [new SqlConstantExpression("hour"), sourceSql]);
-      } // <<< Fecha Chaves
+      }
       case "getMinutes": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         return new SqlFunctionCallExpression("DATEPART", [new SqlConstantExpression("minute"), sourceSql]);
-      } // <<< Fecha Chaves
+      }
       case "getSeconds": {
-        // <<< Adiciona Chaves
         this.validateArgumentCount(expression, 0);
         return new SqlFunctionCallExpression("DATEPART", [new SqlConstantExpression("second"), sourceSql]);
-      } // <<< Fecha Chaves
+      }
 
       default: {
-        // <<< Adiciona Chaves (já estava ok, mas mantemos por consistência)
         throw new Error(`Método de instância não suportado ou não reconhecido: ${expression.methodName}`);
-      } // <<< Fecha Chaves
+      }
     }
   }
 

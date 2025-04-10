@@ -1,18 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// src/query/translation/visitors/method/ToListVisitor.ts
 
 import {
   MethodCallExpression as LinqMethodCallExpression,
   Expression as LinqExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
-import {
-  SelectExpression,
-  ProjectionExpression,
-  SqlExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
-} from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
+import { SelectExpression, ProjectionExpression, SqlExpression } from "../../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -32,7 +24,6 @@ export class ToListVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
     context: TranslationContext,
     aliasGenerator: AliasGenerator,
     visitDelegate: VisitFn, // Necessário para super
-    // Recebe visitInContext para satisfazer MethodVisitor, mas não o usa
     visitInContext: (expression: LinqExpression, context: TranslationContext) => SqlExpression | null
   ) {
     super(context, aliasGenerator, visitDelegate, visitInContext);
@@ -48,7 +39,6 @@ export class ToListVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
   apply(
     expression: LinqMethodCallExpression,
     currentSelect: SelectExpression,
-    // Recebe _sourceForLambda para compatibilidade, mas não usa
     _sourceForLambda: SqlDataSource
   ): SelectExpression {
     const methodName = expression.methodName.replace(/Async$/, ""); // Remove Async

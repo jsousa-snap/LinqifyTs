@@ -1,5 +1,3 @@
-// src/query/translation/visitors/method/SelectVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -7,19 +5,11 @@ import {
   LambdaExpression as LinqLambdaExpression,
   ParameterExpression as LinqParameterExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
-import {
-  SqlExpression,
-  SelectExpression,
-  ProjectionExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
-  // SqlOrdering -- Não é modificado aqui, mas faz parte de SelectExpression
-} from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
+import { SqlExpression, SelectExpression, ProjectionExpression } from "../../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
-import { AliasGenerator } from "../../../generation/AliasGenerator"; // Para gerar alias para o novo select
-import { VisitFn } from "../../../generation/types"; // Para construtor da base
-import { MethodVisitor } from "../base/MethodVisitor"; // <<< Herda de MethodVisitor
+import { AliasGenerator } from "../../../generation/AliasGenerator";
+import { VisitFn } from "../../../generation/types";
+import { MethodVisitor } from "../base/MethodVisitor";
 
 /**
  * Traduz uma chamada de método LINQ `select` para atualizar as projeções
@@ -113,7 +103,7 @@ export class SelectVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
 
     return new SelectExpression(
       selectAlias, // Define novo alias para esta etapa do SELECT
-      finalProjections, // <<< Define as novas projeções
+      finalProjections,
       currentSelect.from, // Mantém FROM
       currentSelect.predicate, // Mantém WHERE
       currentSelect.having, // Mantém HAVING

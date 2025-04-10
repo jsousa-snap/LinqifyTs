@@ -1,5 +1,3 @@
-// src/query/translation/visitors/base/BaseExpressionVisitor.ts
-
 import { Expression as LinqExpression } from "../../../../expressions";
 import { SqlExpression } from "../../../../sql-expressions";
 import { AliasGenerator } from "../../../generation/AliasGenerator";

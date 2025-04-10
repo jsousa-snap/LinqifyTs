@@ -1,9 +1,5 @@
-// src/query/translation/visitors/fundamental/MemberVisitor.ts
-
-import {
-  MemberExpression as LinqMemberExpression,
-  ExpressionType as LinqExpressionType,
-} from "../../../../expressions";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { MemberExpression as LinqMemberExpression } from "../../../../expressions";
 import {
   SqlExpression,
   TableExpressionBase,
@@ -12,13 +8,9 @@ import {
   SqlConstantExpression,
   TableExpression,
   SelectExpression,
-  SqlExpressionType,
   CompositeUnionExpression,
-  SqlBinaryExpression,
 } from "../../../../sql-expressions";
-import { OperatorType } from "../../../generation/utils/sqlUtils";
 import { BaseExpressionVisitor } from "../base/BaseExpressionVisitor";
-import { TranslationContext } from "../../TranslationContext"; // Importar se usado para criar contexto filho
 
 /**
  * Traduz uma MemberExpression LINQ (acesso a propriedade, ex: 'u.Name', ou métodos
@@ -30,7 +22,6 @@ export class MemberVisitor extends BaseExpressionVisitor<LinqMemberExpression, S
     const memberName = expression.memberName;
 
     // 1. Visita a expressão do objeto passando o contexto atual
-    // <<< CORREÇÃO: Passar this.context >>>
     const sourceSqlBase = this.visitSubexpression(expression.objectExpression, this.context);
 
     if (!sourceSqlBase) {
@@ -56,7 +47,6 @@ export class MemberVisitor extends BaseExpressionVisitor<LinqMemberExpression, S
       const keySql = (sourceSqlBase as any).getSqlForKeyAccess();
       if (keySql) return keySql;
     }
-    // --- Fim GroupBy ---
 
     // 3. Acesso a Membros em Fontes de Tabela/Select/Union
     if (sourceSqlBase instanceof TableExpressionBase) {

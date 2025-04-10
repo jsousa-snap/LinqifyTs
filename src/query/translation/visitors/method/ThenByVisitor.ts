@@ -1,20 +1,10 @@
-// src/query/translation/visitors/method/ThenByVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
-import {
-  SqlExpression,
-  SelectExpression,
-  SqlOrdering,
-  SortDirection,
-  // SqlDataSource -- REMOVIDO DAQUI
-} from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
+import { SqlExpression, SelectExpression, SqlOrdering, SortDirection } from "../../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -81,7 +71,6 @@ export class ThenByVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
     const direction: SortDirection = methodName === "thenBy" ? "ASC" : "DESC";
 
     // Cria contexto filho para a lambda do seletor de chave
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const keySelectorContext = this.context.createChildContext([param], [sourceForLambda]);
 
     // Visita o corpo da lambda (a chave de ordenação secundária) no contexto filho
@@ -108,7 +97,7 @@ export class ThenByVisitor extends MethodVisitor<LinqMethodCallExpression, Selec
       currentSelect.predicate, // Mantém WHERE
       currentSelect.having, // Mantém HAVING
       currentSelect.joins, // Mantém Joins
-      updatedOrderBy, // <<< Define ORDER BY estendido
+      updatedOrderBy,
       currentSelect.offset, // Mantém Offset
       currentSelect.limit, // Mantém Limit
       currentSelect.groupBy // Mantém GroupBy

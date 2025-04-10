@@ -1,5 +1,3 @@
-// src/query/translation/visitors/method/SumVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,

@@ -1,19 +1,10 @@
-// src/query/translation/visitors/method/WhereVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
-import {
-  SqlExpression,
-  SelectExpression,
-  SqlBinaryExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
-} from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
+import { SqlExpression, SelectExpression, SqlBinaryExpression } from "../../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -54,7 +45,6 @@ export class WhereVisitor extends MethodVisitor<LinqMethodCallExpression, Select
     }
     const param = lambda.parameters[0];
 
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const predicateContext = this.context.createChildContext([param], [sourceForLambda]);
     const predicateSql = this.visitInContext(lambda.body, predicateContext);
 
@@ -70,7 +60,7 @@ export class WhereVisitor extends MethodVisitor<LinqMethodCallExpression, Select
       currentSelect.alias,
       currentSelect.projection,
       currentSelect.from,
-      newPredicate, // <<< Predicado atualizado
+      newPredicate,
       currentSelect.having,
       currentSelect.joins,
       currentSelect.orderBy,

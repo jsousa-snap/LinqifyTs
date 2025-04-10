@@ -1,12 +1,9 @@
-// src/query/translation/visitors/method/CountVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
 import {
   SqlExpression,
   SelectExpression,
@@ -14,9 +11,7 @@ import {
   SqlConstantExpression,
   ProjectionExpression,
   SqlFunctionCallExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
 } from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -121,6 +116,5 @@ export class CountVisitor extends MethodVisitor<LinqMethodCallExpression, Select
       null, // LIMIT removido
       [] // GROUP BY removido (não faz sentido para Count simples)
     );
-    // Nota: Count após GroupBy é tratado de forma diferente (geralmente no resultSelector do GroupBy).
   }
 }

@@ -1,23 +1,18 @@
-// src/query/translation/visitors/method/LeftJoinVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
 import {
   SqlExpression,
   SelectExpression,
   TableExpression,
-  LeftJoinExpression, // <<< Usa LeftJoinExpression
+  LeftJoinExpression,
   SqlBinaryExpression,
   ProjectionExpression,
   TableExpressionBase,
-  // SqlDataSource -- REMOVIDO DAQUI
 } from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -44,7 +39,7 @@ export class LeftJoinVisitor extends MethodVisitor<LinqMethodCallExpression, Sel
   constructor(
     context: TranslationContext,
     aliasGenerator: AliasGenerator,
-    visitDelegate: VisitFn, // visitSubexpression
+    visitDelegate: VisitFn,
     visitInContext: (expression: LinqExpression, context: TranslationContext) => SqlExpression | null,
     createProjections: (body: LinqExpression, context: TranslationContext) => ProjectionExpression[]
   ) {
@@ -91,7 +86,6 @@ export class LeftJoinVisitor extends MethodVisitor<LinqMethodCallExpression, Sel
     ];
 
     // --- 1. Visita a fonte interna (idêntico a join) ---
-    // <<< CORREÇÃO: Passa this.context >>>
     const innerSqlSourceBase = this.visitSubexpression(innerSourceLinqExpr, this.context);
     if (!innerSqlSourceBase || !(innerSqlSourceBase instanceof TableExpressionBase)) {
       throw new Error(
@@ -105,13 +99,10 @@ export class LeftJoinVisitor extends MethodVisitor<LinqMethodCallExpression, Sel
     }
     const innerAliasedSource = innerSqlSourceBase;
 
-    // --- 2. Tradução das chaves (idêntico a join) ---
     const outerParam = outerKeyLambdaExpr.parameters[0];
     const innerParam = innerKeyLambdaExpr.parameters[0];
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const outerKeyContext = this.context.createChildContext([outerParam], [sourceForOuterLambda]);
     const outerKeySql = this.visitInContext(outerKeyLambdaExpr.body, outerKeyContext);
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const innerKeyContext = this.context.createChildContext([innerParam], [innerAliasedSource]);
     const innerKeySql = this.visitInContext(innerKeyLambdaExpr.body, innerKeyContext);
     if (!outerKeySql || !innerKeySql) {
@@ -122,7 +113,6 @@ export class LeftJoinVisitor extends MethodVisitor<LinqMethodCallExpression, Sel
 
     // --- 3. Criação da expressão de JOIN ---
     const joinPredicate = new SqlBinaryExpression(outerKeySql, OperatorType.Equal, innerKeySql);
-    // **** DIFERENÇA: Cria LeftJoinExpression ****
     const joinExpr = new LeftJoinExpression(innerAliasedSource, joinPredicate);
     const newJoins = [...currentSelect.joins, joinExpr];
 

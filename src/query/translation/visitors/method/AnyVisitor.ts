@@ -1,5 +1,3 @@
-// src/query/translation/visitors/method/AnyVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
@@ -73,7 +71,6 @@ export class AnyVisitor extends BaseExpressionVisitor<LinqMethodCallExpression, 
     }
 
     // 1. Visita a fonte da chamada 'any'
-    // <<< CORREÇÃO: Passa this.context >>>
     const sourceSql = this.visitSubexpression(expression.source, this.context);
     if (!sourceSql) {
       throw new Error(`Não foi possível traduzir a fonte de 'any'. Fonte: ${expression.source.toString()}`);
@@ -155,9 +152,9 @@ export class AnyVisitor extends BaseExpressionVisitor<LinqMethodCallExpression, 
       selectForExists.predicate, // WHERE (já inclui o predicado do Any, se houver)
       selectForExists.having, // HAVING (pode ser relevante)
       selectForExists.joins, // Joins (podem ser relevantes)
-      [], // ORDER BY removido
-      null, // OFFSET removido
-      null, // LIMIT removido
+      [],
+      null,
+      null,
       selectForExists.groupBy // GroupBy (pode ser relevante)
     );
 

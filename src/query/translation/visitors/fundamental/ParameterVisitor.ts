@@ -1,10 +1,6 @@
-// src/query/translation/visitors/fundamental/ParameterVisitor.ts
-
 import { ParameterExpression as LinqParameterExpression } from "../../../../expressions";
-// SqlDataSource é um tipo importado de TranslationContext
 import { SqlDataSource } from "../../TranslationContext";
 import { BaseExpressionVisitor } from "../base/BaseExpressionVisitor";
-// TranslationContext é acessado via this.context
 
 /**
  * Traduz uma ParameterExpression LINQ (ex: 'u' em 'u => u.Name').

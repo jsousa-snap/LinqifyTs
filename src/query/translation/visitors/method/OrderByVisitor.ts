@@ -1,20 +1,10 @@
-// src/query/translation/visitors/method/OrderByVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
-import {
-  SqlExpression,
-  SelectExpression,
-  SqlOrdering,
-  SortDirection,
-  // SqlDataSource -- REMOVIDO DAQUI
-} from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
+import { SqlExpression, SelectExpression, SqlOrdering, SortDirection } from "../../../../sql-expressions";
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";
@@ -76,7 +66,6 @@ export class OrderByVisitor extends MethodVisitor<LinqMethodCallExpression, Sele
     const direction: SortDirection = methodName === "orderBy" ? "ASC" : "DESC";
 
     // Cria contexto filho para a lambda do seletor de chave
-    // <<< Usa SqlDataSource importado de TranslationContext >>>
     const keySelectorContext = this.context.createChildContext([param], [sourceForLambda]);
 
     // Visita o corpo da lambda (a chave de ordenação) no contexto filho
@@ -105,8 +94,5 @@ export class OrderByVisitor extends MethodVisitor<LinqMethodCallExpression, Sele
       currentSelect.limit, // Mantém Limit
       currentSelect.groupBy // Mantém GroupBy
     );
-    // Nota: Aplicar um novo OrderBy pode tornar um Skip/Take anterior semanticamente incorreto
-    // se a ordenação for diferente. A lógica do EF Core lida com isso de forma mais sofisticada.
-    // Aqui, estamos apenas construindo a árvore SQL conforme a sequência de chamadas.
   }
 }

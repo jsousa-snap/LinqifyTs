@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Expression, ExpressionType } from "./Expression";
 
 export class ConstantExpression extends Expression {

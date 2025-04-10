@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/query/translation/visitors/method/GroupByVisitor.ts
 
 import {
   Expression as LinqExpression,
@@ -134,7 +133,6 @@ export class GroupByVisitor extends MethodVisitor<LinqMethodCallExpression, Sele
         return keySql;
       }
       // Caso 2: Acesso a membro da chave composta (k.Prop)
-      // <<< CORREÇÃO: Verifica tipo antes de acessar objectExpression >>>
       if (expr.type === LinqExpressionType.MemberAccess) {
         const memberExpr = expr as LinqMemberExpression; // Cast seguro após verificar tipo
         if (memberExpr.objectExpression === keyParam) {
@@ -145,11 +143,9 @@ export class GroupByVisitor extends MethodVisitor<LinqMethodCallExpression, Sele
         }
       }
       // Caso 3: Chamada de agregação no grupo (g.Count(), g.Sum(x => x.Price))
-      // <<< CORREÇÃO: Verifica tipo antes de acessar source >>>
       if (expr.type === LinqExpressionType.Call) {
         const callExpr = expr as LinqMethodCallExpression; // Cast seguro
         if (callExpr.source === groupParam) {
-          // Verifica se a fonte da chamada é o parâmetro 'g'
           const sqlFunctionName = this.mapLinqAggregateToSql(callExpr.methodName);
           let aggregateArgSql: SqlExpression;
 
@@ -232,4 +228,4 @@ export class GroupByVisitor extends MethodVisitor<LinqMethodCallExpression, Sele
         throw new Error(`Agregação LINQ não suportada no groupBy: ${methodName}`);
     }
   }
-} // Fim GroupByVisitor
+}

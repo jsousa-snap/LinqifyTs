@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// src/query/translation/visitors/method/SkipVisitor.ts
 
 import {
   ExpressionType as LinqExpressionType,
@@ -8,15 +7,12 @@ import {
   LiteralExpression as LinqLiteralExpression,
   Expression as LinqExpression, // Para tipo de arg
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
 import {
   SelectExpression,
   SqlConstantExpression,
   SqlBinaryExpression,
   SqlExpression,
-  // SqlDataSource -- REMOVIDO DAQUI
 } from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator";
 import { VisitFn } from "../../../generation/types";

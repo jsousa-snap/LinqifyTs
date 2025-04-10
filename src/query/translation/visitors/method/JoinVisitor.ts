@@ -1,12 +1,9 @@
-// src/query/translation/visitors/method/JoinVisitor.ts
-
 import {
   Expression as LinqExpression,
   ExpressionType as LinqExpressionType,
   MethodCallExpression as LinqMethodCallExpression,
   LambdaExpression as LinqLambdaExpression,
 } from "../../../../expressions";
-// <<< CORREÇÃO: SqlDataSource NÃO vem de sql-expressions >>>
 import {
   SqlExpression,
   SelectExpression,
@@ -17,7 +14,6 @@ import {
   TableExpressionBase,
   // SqlDataSource -- REMOVIDO DAQUI
 } from "../../../../sql-expressions";
-// <<< CORREÇÃO: SqlDataSource VEM de TranslationContext >>>
 import { TranslationContext, SqlDataSource } from "../../TranslationContext";
 import { AliasGenerator } from "../../../generation/AliasGenerator"; // Para gerar alias do join e da fonte interna
 import { VisitFn } from "../../../generation/types"; // Para construtor da base
@@ -170,7 +166,7 @@ export class JoinVisitor extends MethodVisitor<LinqMethodCallExpression, SelectE
       currentSelect.from, // Mantém FROM original
       currentSelect.predicate, // Mantém WHERE original
       currentSelect.having, // Mantém HAVING original
-      newJoins, // <<< Adiciona o novo INNER JOIN
+      newJoins,
       currentSelect.orderBy, // Preserva OrderBy (embora possa precisar ser reavaliado)
       currentSelect.offset, // Preserva Offset
       currentSelect.limit, // Preserva Limit
