@@ -132,7 +132,7 @@ export class QueryExpressionVisitor {
     return finalResult;
   }
 
-  /** Cria uma SelectExpression padrão (SELECT [alias].*) para uma fonte. */
+  /** Cria uma SelectExpression padrão para uma fonte. */
   private createDefaultSelect(source: TableExpressionBase): SelectExpression {
     const sourceAlias =
       source.alias || this.aliasGenerator.generateAlias(source instanceof TableExpression ? source.name : source.type);
@@ -141,6 +141,14 @@ export class QueryExpressionVisitor {
       source.type === SqlExpressionType.Table ? (source as TableExpression).name : `(<${source.type}>)`,
       sourceAlias
     );
+
+    if (source instanceof CompositeUnionExpression) {
+      const newProj = source.sources[0].projection.map(
+        (p) => new ProjectionExpression(new ColumnExpression(p.alias, tableRef), p.alias)
+      );
+      return new SelectExpression(sourceAlias, newProj, source, null, null, [], [], null, null, []);
+    }
+
     const projection = new ProjectionExpression(new ColumnExpression("*", tableRef), "*");
     return new SelectExpression(sourceAlias, [projection], source, null, null, [], [], null, null, []);
   }

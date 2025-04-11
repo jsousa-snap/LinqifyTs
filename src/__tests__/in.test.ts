@@ -94,7 +94,7 @@ WHERE [p].[price] < 10 OR [p].[name] IN ('Laptop', 'Mouse')
         .select((p) => p.name)
         .toQueryString();
     }).toThrow(
-      "Query Processing Failed during getQueryText: Erro de Tradução: O array fornecido para 'includes' (SQL IN) não pode estar vazio."
+      "Query Processing Failed during getQueryText: Falha na tradução da consulta: Erro de Tradução: O array fornecido para 'includes' (SQL IN) não pode estar vazio."
     );
   });
 

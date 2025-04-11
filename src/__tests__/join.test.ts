@@ -343,4 +343,24 @@ LEFT JOIN [Departments] AS [d] ON [u].[departmentId] = [d].[deptId]
     expect(normalizeSql(actualSql)).toContain("SELECT [u].[name] AS [UserName]");
     expect(normalizeSql(actualSql)).toContain("[p].[title] AS [PostTitle]");
   });
+
+  it("Teste LEFT Join 4: Inner Join followed by Left Join", () => {
+    const query = users // u
+      .join(
+        posts, // p
+        (u) => u.id,
+        (p) => p.authorId,
+        (u, p) => ({ user: u, post: p })
+      )
+      .select((result) => ({
+        UserName: result.user.name,
+        Post: result.post,
+      }));
+
+    expect(() => {
+      query.toQueryString();
+    }).toThrow(
+      "A operação 'getQueryText' não pode ser executada porque a projeção final da consulta SQL resultante é implícita (contém '*'). Use '.select()' na sua consulta LINQ para especificar explicitamente as colunas ou valores desejados."
+    );
+  });
 });
